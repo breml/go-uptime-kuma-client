@@ -12,7 +12,7 @@ import (
 	"github.com/maldikhan/go.socket.io/utils"
 	"github.com/maniartech/signals"
 
-	"github.com/breml/go-uptime-kuma-client/model"
+	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
 var (
@@ -46,7 +46,7 @@ func LogLevel(level string) int {
 var empty = struct{}{}
 
 type state struct {
-	notifications []model.Notification
+	notifications []notification.Base
 }
 
 type Client struct {
@@ -100,7 +100,12 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	updateSeenMu := sync.Mutex{}
 	updateSeenMu.Lock()
 	updateSeen := map[string]struct{}{
+		"monitorList":      empty,
+		"maintenanceList":  empty,
 		"notificationList": empty,
+		"proxyList":        empty,
+		"dockerHostList":   empty,
+		"apiKeyList":       empty,
 	}
 	updateSeenMu.Unlock()
 
@@ -122,11 +127,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}, "connect-ready")
 	defer c.updates.RemoveListener("connect-ready")
 
-	client.On("notificationList", func(notificationList []model.Notification) {
+	client.On("notificationList", func(notificationList []notification.Base) {
 		c.mu.Lock()
+		c.state.notifications = notificationList
 		defer c.mu.Unlock()
 
-		c.state.notifications = notificationList
 		c.updates.Emit(ctx, "notificationList")
 	})
 
@@ -151,6 +156,13 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			closeSetupRequired()
 		})
 	}
+
+	client.OnAny(func(s string, i []any) {
+		// fmt.Printf("%s: %#v", s, i)
+		if s != "notificationList" {
+			c.updates.Emit(ctx, s)
+		}
+	})
 
 	err = client.Connect(ctx)
 	if err != nil {

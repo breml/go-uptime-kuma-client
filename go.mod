@@ -40,8 +40,6 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/graarh/golang-socketio v0.0.0-20170510162725-2c44953b9b5f
 	github.com/maniartech/signals v1.2.1-0.20250713110343-9566101cf08a
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/testify v1.10.0
