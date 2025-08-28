@@ -1,9 +1,12 @@
 package notification
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -98,4 +101,21 @@ func marshalJSON(base Base, details interface{ Type() string }) ([]byte, error) 
 	rawMap["type"] = details.Type()
 
 	return json.Marshal(rawMap)
+}
+
+func orderedByKey[K cmp.Ordered, E any](m map[K]E) iter.Seq2[K, E] {
+	return func(yield func(K, E) bool) {
+		keys := make([]K, 0, len(m))
+		for k := range m {
+			keys = append(keys, k)
+		}
+
+		slices.Sort(keys)
+
+		for _, k := range keys {
+			if !yield(k, m[k]) {
+				return
+			}
+		}
+	}
 }
