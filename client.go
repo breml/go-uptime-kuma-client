@@ -175,20 +175,22 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		return nil, fmt.Errorf("connect to server: %v", ctx.Err())
 	}
 
-	_, err = c.syncEmit(ctx, "login", map[string]any{"username": username, "password": password, "token": ""})
-	if err != nil {
-		// Ensure we had the time to receive a potential setup event.
-		time.Sleep(10 * time.Millisecond)
+	if username != "" && password != "" {
+		_, err = c.syncEmit(ctx, "login", map[string]any{"username": username, "password": password, "token": ""})
+		if err != nil {
+			// Ensure we had the time to receive a potential setup event.
+			time.Sleep(10 * time.Millisecond)
 
-		wantSetup := false
-		select {
-		case <-setupRequired:
-			wantSetup = true
-		default:
-		}
+			wantSetup := false
+			select {
+			case <-setupRequired:
+				wantSetup = true
+			default:
+			}
 
-		if !strings.Contains(err.Error(), "Incorrect username or password") || !wantSetup {
-			return nil, fmt.Errorf("login: %v", err)
+			if !strings.Contains(err.Error(), "Incorrect username or password") || !wantSetup {
+				return nil, fmt.Errorf("login: %v", err)
+			}
 		}
 	}
 
