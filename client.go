@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	socketio "github.com/maldikhan/go.socket.io/socket.io/v5/client"
 	"github.com/maldikhan/go.socket.io/socket.io/v5/client/emit"
 	"github.com/maldikhan/go.socket.io/utils"
@@ -269,4 +270,54 @@ type ackResponse struct {
 	OK   bool           `json:"ok"`
 	ID   int            `json:"id"`
 	Data map[string]any `json:"data"`
+}
+
+func (c *Client) sendUpdateCommand(ctx context.Context, command string, updateEvent string, args ...any) (ackResponse, error) {
+	done := make(chan struct{})
+	closeDone := sync.OnceFunc(func() {
+		close(done)
+	})
+	defer closeDone()
+
+	res := make(chan ackResponse)
+	defer close(res)
+
+	// Register listener for notifications updates.
+	// Signal done, if update is received and remove listener.
+	listenerID := uuid.New()
+	c.updates.AddListener(func(ctx context.Context, update string) {
+		if update == updateEvent {
+			c.updates.RemoveListener(listenerID.String())
+			closeDone()
+		}
+	}, listenerID.String())
+
+	args = append(args, emit.WithAck(func(response ackResponse) {
+		res <- response
+	}))
+	err := c.socketioClient.Emit(command, args...)
+	if err != nil {
+		return ackResponse{}, fmt.Errorf("%s: %v", command, err)
+	}
+
+	var response ackResponse
+	// Ensure, we have received both signals: done and ack
+	// Setting channel to nil blocks forever, thisway we ensure, that
+	// we also receive the second signal.
+	for done != nil || res != nil {
+		select {
+		case <-done:
+			done = nil
+		case response = <-res:
+			if !response.OK {
+				return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
+			}
+
+			res = nil
+		case <-ctx.Done():
+			return ackResponse{}, fmt.Errorf("%s: %v", command, ctx.Err())
+		}
+	}
+
+	return response, nil
 }
