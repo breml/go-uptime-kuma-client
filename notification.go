@@ -46,7 +46,7 @@ func (c *Client) GetNotificationAs(ctx context.Context, id int, target any) erro
 }
 
 func (c *Client) CreateNotification(ctx context.Context, notification notification.Notification) (int, error) {
-	response, err := c.sendUpdateCommand(ctx, "addNotification", "notificationList", notification, nil)
+	response, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notification, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -55,11 +55,11 @@ func (c *Client) CreateNotification(ctx context.Context, notification notificati
 }
 
 func (c *Client) UpdateNotification(ctx context.Context, notification notification.Notification) error {
-	_, err := c.sendUpdateCommand(ctx, "addNotification", "notificationList", notification, notification.GetID())
+	_, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notification, notification.GetID())
 	return err
 }
 
 func (c *Client) DeleteNotification(ctx context.Context, id int) error {
-	_, err := c.sendUpdateCommand(ctx, "deleteNotification", "notificationList", id)
+	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteNotification", "notificationList", id)
 	return err
 }

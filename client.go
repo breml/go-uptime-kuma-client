@@ -16,10 +16,7 @@ import (
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
-var (
-	ErrNotFound        = fmt.Errorf("not found")
-	ErrInvalidResponse = fmt.Errorf("invalid response")
-)
+var ErrNotFound = fmt.Errorf("not found")
 
 const (
 	LogLevelDebug = utils.DEBUG
@@ -159,7 +156,6 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	client.OnAny(func(s string, i []any) {
-		// fmt.Printf("%s: %#v", s, i)
 		if s != "notificationList" {
 			c.updates.Emit(ctx, s)
 		}
@@ -227,44 +223,6 @@ func (c *Client) Disconnect() error {
 	return c.socketioClient.Close()
 }
 
-func (c *Client) syncEmit(ctx context.Context, event any, args ...any) (map[string]any, error) {
-	resp := make(chan map[string]any)
-
-	args = append(args,
-		emit.WithAck(func(loginResponse map[string]any) {
-			resp <- loginResponse
-		}),
-	)
-
-	err := c.socketioClient.Emit(event, args...)
-	if err != nil {
-		return nil, fmt.Errorf("login: %v", err)
-	}
-
-	select {
-	case response := <-resp:
-		okValue, ok := response["ok"]
-		if !ok {
-			return response, ErrInvalidResponse
-		}
-
-		success, ok := okValue.(bool)
-		if !ok {
-			return response, ErrInvalidResponse
-		}
-
-		if !success {
-			msg := response["msg"]
-			return response, fmt.Errorf("%v failed: %v", event, msg)
-		}
-
-		return response, nil
-
-	case <-ctx.Done():
-		return nil, fmt.Errorf("syncEmit wait for response to: %v (args: %v)", event, args)
-	}
-}
-
 type ackResponse struct {
 	Msg  string         `json:"msg"`
 	OK   bool           `json:"ok"`
@@ -272,15 +230,37 @@ type ackResponse struct {
 	Data map[string]any `json:"data"`
 }
 
-func (c *Client) sendUpdateCommand(ctx context.Context, command string, updateEvent string, args ...any) (ackResponse, error) {
+func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
+	res := make(chan ackResponse)
+	defer close(res)
+
+	args = append(args, emit.WithAck(func(response ackResponse) {
+		res <- response
+	}))
+
+	err := c.socketioClient.Emit(command, args...)
+	if err != nil {
+		return ackResponse{}, fmt.Errorf("%s: %v", command, err)
+	}
+
+	select {
+	case response := <-res:
+		if !response.OK {
+			return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
+		}
+
+		return response, nil
+	case <-ctx.Done():
+		return ackResponse{}, fmt.Errorf("%s: %v", command, ctx.Err())
+	}
+}
+
+func (c *Client) syncEmitWithUpdateEvent(ctx context.Context, command string, updateEvent string, args ...any) (ackResponse, error) {
 	done := make(chan struct{})
 	closeDone := sync.OnceFunc(func() {
 		close(done)
 	})
 	defer closeDone()
-
-	res := make(chan ackResponse)
-	defer close(res)
 
 	// Register listener for notifications updates.
 	// Signal done, if update is received and remove listener.
@@ -291,6 +271,9 @@ func (c *Client) sendUpdateCommand(ctx context.Context, command string, updateEv
 			closeDone()
 		}
 	}, listenerID.String())
+
+	res := make(chan ackResponse)
+	defer close(res)
 
 	args = append(args, emit.WithAck(func(response ackResponse) {
 		res <- response
