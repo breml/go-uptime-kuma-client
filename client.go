@@ -235,8 +235,7 @@ func (c *Client) syncEmit(ctx context.Context, event any, args ...any) (map[stri
 		}),
 	)
 
-	err := c.socketioClient.Emit(event, args...,
-	)
+	err := c.socketioClient.Emit(event, args...)
 	if err != nil {
 		return nil, fmt.Errorf("login: %v", err)
 	}
@@ -263,4 +262,11 @@ func (c *Client) syncEmit(ctx context.Context, event any, args ...any) (map[stri
 	case <-ctx.Done():
 		return nil, fmt.Errorf("syncEmit wait for response to: %v (args: %v)", event, args)
 	}
+}
+
+type ackResponse struct {
+	Msg  string         `json:"msg"`
+	OK   bool           `json:"ok"`
+	ID   int            `json:"id"`
+	Data map[string]any `json:"data"`
 }

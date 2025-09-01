@@ -12,12 +12,6 @@ import (
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
-type notificationResponse struct {
-	Msg string `json:"msg"`
-	OK  bool   `json:"ok"`
-	ID  int    `json:"id"`
-}
-
 func (c *Client) GetNotifications(_ context.Context) []notification.Base {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -87,7 +81,7 @@ func (c *Client) CreateNotification(ctx context.Context, notification notificati
 	err := c.socketioClient.Emit("addNotification",
 		notification,
 		nil, // no ID, create new entry.
-		emit.WithAck(func(response notificationResponse) {
+		emit.WithAck(func(response ackResponse) {
 			defer closeAck()
 
 			if !response.OK {
@@ -156,7 +150,7 @@ func (c *Client) UpdateNotification(ctx context.Context, notification notificati
 	err := c.socketioClient.Emit("addNotification",
 		notification,
 		notification.GetID(),
-		emit.WithAck(func(response notificationResponse) {
+		emit.WithAck(func(response ackResponse) {
 			if !response.OK {
 				errChan <- fmt.Errorf("ack: %s", response.Msg)
 			}
@@ -198,7 +192,7 @@ func (c *Client) DeleteNotification(ctx context.Context, id int) error {
 
 	err := c.socketioClient.Emit("deleteNotification",
 		id,
-		emit.WithAck(func(response notificationResponse) {
+		emit.WithAck(func(response ackResponse) {
 			if !response.OK {
 				errChan <- fmt.Errorf("ack: %s", response.Msg)
 			}
