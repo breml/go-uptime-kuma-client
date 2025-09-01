@@ -50,20 +50,14 @@ func (c *Client) GetNotificationAs(ctx context.Context, id int, target any) erro
 }
 
 func (c *Client) CreateNotification(ctx context.Context, notification notification.Notification) (int, error) {
-	errChan := make(chan error)
-	defer close(errChan)
-
 	done := make(chan struct{})
 	closeDone := sync.OnceFunc(func() {
 		close(done)
 	})
 	defer closeDone()
 
-	ack := make(chan struct{})
-	closeAck := sync.OnceFunc(func() {
-		close(ack)
-	})
-	defer closeAck()
+	res := make(chan ackResponse)
+	defer close(res)
 
 	// Register listener for notifications updates.
 	// Signal done, if update is received and remove listener.
@@ -75,67 +69,51 @@ func (c *Client) CreateNotification(ctx context.Context, notification notificati
 		}
 	}, listenerID.String())
 
-	var id int
-	idMu := sync.Mutex{}
-
 	err := c.socketioClient.Emit("addNotification",
 		notification,
 		nil, // no ID, create new entry.
 		emit.WithAck(func(response ackResponse) {
-			defer closeAck()
-
-			if !response.OK {
-				errChan <- fmt.Errorf("ack: %s", response.Msg)
-			}
-
-			idMu.Lock()
-			defer idMu.Unlock()
-			id = response.ID
+			res <- response
 		}),
 	)
 	if err != nil {
 		return 0, fmt.Errorf("create notification: %v", err)
 	}
 
+	var id int
+
 	// Ensure, we have received both signals: done and ack
 	// Setting channel to nil blocks forever, thisway we ensure, that
 	// we also receive the second signal.
-	// FIXME: this also needs to be added to the update code path.
-	select {
-	case <-done:
-		done = nil
-	case <-ack:
-		ack = nil
-	case err := <-errChan:
-		return 0, fmt.Errorf("create notification: %v", err)
-	case <-ctx.Done():
-		return 0, fmt.Errorf("create notification: %v", ctx.Err())
-	}
+	for done != nil || res != nil {
+		select {
+		case <-done:
+			done = nil
+		case response := <-res:
+			if !response.OK {
+				return 0, fmt.Errorf("create notification: %s", response.Msg)
+			}
 
-	select {
-	case <-done:
-	case <-ack:
-	case err := <-errChan:
-		return 0, fmt.Errorf("create notification: %v", err)
-	case <-ctx.Done():
-		return 0, fmt.Errorf("create notification: %v", ctx.Err())
-	}
+			id = response.ID
 
-	idMu.Lock()
-	defer idMu.Unlock()
+			res = nil
+		case <-ctx.Done():
+			return 0, fmt.Errorf("create notification: %v", ctx.Err())
+		}
+	}
 
 	return id, nil
 }
 
 func (c *Client) UpdateNotification(ctx context.Context, notification notification.Notification) error {
-	errChan := make(chan error)
-	defer close(errChan)
-
 	done := make(chan struct{})
 	closeDone := sync.OnceFunc(func() {
 		close(done)
 	})
 	defer closeDone()
+
+	res := make(chan ackResponse)
+	defer close(res)
 
 	// Register listener for notifications updates.
 	// Signal done, if update is received and remove listener.
@@ -151,34 +129,43 @@ func (c *Client) UpdateNotification(ctx context.Context, notification notificati
 		notification,
 		notification.GetID(),
 		emit.WithAck(func(response ackResponse) {
-			if !response.OK {
-				errChan <- fmt.Errorf("ack: %s", response.Msg)
-			}
+			res <- response
 		}),
 	)
 	if err != nil {
 		return fmt.Errorf("update notification: %v", err)
 	}
 
-	select {
-	case <-done:
-		return nil
-	case err := <-errChan:
-		return fmt.Errorf("update notification: %v", err)
-	case <-ctx.Done():
-		return fmt.Errorf("update notification: %v", ctx.Err())
+	// Ensure, we have received both signals: done and ack
+	// Setting channel to nil blocks forever, thisway we ensure, that
+	// we also receive the second signal.
+	for done != nil || res != nil {
+		select {
+		case <-done:
+			done = nil
+		case response := <-res:
+			if !response.OK {
+				return fmt.Errorf("update notification: %s", response.Msg)
+			}
+
+			res = nil
+		case <-ctx.Done():
+			return fmt.Errorf("update notification: %v", ctx.Err())
+		}
 	}
+
+	return nil
 }
 
 func (c *Client) DeleteNotification(ctx context.Context, id int) error {
-	errChan := make(chan error)
-	defer close(errChan)
-
 	done := make(chan struct{})
 	closeDone := sync.OnceFunc(func() {
 		close(done)
 	})
 	defer closeDone()
+
+	res := make(chan ackResponse)
+	defer close(res)
 
 	// Register listener for notifications updates.
 	// Signal done, if update is received and remove listener.
@@ -193,21 +180,30 @@ func (c *Client) DeleteNotification(ctx context.Context, id int) error {
 	err := c.socketioClient.Emit("deleteNotification",
 		id,
 		emit.WithAck(func(response ackResponse) {
-			if !response.OK {
-				errChan <- fmt.Errorf("ack: %s", response.Msg)
-			}
+			res <- response
 		}),
 	)
 	if err != nil {
 		return fmt.Errorf("delete notification: %v", err)
 	}
 
-	select {
-	case <-done:
-		return nil
-	case err := <-errChan:
-		return fmt.Errorf("delete notification: %v", err)
-	case <-ctx.Done():
-		return fmt.Errorf("delete notification: %v", ctx.Err())
+	// Ensure, we have received both signals: done and ack
+	// Setting channel to nil blocks forever, thisway we ensure, that
+	// we also receive the second signal.
+	for done != nil || res != nil {
+		select {
+		case <-done:
+			done = nil
+		case response := <-res:
+			if !response.OK {
+				return fmt.Errorf("delete notification: %s", response.Msg)
+			}
+
+			res = nil
+		case <-ctx.Done():
+			return fmt.Errorf("delete notification: %v", ctx.Err())
+		}
 	}
+
+	return nil
 }
