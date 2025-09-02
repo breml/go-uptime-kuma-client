@@ -18,7 +18,7 @@ func (c *Client) GetNotifications(_ context.Context) []notification.Base {
 	return notifications
 }
 
-func (c *Client) GetNotification(_ context.Context, id int) (notification.Base, error) {
+func (c *Client) GetNotification(_ context.Context, id int64) (notification.Base, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -31,7 +31,7 @@ func (c *Client) GetNotification(_ context.Context, id int) (notification.Base, 
 	return notification.Base{}, fmt.Errorf("get notification: %w", ErrNotFound)
 }
 
-func (c *Client) GetNotificationAs(ctx context.Context, id int, target any) error {
+func (c *Client) GetNotificationAs(ctx context.Context, id int64, target any) error {
 	notification, err := c.GetNotification(ctx, id)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (c *Client) GetNotificationAs(ctx context.Context, id int, target any) erro
 	return json.Unmarshal(notificationJSON, target)
 }
 
-func (c *Client) CreateNotification(ctx context.Context, notification notification.Notification) (int, error) {
+func (c *Client) CreateNotification(ctx context.Context, notification notification.Notification) (int64, error) {
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notification, nil)
 	if err != nil {
 		return 0, err
@@ -59,7 +59,7 @@ func (c *Client) UpdateNotification(ctx context.Context, notification notificati
 	return err
 }
 
-func (c *Client) DeleteNotification(ctx context.Context, id int) error {
+func (c *Client) DeleteNotification(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteNotification", "notificationList", id)
 	return err
 }

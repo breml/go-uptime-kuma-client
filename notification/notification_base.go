@@ -6,18 +6,18 @@ import (
 )
 
 type Notification interface {
-	GetID() int
+	GetID() int64
 	Type() string
 	As(any) error
 }
 
 type Base struct {
-	ID            int    `json:"id,omitzero"`
+	ID            int64  `json:"id,omitzero"`
 	Name          string `json:"name"`
 	IsActive      bool   `json:"active"`
 	IsDefault     bool   `json:"isDefault"`
 	ApplyExisting bool   `json:"applyExisting"`
-	UserID        int    `json:"userId"`
+	UserID        int64  `json:"userId"`
 
 	typeFromConfigStr string
 	configStr         string
@@ -30,10 +30,10 @@ func (b Base) String() string {
 
 func (b *Base) UnmarshalJSON(data []byte) error {
 	raw := struct {
-		ID        int    `json:"id"`
+		ID        int64  `json:"id"`
 		Name      string `json:"name"`
 		IsActive  bool   `json:"active"`
-		UserID    int    `json:"userId"`
+		UserID    int64  `json:"userId"`
 		IsDefault bool   `json:"isDefault"`
 		ConfigStr string `json:"config"`
 	}{}
@@ -86,7 +86,7 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (b Base) GetID() int {
+func (b Base) GetID() int64 {
 	return b.ID
 }
 

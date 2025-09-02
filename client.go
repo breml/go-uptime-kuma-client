@@ -226,7 +226,7 @@ func (c *Client) Disconnect() error {
 type ackResponse struct {
 	Msg  string         `json:"msg"`
 	OK   bool           `json:"ok"`
-	ID   int            `json:"id"`
+	ID   int64          `json:"id"`
 	Data map[string]any `json:"data"`
 }
 

@@ -14,7 +14,7 @@ type NtfyDetails struct {
 	AuthenticationMethod string `json:"ntfyAuthenticationMethod"`
 	Icon                 string `json:"ntfyIcon"`
 	Password             string `json:"ntfypassword"`
-	Priority             int    `json:"ntfyPriority"`
+	Priority             int64  `json:"ntfyPriority"`
 	ServerURL            string `json:"ntfyserverurl"`
 	Topic                string `json:"ntfytopic"`
 	Username             string `json:"ntfyusername"`
