@@ -39,11 +39,6 @@ func TestBase_Unmarshal(t *testing.T) {
 			require.NoError(t, err)
 
 			require.EqualExportedValues(t, tc.want, ntfy)
-
-			// data, err := json.Marshal(ntfy)
-			// require.NoError(t, err)
-
-			// t.Log(string(data))
 		})
 	}
 }
