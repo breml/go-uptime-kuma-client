@@ -60,14 +60,13 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf(`invalid notification, attribute "type" is not string`)
 	}
 
+	var applyExisting bool
 	applyExistingAny, ok := config["applyExisting"]
-	if !ok {
-		return fmt.Errorf(`invalid notification, attribute "applyExisting" missing`)
-	}
-
-	applyExisting, ok := applyExistingAny.(bool)
-	if !ok {
-		return fmt.Errorf(`invalid notification, attribute "applyExisting" is not bool`)
+	if ok {
+		applyExisting, ok = applyExistingAny.(bool)
+		if !ok {
+			return fmt.Errorf(`invalid notification, attribute "applyExisting" is not bool`)
+		}
 	}
 
 	*b = Base{
@@ -84,6 +83,21 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+func (b Base) MarshalJSON() ([]byte, error) {
+	if b.configStr == "" {
+		return nil, fmt.Errorf("not unmarshaled notification, unable to marshal")
+	}
+
+	genericDetails := GenericDetails{}
+	fmt.Println(b.configStr)
+	err := json.Unmarshal([]byte(b.configStr), &genericDetails)
+	if err != nil {
+		return nil, fmt.Errorf("invalid internal state for configStr, failed to unmarshal: %w", err)
+	}
+
+	return marshalJSON(b, genericDetails)
 }
 
 func (b Base) GetID() int64 {

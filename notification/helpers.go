@@ -77,21 +77,19 @@ func unmarshalTo(data []byte, detail any) (Base, error) {
 }
 
 func marshalJSON(base Base, details interface{ Type() string }) ([]byte, error) {
-	baseData, err := json.Marshal(base)
-	if err != nil {
-		return nil, err
-	}
-
 	detailData, err := json.Marshal(details)
 	if err != nil {
 		return nil, err
 	}
 
 	rawMap := make(map[string]any, 20)
-	err = json.Unmarshal(baseData, &rawMap)
-	if err != nil {
-		return nil, err
-	}
+	rawMap["id"] = base.ID
+	rawMap["name"] = base.Name
+	rawMap["active"] = base.IsActive
+	rawMap["isDefault"] = base.IsDefault
+	rawMap["applyExisting"] = base.ApplyExisting
+	rawMap["userId"] = base.UserID
+	rawMap["type"] = base.typeFromConfigStr
 
 	err = json.Unmarshal(detailData, &rawMap)
 	if err != nil {
