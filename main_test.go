@@ -2,8 +2,10 @@ package kuma_test
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -31,7 +33,7 @@ func TestMain(m *testing.M) {
 
 	// pulls an image, creates a container based on it and runs it
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Name:       "uptime-kuma",
+		Name:       fmt.Sprintf("uptime-kuma-%s", randomString(8)),
 		Repository: "louislam/uptime-kuma",
 		Tag:        "1",
 	}, func(config *docker.HostConfig) {
@@ -87,4 +89,16 @@ func TestMain(m *testing.M) {
 	}()
 
 	m.Run()
+}
+
+const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+func randomString(n int) string {
+	result := make([]byte, n)
+	for i := range result {
+		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		result[i] = charset[num.Int64()]
+	}
+
+	return string(result)
 }
