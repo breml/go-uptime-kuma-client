@@ -15,6 +15,14 @@ tasks:
       - go test ./...
     silent: true
 
+  test-debug:
+    desc: Run all tests with verbose output
+    env:
+      SOCKETIO_LOG_LEVEL: DEBUG
+    cmds:
+      - go test -v ./...
+    silent: true
+
   lint:
     desc: Lint all code
     cmds:
