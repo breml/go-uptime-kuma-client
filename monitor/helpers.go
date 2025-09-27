@@ -40,6 +40,10 @@ func formatMonitor(s any, withType bool) string {
 
 		name := strings.Split(field.Tag.Get("json"), ",")[0]
 
+		if name == "" || name == "-" {
+			name = field.Name
+		}
+
 		var valueStr string
 		if value.Kind() == reflect.String {
 			valueStr = fmt.Sprintf("%q", value.String())
