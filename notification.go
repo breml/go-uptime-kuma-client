@@ -2,12 +2,12 @@ package kuma
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
+// GetNotifications returns all notifications for the authenticated user.
 func (c *Client) GetNotifications(_ context.Context) []notification.Base {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -18,6 +18,7 @@ func (c *Client) GetNotifications(_ context.Context) []notification.Base {
 	return notifications
 }
 
+// GetNotification returns a specific notification by ID.
 func (c *Client) GetNotification(_ context.Context, id int64) (notification.Base, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -31,20 +32,22 @@ func (c *Client) GetNotification(_ context.Context, id int64) (notification.Base
 	return notification.Base{}, fmt.Errorf("get notification: %w", ErrNotFound)
 }
 
+// GetNotificationAs returns a specific notification by ID and coverts it to the target type.
 func (c *Client) GetNotificationAs(ctx context.Context, id int64, target any) error {
 	notification, err := c.GetNotification(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	notificationJSON, err := json.Marshal(notification)
+	err = notification.As(target)
 	if err != nil {
-		return err
+		return fmt.Errorf("get monitor %d as %t: %v", id, target, err)
 	}
 
-	return json.Unmarshal(notificationJSON, target)
+	return nil
 }
 
+// CreateNotification creates a new notification.
 func (c *Client) CreateNotification(ctx context.Context, notification notification.Notification) (int64, error) {
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notification, nil)
 	if err != nil {
@@ -54,11 +57,13 @@ func (c *Client) CreateNotification(ctx context.Context, notification notificati
 	return response.ID, nil
 }
 
+// UpdateNotification updates an existing notification.
 func (c *Client) UpdateNotification(ctx context.Context, notification notification.Notification) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notification, notification.GetID())
 	return err
 }
 
+// DeleteNotification deletes a notification by ID.
 func (c *Client) DeleteNotification(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteNotification", "notificationList", id)
 	return err
