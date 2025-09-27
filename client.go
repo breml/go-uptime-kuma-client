@@ -13,6 +13,7 @@ import (
 	"github.com/maldikhan/go.socket.io/utils"
 	"github.com/maniartech/signals"
 
+	"github.com/breml/go-uptime-kuma-client/monitor"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -45,6 +46,7 @@ var empty = struct{}{}
 
 type state struct {
 	notifications []notification.Base
+	monitors      []monitor.Base
 }
 
 type Client struct {
@@ -133,6 +135,20 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		c.updates.Emit(ctx, "notificationList")
 	})
 
+	client.On("monitorList", func(monitorMap map[string]monitor.Base) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		// Convert map to slice
+		monitors := make([]monitor.Base, 0, len(monitorMap))
+		for _, monitor := range monitorMap {
+			monitors = append(monitors, monitor)
+		}
+		c.state.monitors = monitors
+
+		c.updates.Emit(ctx, "monitorList")
+	})
+
 	connect := make(chan struct{})
 	closeConnect := sync.OnceFunc(func() {
 		close(connect)
@@ -156,7 +172,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	client.OnAny(func(s string, i []any) {
-		if s != "notificationList" {
+		if s != "notificationList" && s != "monitorList" {
 			c.updates.Emit(ctx, s)
 		}
 	})
@@ -224,10 +240,12 @@ func (c *Client) Disconnect() error {
 }
 
 type ackResponse struct {
-	Msg  string         `json:"msg"`
-	OK   bool           `json:"ok"`
-	ID   int64          `json:"id"`
-	Data map[string]any `json:"data"`
+	Msg       string         `json:"msg"`
+	OK        bool           `json:"ok"`
+	ID        int64          `json:"id"`
+	MonitorID int64          `json:"monitorID"`
+	Monitor   map[string]any `json:"monitor"`
+	Data      map[string]any `json:"data"`
 }
 
 func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
