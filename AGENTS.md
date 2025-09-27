@@ -2,7 +2,7 @@
 
 ## Build & Commands
 
-- **Run Tests**: `task test`
+- **Run Tests**: `task test`, use `task test-debug` for verbose output
 - **Run Linter**: `task lint`
 - **Compile code**: `task build`
 
