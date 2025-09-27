@@ -14,7 +14,8 @@ func TestNotificationTeams_Unmarshal(t *testing.T) {
 		name string
 		data []byte
 
-		want notification.Teams
+		want     notification.Teams
+		wantJSON string
 	}{
 		{
 			name: "success",
@@ -33,6 +34,7 @@ func TestNotificationTeams_Unmarshal(t *testing.T) {
 					WebhookURL: "https://outlook.office.com/webhook/xxx",
 				},
 			},
+			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My Teams Alert","type":"teams","userId":1,"webhookUrl":"https://outlook.office.com/webhook/xxx"}`,
 		},
 	}
 
@@ -48,7 +50,7 @@ func TestNotificationTeams_Unmarshal(t *testing.T) {
 			data, err := json.Marshal(teams)
 			require.NoError(t, err)
 
-			t.Log(string(data))
+			require.JSONEq(t, tc.wantJSON, string(data))
 		})
 	}
 }

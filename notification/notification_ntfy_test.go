@@ -14,7 +14,8 @@ func TestNotificationNtfy_Unmarshal(t *testing.T) {
 		name string
 		data []byte
 
-		want notification.Ntfy
+		want     notification.Ntfy
+		wantJSON string
 	}{
 		{
 			name: "success",
@@ -39,6 +40,7 @@ func TestNotificationNtfy_Unmarshal(t *testing.T) {
 					Username:             "user",
 				},
 			},
+			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My Ntfy Alert","ntfyAuthenticationMethod":"usernamePassword","ntfyIcon":"http://symbol.url","ntfyPriority":5,"ntfyaccesstoken":"","ntfypassword":"password","ntfyserverurl":"https://ntfy.sh","ntfytopic":"topic","ntfyusername":"user","type":"ntfy","userId":1}`,
 		},
 	}
 
@@ -54,7 +56,7 @@ func TestNotificationNtfy_Unmarshal(t *testing.T) {
 			data, err := json.Marshal(ntfy)
 			require.NoError(t, err)
 
-			t.Log(string(data))
+			require.JSONEq(t, tc.wantJSON, string(data))
 		})
 	}
 }
