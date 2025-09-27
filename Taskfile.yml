@@ -1,0 +1,22 @@
+---
+
+version: '3'
+
+tasks:
+  build:
+    desc: Build all code
+    cmds:
+      - go build ./...
+    silent: true
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test ./...
+    silent: true
+
+  lint:
+    desc: Lint all code
+    cmds:
+      - golangci-lint run
+    silent: true
