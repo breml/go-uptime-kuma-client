@@ -41,61 +41,52 @@ func (h *HTTP) UnmarshalJSON(data []byte) error {
 }
 
 func (h HTTP) MarshalJSON() ([]byte, error) {
-	if h.Base.raw == nil || h.Base.internalType == "" {
-		return nil, fmt.Errorf("not unmarshaled monitor, unable to marshal")
-	}
-
 	raw := map[string]any{}
-	err := json.Unmarshal(h.Base.raw, &raw)
-	if err != nil {
-		return nil, fmt.Errorf("invalid internal state for raw, failed to unmarshal: %w", err)
-	}
+	raw["id"] = h.ID
+	raw["type"] = "http"
+	raw["name"] = h.Name
+	raw["description"] = h.Description
+	// Don't set pathName, server generates it.
+	// raw["pathName"] = h.PathName
+	raw["interval"] = h.Interval
+	raw["retryInterval"] = h.RetryInterval
+	raw["resendInterval"] = h.ResendInterval
+	raw["maxretries"] = h.MaxRetries
+	raw["upsideDown"] = h.UpsideDown
+	raw["active"] = h.IsActive
 
-	// Update base fields
-	raw["id"] = h.Base.ID
-	raw["type"] = h.Base.internalType
-	raw["name"] = h.Base.Name
-	raw["description"] = h.Base.Description
-	raw["pathName"] = h.Base.PathName
-	raw["interval"] = h.Base.Interval
-	raw["retryInterval"] = h.Base.RetryInterval
-	raw["resendInterval"] = h.Base.ResendInterval
-	raw["maxretries"] = h.Base.MaxRetries
-	raw["upsideDown"] = h.Base.UpsideDown
-	raw["active"] = h.Base.IsActive
-
-	// Update notification IDs
+	// Update notification IDs.
 	ids := map[string]bool{}
-	for _, id := range h.Base.NotificationIDs {
+	for _, id := range h.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
 	raw["notificationIDList"] = ids
 
-	// Update HTTP-specific fields
-	raw["url"] = h.HTTPDetails.URL
-	raw["timeout"] = h.HTTPDetails.Timeout
-	raw["expiryNotification"] = h.HTTPDetails.ExpiryNotification
-	raw["ignoreTls"] = h.HTTPDetails.IgnoreTLS
-	raw["maxredirects"] = h.HTTPDetails.MaxRedirects
-	raw["accepted_statuscodes"] = h.HTTPDetails.AcceptedStatusCodes
-	raw["proxyID"] = h.HTTPDetails.ProxyID
-	raw["method"] = h.HTTPDetails.Method
-	raw["httpBodyEncoding"] = h.HTTPDetails.HTTPBodyEncoding
-	raw["body"] = h.HTTPDetails.Body
-	raw["headers"] = h.HTTPDetails.Headers
-	raw["authMethod"] = h.HTTPDetails.AuthMethod
-	raw["basic_auth_user"] = h.HTTPDetails.BasicAuthUser
-	raw["basic_auth_pass"] = h.HTTPDetails.BasicAuthPass
-	raw["authDomain"] = h.HTTPDetails.AuthDomain
-	raw["authWorkstation"] = h.HTTPDetails.AuthWorkstation
-	raw["tlsCert"] = h.HTTPDetails.TLSCert
-	raw["tlsKey"] = h.HTTPDetails.TLSKey
-	raw["tlsCa"] = h.HTTPDetails.TLSCa
-	raw["oauth_auth_method"] = h.HTTPDetails.OAuthAuthMethod
-	raw["oauth_token_url"] = h.HTTPDetails.OAuthTokenURL
-	raw["oauth_client_id"] = h.HTTPDetails.OAuthClientID
-	raw["oauth_client_secret"] = h.HTTPDetails.OAuthClientSecret
-	raw["oauth_scopes"] = h.HTTPDetails.OAuthScopes
+	// Always override with current HTTP-specific field values.
+	raw["url"] = h.URL
+	raw["timeout"] = h.Timeout
+	raw["expiryNotification"] = h.ExpiryNotification
+	raw["ignoreTls"] = h.IgnoreTLS
+	raw["maxredirects"] = h.MaxRedirects
+	raw["accepted_statuscodes"] = h.AcceptedStatusCodes
+	raw["proxyId"] = h.ProxyID
+	raw["method"] = h.Method
+	raw["httpBodyEncoding"] = h.HTTPBodyEncoding
+	raw["body"] = h.Body
+	raw["headers"] = h.Headers
+	raw["authMethod"] = h.AuthMethod
+	raw["basic_auth_user"] = h.BasicAuthUser
+	raw["basic_auth_pass"] = h.BasicAuthPass
+	raw["authDomain"] = h.AuthDomain
+	raw["authWorkstation"] = h.AuthWorkstation
+	raw["tlsCert"] = h.TLSCert
+	raw["tlsKey"] = h.TLSKey
+	raw["tlsCa"] = h.TLSCa
+	raw["oauth_auth_method"] = h.OAuthAuthMethod
+	raw["oauth_token_url"] = h.OAuthTokenURL
+	raw["oauth_client_id"] = h.OAuthClientID
+	raw["oauth_client_secret"] = h.OAuthClientSecret
+	raw["oauth_scopes"] = h.OAuthScopes
 
 	return json.Marshal(raw)
 }
@@ -107,7 +98,7 @@ type HTTPDetails struct {
 	IgnoreTLS           bool       `json:"ignoreTls"`
 	MaxRedirects        int        `json:"maxredirects"`
 	AcceptedStatusCodes []string   `json:"accepted_statuscodes"`
-	ProxyID             int64      `json:"proxyID"`
+	ProxyID             *int64     `json:"proxyId"`
 	Method              string     `json:"method"`
 	HTTPBodyEncoding    string     `json:"httpBodyEncoding"`
 	Body                string     `json:"body"`

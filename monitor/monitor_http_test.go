@@ -41,7 +41,7 @@ func TestMonitorHTTP_Unmarshal(t *testing.T) {
 					IgnoreTLS:           false,
 					MaxRedirects:        10,
 					AcceptedStatusCodes: []string{"200-299"},
-					ProxyID:             0,
+					ProxyID:             nil,
 					Method:              "GET",
 					HTTPBodyEncoding:    "json",
 					Body:                "",

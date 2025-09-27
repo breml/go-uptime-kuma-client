@@ -10,6 +10,7 @@ type Monitor interface {
 	GetID() int64
 	Type() string
 	As(any) error
+	GetNotificationIDs() []int64
 }
 
 type Base struct {
@@ -88,16 +89,19 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	}
 
 	raw := map[string]any{}
+
+	// Monitor was unmarshaled from JSON, use existing raw data as base.
 	err := json.Unmarshal(b.raw, &raw)
 	if err != nil {
 		return nil, fmt.Errorf("invalid internal state for raw, failed to unmarshal: %w", err)
 	}
 
 	raw["id"] = b.ID
-	raw["type"] = b.internalType
+	raw["type"] = b.getType()
 	raw["name"] = b.Name
 	raw["description"] = b.Description
-	raw["pathName"] = b.PathName
+	// Don't set pathName, server generates it.
+	// raw["pathName"] = b.PathName
 	raw["interval"] = b.Interval
 	raw["retryInterval"] = b.RetryInterval
 	raw["resendInterval"] = b.ResendInterval
@@ -109,10 +113,13 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	for _, id := range b.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
-
 	raw["notificationIDList"] = ids
 
 	return json.Marshal(raw)
+}
+
+func (b Base) getType() string {
+	return b.internalType
 }
 
 func (b Base) GetID() int64 {
@@ -121,6 +128,10 @@ func (b Base) GetID() int64 {
 
 func (b Base) Type() string {
 	return b.internalType
+}
+
+func (b Base) GetNotificationIDs() []int64 {
+	return b.NotificationIDs
 }
 
 func (b Base) As(target any) error {
