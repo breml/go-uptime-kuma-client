@@ -45,7 +45,10 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not start resource: %v", err)
 	}
 
-	resource.Expire(60)
+	err = resource.Expire(60)
+	if err != nil {
+		log.Fatalf("Could not connect to Docker: %v", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
