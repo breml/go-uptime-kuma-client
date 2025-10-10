@@ -10,8 +10,8 @@
 
 - Each entity of Uptime Kuma (Monitor, Notification, etc.) has its own package
 - The client it self is in the project's root directory
-- **scratch/uptime-kuma/**: Code of Uptime Kuma itself, copied here for reference
-- **scratch/**: Temporary code for testing ideas, not linted, not tested, not checked into git
+- **.scratch/uptime-kuma/**: Code of Uptime Kuma itself, copied here for reference
+- **.scratch/**: Temporary code for testing ideas, not linted, not tested, not checked into git
 
 ## Code Style & Conventions
 
