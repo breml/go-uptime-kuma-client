@@ -14,7 +14,8 @@ func TestMonitorGroup_Unmarshal(t *testing.T) {
 		name string
 		data []byte
 
-		want monitor.Group
+		want     monitor.Group
+		wantJSON string
 	}{
 		{
 			name: "success",
@@ -35,6 +36,7 @@ func TestMonitorGroup_Unmarshal(t *testing.T) {
 				},
 				GroupDetails: monitor.GroupDetails{},
 			},
+			wantJSON: `{"accepted_statuscodes":[],"active":false,"description":null,"id":1,"interval":60,"kafkaProducerBrokers":[],"kafkaProducerSaslOptions":{},"maxretries":0,"name":"group","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"group","upsideDown":false}`,
 		},
 	}
 
@@ -50,7 +52,7 @@ func TestMonitorGroup_Unmarshal(t *testing.T) {
 			data, err := json.Marshal(groupMonitor)
 			require.NoError(t, err)
 
-			t.Log(string(data))
+			require.JSONEq(t, tc.wantJSON, string(data))
 		})
 	}
 }
