@@ -18,6 +18,7 @@ type Base struct {
 	Name            string  `json:"name"`
 	Description     *string `json:"description"`
 	PathName        string  `json:"pathName"`
+	Parent          *int64  `json:"parent"`
 	Interval        int64   `json:"interval"`
 	RetryInterval   int64   `json:"retryInterval"`
 	ResendInterval  int64   `json:"resendInterval"`
@@ -41,6 +42,7 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 		Name            string          `json:"name"`
 		Description     *string         `json:"description"`
 		PathName        string          `json:"pathName"`
+		Parent          *int64          `json:"parent"`
 		Interval        int64           `json:"interval"`
 		RetryInterval   int64           `json:"retryInterval"`
 		ResendInterval  int64           `json:"resendInterval"`
@@ -60,6 +62,7 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 		Name:           raw.Name,
 		Description:    raw.Description,
 		PathName:       raw.PathName,
+		Parent:         raw.Parent,
 		Interval:       raw.Interval,
 		RetryInterval:  raw.RetryInterval,
 		ResendInterval: raw.ResendInterval,
@@ -102,6 +105,7 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	raw["description"] = b.Description
 	// Don't set pathName, server generates it.
 	// raw["pathName"] = b.PathName
+	raw["parent"] = b.Parent
 	raw["interval"] = b.Interval
 	raw["retryInterval"] = b.RetryInterval
 	raw["resendInterval"] = b.ResendInterval

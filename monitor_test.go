@@ -207,3 +207,130 @@ func TestClient_MonitorGroupCRUD(t *testing.T) {
 		require.Equal(t, initialCount, len(monitors))
 	})
 }
+
+func TestClient_MonitorParent(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	groupMonitor := monitor.Group{
+		Base: monitor.Base{
+			Name:           "Parent Group",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     0,
+			UpsideDown:     false,
+			IsActive:       true,
+		},
+	}
+
+	var parentID int64
+	t.Run("create_parent_group", func(t *testing.T) {
+		parentID, err = client.CreateMonitor(ctx, groupMonitor)
+		require.NoError(t, err)
+		require.Greater(t, parentID, int64(0))
+	})
+
+	var childID int64
+	t.Run("create_monitor_with_parent", func(t *testing.T) {
+		httpMonitor := monitor.HTTP{
+			Base: monitor.Base{
+				Name:           "Child Monitor",
+				Parent:         &parentID,
+				Interval:       60,
+				RetryInterval:  60,
+				ResendInterval: 0,
+				MaxRetries:     3,
+				UpsideDown:     false,
+				IsActive:       true,
+			},
+			HTTPDetails: monitor.HTTPDetails{
+				URL:                 "https://httpbin.org/status/200",
+				Timeout:             48,
+				Method:              "GET",
+				ExpiryNotification:  false,
+				IgnoreTLS:           false,
+				MaxRedirects:        10,
+				AcceptedStatusCodes: []string{"200-299"},
+				AuthMethod:          monitor.AuthMethodNone,
+			},
+		}
+
+		childID, err = client.CreateMonitor(ctx, httpMonitor)
+		require.NoError(t, err)
+		require.Greater(t, childID, int64(0))
+
+		var childMonitorRetrieved monitor.HTTP
+		err = client.GetMonitorAs(ctx, childID, &childMonitorRetrieved)
+		require.NoError(t, err)
+		require.NotNil(t, childMonitorRetrieved.Parent)
+		require.Equal(t, parentID, *childMonitorRetrieved.Parent)
+	})
+
+	var newParentID int64
+	t.Run("update_parent", func(t *testing.T) {
+		newGroupMonitor := monitor.Group{
+			Base: monitor.Base{
+				Name:           "New Parent Group",
+				Interval:       60,
+				RetryInterval:  60,
+				ResendInterval: 0,
+				MaxRetries:     0,
+				UpsideDown:     false,
+				IsActive:       true,
+			},
+		}
+
+		newParentID, err = client.CreateMonitor(ctx, newGroupMonitor)
+		require.NoError(t, err)
+		require.Greater(t, newParentID, int64(0))
+
+		var httpMonitor monitor.HTTP
+		err = client.GetMonitorAs(ctx, childID, &httpMonitor)
+		require.NoError(t, err)
+
+		httpMonitor.Parent = &newParentID
+
+		err = client.UpdateMonitor(ctx, httpMonitor)
+		require.NoError(t, err)
+
+		var updatedMonitor monitor.HTTP
+		err = client.GetMonitorAs(ctx, childID, &updatedMonitor)
+		require.NoError(t, err)
+		require.NotNil(t, updatedMonitor.Parent)
+		require.Equal(t, newParentID, *updatedMonitor.Parent)
+	})
+
+	t.Run("remove_parent", func(t *testing.T) {
+		var httpMonitor monitor.HTTP
+		err = client.GetMonitorAs(ctx, childID, &httpMonitor)
+		require.NoError(t, err)
+
+		httpMonitor.Parent = nil
+
+		err = client.UpdateMonitor(ctx, httpMonitor)
+		require.NoError(t, err)
+
+		var updatedMonitor monitor.HTTP
+		err = client.GetMonitorAs(ctx, childID, &updatedMonitor)
+		require.NoError(t, err)
+		require.Nil(t, updatedMonitor.Parent)
+	})
+
+	t.Run("cleanup", func(t *testing.T) {
+		err := client.DeleteMonitor(ctx, childID)
+		require.NoError(t, err)
+
+		err = client.DeleteMonitor(ctx, newParentID)
+		require.NoError(t, err)
+
+		err = client.DeleteMonitor(ctx, parentID)
+		require.NoError(t, err)
+	})
+}

@@ -48,7 +48,7 @@ func (g Group) MarshalJSON() ([]byte, error) {
 	raw["description"] = g.Description
 	// Don't set pathName, server generates it.
 	// raw["pathName"] = g.PathName
-	raw["parent"] = nil
+	raw["parent"] = g.Parent
 	raw["interval"] = g.Interval
 	raw["retryInterval"] = g.RetryInterval
 	raw["resendInterval"] = g.ResendInterval

@@ -48,6 +48,7 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw["description"] = h.Description
 	// Don't set pathName, server generates it.
 	// raw["pathName"] = h.PathName
+	raw["parent"] = h.Parent
 	raw["interval"] = h.Interval
 	raw["retryInterval"] = h.RetryInterval
 	raw["resendInterval"] = h.ResendInterval
