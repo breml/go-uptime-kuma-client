@@ -246,6 +246,8 @@ type ackResponse struct {
 	MonitorID int64          `json:"monitorID"`
 	Monitor   map[string]any `json:"monitor"`
 	Data      map[string]any `json:"data"`
+	Tags      []any          `json:"tags"`
+	Tag       map[string]any `json:"tag"`
 }
 
 func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
