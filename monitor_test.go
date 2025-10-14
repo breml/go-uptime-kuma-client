@@ -406,6 +406,112 @@ func TestClient_MonitorPushCRUD(t *testing.T) {
 	})
 }
 
+func TestClient_MonitorTCPPortCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	// Create a test TCP Port monitor
+	tcpPortMonitor := monitor.TCPPort{
+		Base: monitor.Base{
+			Name:           "Test TCP Port Monitor",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     3,
+			UpsideDown:     false,
+			IsActive:       true,
+		},
+		TCPPortDetails: monitor.TCPPortDetails{
+			Hostname: "example.com",
+			Port:     443,
+		},
+	}
+
+	var initialCount int
+	t.Run("initial_state", func(t *testing.T) {
+		// Test GetMonitors (should work even if empty)
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		initialCount = len(monitors)
+	})
+
+	var monitorID int64
+	var tcpPortMonitorRetrieved monitor.TCPPort
+	t.Run("create", func(t *testing.T) {
+		// Test CreateMonitor
+		monitorID, err = client.CreateMonitor(ctx, tcpPortMonitor)
+		require.NoError(t, err)
+		require.Greater(t, monitorID, int64(0))
+
+		// Test GetMonitors after creation
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount+1, len(monitors))
+
+		// Test GetMonitor
+		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, monitorID, retrievedMonitor.ID)
+		require.Equal(t, "Test TCP Port Monitor", retrievedMonitor.Name)
+
+		// Test GetMonitorAs
+		err = client.GetMonitorAs(ctx, monitorID, &tcpPortMonitorRetrieved)
+		require.NoError(t, err)
+		tcpPortMonitor.ID = monitorID
+		tcpPortMonitor.PathName = tcpPortMonitor.Name
+		require.EqualExportedValues(t, tcpPortMonitor, tcpPortMonitorRetrieved)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		// Test UpdateMonitor
+		tcpPortMonitorRetrieved.Name = "Updated TCP Port Monitor"
+		tcpPortMonitorRetrieved.Hostname = "cloudflare.com"
+		tcpPortMonitorRetrieved.Port = 80
+		err := client.UpdateMonitor(ctx, tcpPortMonitorRetrieved)
+		require.NoError(t, err)
+
+		// Verify update
+		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, "Updated TCP Port Monitor", updatedMonitor.Name)
+
+		var updatedTCPPort monitor.TCPPort
+		err = client.GetMonitorAs(ctx, monitorID, &updatedTCPPort)
+		require.NoError(t, err)
+		require.Equal(t, "cloudflare.com", updatedTCPPort.Hostname)
+		require.Equal(t, 80, updatedTCPPort.Port)
+	})
+
+	t.Run("pause", func(t *testing.T) {
+		// Test PauseMonitor
+		err := client.PauseMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("resume", func(t *testing.T) {
+		// Test ResumeMonitor
+		err := client.ResumeMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		// Test DeleteMonitor
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+
+		// Verify deletion
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount, len(monitors))
+	})
+}
+
 func TestClient_MonitorParent(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
