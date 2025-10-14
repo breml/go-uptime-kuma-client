@@ -314,6 +314,98 @@ func TestClient_MonitorPingCRUD(t *testing.T) {
 	})
 }
 
+func TestClient_MonitorPushCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	// Create a test Push monitor
+	pushMonitor := monitor.Push{
+		Base: monitor.Base{
+			Name:           "Test Push Monitor",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     0,
+			UpsideDown:     false,
+			IsActive:       true,
+		},
+		PushDetails: monitor.PushDetails{
+			PushToken: "testtoken123",
+		},
+	}
+
+	var initialCount int
+	t.Run("initial_state", func(t *testing.T) {
+		// Test GetMonitors (should work even if empty)
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		initialCount = len(monitors)
+	})
+
+	var monitorID int64
+	var pushMonitorRetrieved monitor.Push
+	t.Run("create", func(t *testing.T) {
+		// Test CreateMonitor
+		monitorID, err = client.CreateMonitor(ctx, pushMonitor)
+		require.NoError(t, err)
+		require.Greater(t, monitorID, int64(0))
+
+		// Test GetMonitors after creation
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount+1, len(monitors))
+
+		// Test GetMonitor
+		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, monitorID, retrievedMonitor.ID)
+		require.Equal(t, "Test Push Monitor", retrievedMonitor.Name)
+
+		// Test GetMonitorAs
+		err = client.GetMonitorAs(ctx, monitorID, &pushMonitorRetrieved)
+		require.NoError(t, err)
+		pushMonitor.ID = monitorID
+		pushMonitor.PathName = pushMonitor.Name
+		require.EqualExportedValues(t, pushMonitor, pushMonitorRetrieved)
+		require.NotEmpty(t, pushMonitorRetrieved.PushToken)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		// Test UpdateMonitor
+		pushMonitorRetrieved.Name = "Updated Push Monitor"
+		err := client.UpdateMonitor(ctx, pushMonitorRetrieved)
+		require.NoError(t, err)
+
+		// Verify update
+		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, "Updated Push Monitor", updatedMonitor.Name)
+
+		var updatedPush monitor.Push
+		err = client.GetMonitorAs(ctx, monitorID, &updatedPush)
+		require.NoError(t, err)
+		require.Equal(t, "Updated Push Monitor", updatedPush.Name)
+		require.Equal(t, pushMonitorRetrieved.PushToken, updatedPush.PushToken)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		// Test DeleteMonitor
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+
+		// Verify deletion
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount, len(monitors))
+	})
+}
+
 func TestClient_MonitorParent(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
