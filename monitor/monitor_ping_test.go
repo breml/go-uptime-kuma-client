@@ -43,7 +43,7 @@ func TestMonitorPing_Unmarshal(t *testing.T) {
 					PacketSize: 64,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"description":"Test ping monitor","hostname":"8.8.8.8","id":3,"interval":60,"kafkaProducerBrokers":[],"kafkaProducerSaslOptions":{},"maxretries":2,"name":"ping-monitor","notificationIDList":{"1":true,"2":true},"packetSize":64,"parent":1,"resendInterval":0,"retryInterval":60,"type":"ping","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"description":"Test ping monitor","hostname":"8.8.8.8","id":3,"interval":60,"maxretries":2,"name":"ping-monitor","notificationIDList":{"1":true,"2":true},"packetSize":64,"parent":1,"resendInterval":0,"retryInterval":60,"type":"ping","upsideDown":false}`,
 		},
 	}
 

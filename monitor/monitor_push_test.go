@@ -42,7 +42,7 @@ func TestMonitorPush_Unmarshal(t *testing.T) {
 					PushToken: "ABC1234567",
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"description":null,"id":3,"interval":60,"kafkaProducerBrokers":[],"kafkaProducerSaslOptions":{},"maxretries":0,"name":"push-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"pushToken":"ABC1234567","resendInterval":0,"retryInterval":60,"type":"push","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"description":null,"id":3,"interval":60,"maxretries":0,"name":"push-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"pushToken":"ABC1234567","resendInterval":0,"retryInterval":60,"type":"push","upsideDown":false}`,
 		},
 	}
 

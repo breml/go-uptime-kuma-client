@@ -36,7 +36,7 @@ func TestMonitorGroup_Unmarshal(t *testing.T) {
 				},
 				GroupDetails: monitor.GroupDetails{},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":false,"description":null,"id":1,"interval":60,"kafkaProducerBrokers":[],"kafkaProducerSaslOptions":{},"maxretries":0,"name":"group","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"group","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":false,"description":null,"id":1,"interval":60,"maxretries":0,"name":"group","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"group","upsideDown":false}`,
 		},
 	}
 

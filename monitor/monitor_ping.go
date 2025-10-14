@@ -69,8 +69,6 @@ func (p Ping) MarshalJSON() ([]byte, error) {
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
-	raw["kafkaProducerBrokers"] = []string{}
-	raw["kafkaProducerSaslOptions"] = map[string]string{}
 
 	return json.Marshal(raw)
 }
