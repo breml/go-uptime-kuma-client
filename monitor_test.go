@@ -208,6 +208,112 @@ func TestClient_MonitorGroupCRUD(t *testing.T) {
 	})
 }
 
+func TestClient_MonitorPingCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	// Create a test Ping monitor
+	pingMonitor := monitor.Ping{
+		Base: monitor.Base{
+			Name:           "Test Ping Monitor",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     3,
+			UpsideDown:     false,
+			IsActive:       true,
+		},
+		PingDetails: monitor.PingDetails{
+			Hostname:   "8.8.8.8",
+			PacketSize: 56,
+		},
+	}
+
+	var initialCount int
+	t.Run("initial_state", func(t *testing.T) {
+		// Test GetMonitors (should work even if empty)
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		initialCount = len(monitors)
+	})
+
+	var monitorID int64
+	var pingMonitorRetrieved monitor.Ping
+	t.Run("create", func(t *testing.T) {
+		// Test CreateMonitor
+		monitorID, err = client.CreateMonitor(ctx, pingMonitor)
+		require.NoError(t, err)
+		require.Greater(t, monitorID, int64(0))
+
+		// Test GetMonitors after creation
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount+1, len(monitors))
+
+		// Test GetMonitor
+		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, monitorID, retrievedMonitor.ID)
+		require.Equal(t, "Test Ping Monitor", retrievedMonitor.Name)
+
+		// Test GetMonitorAs
+		err = client.GetMonitorAs(ctx, monitorID, &pingMonitorRetrieved)
+		require.NoError(t, err)
+		pingMonitor.ID = monitorID
+		pingMonitor.PathName = pingMonitor.Name
+		require.EqualExportedValues(t, pingMonitor, pingMonitorRetrieved)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		// Test UpdateMonitor
+		pingMonitorRetrieved.Name = "Updated Ping Monitor"
+		pingMonitorRetrieved.Hostname = "1.1.1.1"
+		pingMonitorRetrieved.PacketSize = 64
+		err := client.UpdateMonitor(ctx, pingMonitorRetrieved)
+		require.NoError(t, err)
+
+		// Verify update
+		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, "Updated Ping Monitor", updatedMonitor.Name)
+
+		var updatedPing monitor.Ping
+		err = client.GetMonitorAs(ctx, monitorID, &updatedPing)
+		require.NoError(t, err)
+		require.Equal(t, "1.1.1.1", updatedPing.Hostname)
+		require.Equal(t, 64, updatedPing.PacketSize)
+	})
+
+	t.Run("pause", func(t *testing.T) {
+		// Test PauseMonitor
+		err := client.PauseMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("resume", func(t *testing.T) {
+		// Test ResumeMonitor
+		err := client.ResumeMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		// Test DeleteMonitor
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+
+		// Verify deletion
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount, len(monitors))
+	})
+}
+
 func TestClient_MonitorParent(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
