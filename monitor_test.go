@@ -638,3 +638,111 @@ func TestClient_MonitorParent(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestClient_MonitorDNSCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	// Create a test DNS monitor
+	dnsMonitor := monitor.DNS{
+		Base: monitor.Base{
+			Name:           "Test DNS Monitor",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     3,
+			UpsideDown:     false,
+			IsActive:       true,
+		},
+		DNSDetails: monitor.DNSDetails{
+			Hostname:       "example.com",
+			ResolverServer: "1.1.1.1",
+			ResolveType:    monitor.DNSResolveTypeA,
+			Port:           53,
+		},
+	}
+
+	var initialCount int
+	t.Run("initial_state", func(t *testing.T) {
+		// Test GetMonitors (should work even if empty)
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		initialCount = len(monitors)
+	})
+
+	var monitorID int64
+	var dnsMonitorRetrieved monitor.DNS
+	t.Run("create", func(t *testing.T) {
+		// Test CreateMonitor
+		monitorID, err = client.CreateMonitor(ctx, dnsMonitor)
+		require.NoError(t, err)
+		require.Greater(t, monitorID, int64(0))
+
+		// Test GetMonitors after creation
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount+1, len(monitors))
+
+		// Test GetMonitor
+		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, monitorID, retrievedMonitor.ID)
+		require.Equal(t, "Test DNS Monitor", retrievedMonitor.Name)
+
+		// Test GetMonitorAs
+		err = client.GetMonitorAs(ctx, monitorID, &dnsMonitorRetrieved)
+		require.NoError(t, err)
+		dnsMonitor.ID = monitorID
+		dnsMonitor.PathName = dnsMonitor.Name
+		require.EqualExportedValues(t, dnsMonitor, dnsMonitorRetrieved)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		// Test UpdateMonitor
+		dnsMonitorRetrieved.Name = "Updated DNS Monitor"
+		dnsMonitorRetrieved.Hostname = "cloudflare.com"
+		dnsMonitorRetrieved.ResolveType = monitor.DNSResolveTypeAAAA
+		err := client.UpdateMonitor(ctx, dnsMonitorRetrieved)
+		require.NoError(t, err)
+
+		// Verify update
+		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, "Updated DNS Monitor", updatedMonitor.Name)
+
+		var updatedDNS monitor.DNS
+		err = client.GetMonitorAs(ctx, monitorID, &updatedDNS)
+		require.NoError(t, err)
+		require.Equal(t, "cloudflare.com", updatedDNS.Hostname)
+		require.Equal(t, monitor.DNSResolveTypeAAAA, updatedDNS.ResolveType)
+	})
+
+	t.Run("pause", func(t *testing.T) {
+		// Test PauseMonitor
+		err := client.PauseMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("resume", func(t *testing.T) {
+		// Test ResumeMonitor
+		err := client.ResumeMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		// Test DeleteMonitor
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+
+		// Verify deletion
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount, len(monitors))
+	})
+}
