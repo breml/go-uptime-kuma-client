@@ -1,4 +1,4 @@
-# PEP 0004: Add Monitor TCP Port Type
+# PEP 0006: Add Monitor TCP Port Type
 
 Extend the `monitor` package in @monitor to support the monitor type "tcp port".
 

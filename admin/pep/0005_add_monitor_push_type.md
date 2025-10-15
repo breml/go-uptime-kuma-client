@@ -1,4 +1,4 @@
-# PEP 0004: Add Monitor Push Type
+# PEP 0005: Add Monitor Push Type
 
 Extend the `monitor` package in @monitor to support the monitor type "push".
 
