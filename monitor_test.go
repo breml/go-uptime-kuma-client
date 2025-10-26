@@ -967,6 +967,113 @@ func TestClient_MonitorHTTPJSONQueryCRUD(t *testing.T) {
 	})
 }
 
+func TestClient_MonitorRealBrowserCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	// Create a test RealBrowser monitor
+	realBrowserMonitor := monitor.RealBrowser{
+		Base: monitor.Base{
+			Name:           "Test RealBrowser Monitor",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     3,
+			UpsideDown:     false,
+			IsActive:       true,
+		},
+		RealBrowserDetails: monitor.RealBrowserDetails{
+			URL:                 "https://httpbin.org/status/200",
+			Timeout:             48,
+			IgnoreTLS:           false,
+			MaxRedirects:        10,
+			AcceptedStatusCodes: []string{"200-299"},
+		},
+	}
+
+	var initialCount int
+	t.Run("initial_state", func(t *testing.T) {
+		// Test GetMonitors (should work even if empty)
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		initialCount = len(monitors)
+	})
+
+	var monitorID int64
+	var realBrowserMonitorRetrieved monitor.RealBrowser
+	t.Run("create", func(t *testing.T) {
+		// Test CreateMonitor
+		monitorID, err = client.CreateMonitor(ctx, realBrowserMonitor)
+		require.NoError(t, err)
+		require.Greater(t, monitorID, int64(0))
+
+		// Test GetMonitors after creation
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount+1, len(monitors))
+
+		// Test GetMonitor
+		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, monitorID, retrievedMonitor.ID)
+		require.Equal(t, "Test RealBrowser Monitor", retrievedMonitor.Name)
+
+		// Test GetMonitorAs
+		err = client.GetMonitorAs(ctx, monitorID, &realBrowserMonitorRetrieved)
+		require.NoError(t, err)
+		realBrowserMonitor.ID = monitorID
+		realBrowserMonitor.PathName = realBrowserMonitor.Name
+		require.EqualExportedValues(t, realBrowserMonitor, realBrowserMonitorRetrieved)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		// Test UpdateMonitor
+		realBrowserMonitorRetrieved.Name = "Updated RealBrowser Monitor"
+		realBrowserMonitorRetrieved.URL = "https://httpbin.org/status/201"
+		err := client.UpdateMonitor(ctx, realBrowserMonitorRetrieved)
+		require.NoError(t, err)
+
+		// Verify update
+		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, "Updated RealBrowser Monitor", updatedMonitor.Name)
+
+		var updatedRealBrowser monitor.RealBrowser
+		err = client.GetMonitorAs(ctx, monitorID, &updatedRealBrowser)
+		require.NoError(t, err)
+		require.Equal(t, "https://httpbin.org/status/201", updatedRealBrowser.URL)
+	})
+
+	t.Run("pause", func(t *testing.T) {
+		// Test PauseMonitor
+		err := client.PauseMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("resume", func(t *testing.T) {
+		// Test ResumeMonitor
+		err := client.ResumeMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		// Test DeleteMonitor
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+
+		// Verify deletion
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount, len(monitors))
+	})
+}
+
 func TestClient_MonitorRedisCRUD(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
