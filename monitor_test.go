@@ -967,6 +967,102 @@ func TestClient_MonitorHTTPJSONQueryCRUD(t *testing.T) {
 	})
 }
 
+func TestClient_MonitorPostgresCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	// Create a test Postgres monitor
+	// Note: Using a dummy connection string that won't actually connect
+	// Integration test focuses on CRUD operations, not actual database connectivity
+	postgresMonitor := monitor.Postgres{
+		Base: monitor.Base{
+			Name:           "Test Postgres Monitor",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     3,
+			UpsideDown:     false,
+			IsActive:       false, // Keep inactive to avoid connection attempts
+		},
+		PostgresDetails: monitor.PostgresDetails{
+			DatabaseConnectionString: "postgres://testuser:testpass@localhost:5432/testdb",
+			DatabaseQuery:            "SELECT 1",
+		},
+	}
+
+	var initialCount int
+	t.Run("initial_state", func(t *testing.T) {
+		// Test GetMonitors (should work even if empty)
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		initialCount = len(monitors)
+	})
+
+	var monitorID int64
+	var postgresMonitorRetrieved monitor.Postgres
+	t.Run("create", func(t *testing.T) {
+		// Test CreateMonitor
+		monitorID, err = client.CreateMonitor(ctx, postgresMonitor)
+		require.NoError(t, err)
+		require.Greater(t, monitorID, int64(0))
+
+		// Test GetMonitors after creation
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount+1, len(monitors))
+
+		// Test GetMonitor
+		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, monitorID, retrievedMonitor.ID)
+		require.Equal(t, "Test Postgres Monitor", retrievedMonitor.Name)
+
+		// Test GetMonitorAs
+		err = client.GetMonitorAs(ctx, monitorID, &postgresMonitorRetrieved)
+		require.NoError(t, err)
+		postgresMonitor.ID = monitorID
+		postgresMonitor.PathName = postgresMonitor.Name
+		require.EqualExportedValues(t, postgresMonitor, postgresMonitorRetrieved)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		// Test UpdateMonitor
+		postgresMonitorRetrieved.Name = "Updated Postgres Monitor"
+		postgresMonitorRetrieved.DatabaseConnectionString = "postgres://newuser:newpass@localhost:5432/newdb"
+		postgresMonitorRetrieved.DatabaseQuery = "SELECT version()"
+		err := client.UpdateMonitor(ctx, postgresMonitorRetrieved)
+		require.NoError(t, err)
+
+		// Verify update
+		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, "Updated Postgres Monitor", updatedMonitor.Name)
+
+		var updatedPostgres monitor.Postgres
+		err = client.GetMonitorAs(ctx, monitorID, &updatedPostgres)
+		require.NoError(t, err)
+		require.Equal(t, "postgres://newuser:newpass@localhost:5432/newdb", updatedPostgres.DatabaseConnectionString)
+		require.Equal(t, "SELECT version()", updatedPostgres.DatabaseQuery)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		// Test DeleteMonitor
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+
+		// Verify deletion
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount, len(monitors))
+	})
+}
+
 func TestClient_MonitorRealBrowserCRUD(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
