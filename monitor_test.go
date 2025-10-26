@@ -639,6 +639,110 @@ func TestClient_MonitorParent(t *testing.T) {
 	})
 }
 
+func TestClient_MonitorHTTPKeywordCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	httpKeywordMonitor := monitor.HTTPKeyword{
+		Base: monitor.Base{
+			Name:           "Test HTTP Keyword Monitor",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     3,
+			UpsideDown:     false,
+			IsActive:       true,
+		},
+		HTTPKeywordDetails: monitor.HTTPKeywordDetails{
+			HTTPDetails: monitor.HTTPDetails{
+				URL:                 "https://httpbin.org/html",
+				Timeout:             48,
+				Method:              "GET",
+				ExpiryNotification:  false,
+				IgnoreTLS:           false,
+				MaxRedirects:        10,
+				AcceptedStatusCodes: []string{"200-299"},
+				AuthMethod:          monitor.AuthMethodNone,
+			},
+			Keyword:       "Herman Melville",
+			InvertKeyword: false,
+		},
+	}
+
+	var initialCount int
+	t.Run("initial_state", func(t *testing.T) {
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		initialCount = len(monitors)
+	})
+
+	var monitorID int64
+	var httpKeywordMonitorRetrieved monitor.HTTPKeyword
+	t.Run("create", func(t *testing.T) {
+		monitorID, err = client.CreateMonitor(ctx, httpKeywordMonitor)
+		require.NoError(t, err)
+		require.Greater(t, monitorID, int64(0))
+
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount+1, len(monitors))
+
+		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, monitorID, retrievedMonitor.ID)
+		require.Equal(t, "Test HTTP Keyword Monitor", retrievedMonitor.Name)
+
+		err = client.GetMonitorAs(ctx, monitorID, &httpKeywordMonitorRetrieved)
+		require.NoError(t, err)
+		httpKeywordMonitor.ID = monitorID
+		httpKeywordMonitor.PathName = httpKeywordMonitor.Name
+		require.EqualExportedValues(t, httpKeywordMonitor, httpKeywordMonitorRetrieved)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		httpKeywordMonitorRetrieved.Name = "Updated HTTP Keyword Monitor"
+		httpKeywordMonitorRetrieved.Keyword = "Moby Dick"
+		httpKeywordMonitorRetrieved.InvertKeyword = true
+		err := client.UpdateMonitor(ctx, httpKeywordMonitorRetrieved)
+		require.NoError(t, err)
+
+		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, "Updated HTTP Keyword Monitor", updatedMonitor.Name)
+
+		var updatedHTTPKeyword monitor.HTTPKeyword
+		err = client.GetMonitorAs(ctx, monitorID, &updatedHTTPKeyword)
+		require.NoError(t, err)
+		require.Equal(t, "Moby Dick", updatedHTTPKeyword.Keyword)
+		require.Equal(t, true, updatedHTTPKeyword.InvertKeyword)
+	})
+
+	t.Run("pause", func(t *testing.T) {
+		err := client.PauseMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("resume", func(t *testing.T) {
+		err := client.ResumeMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount, len(monitors))
+	})
+}
+
 func TestClient_MonitorDNSCRUD(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
