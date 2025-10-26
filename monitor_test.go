@@ -967,6 +967,109 @@ func TestClient_MonitorHTTPJSONQueryCRUD(t *testing.T) {
 	})
 }
 
+func TestClient_MonitorRedisCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	// Create a test Redis monitor
+	redisMonitor := monitor.Redis{
+		Base: monitor.Base{
+			Name:           "Test Redis Monitor",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     3,
+			UpsideDown:     false,
+			IsActive:       true,
+		},
+		RedisDetails: monitor.RedisDetails{
+			ConnectionString: "redis://localhost:6379",
+		},
+	}
+
+	var initialCount int
+	t.Run("initial_state", func(t *testing.T) {
+		// Test GetMonitors (should work even if empty)
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		initialCount = len(monitors)
+	})
+
+	var monitorID int64
+	var redisMonitorRetrieved monitor.Redis
+	t.Run("create", func(t *testing.T) {
+		// Test CreateMonitor
+		monitorID, err = client.CreateMonitor(ctx, redisMonitor)
+		require.NoError(t, err)
+		require.Greater(t, monitorID, int64(0))
+
+		// Test GetMonitors after creation
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount+1, len(monitors))
+
+		// Test GetMonitor
+		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, monitorID, retrievedMonitor.ID)
+		require.Equal(t, "Test Redis Monitor", retrievedMonitor.Name)
+
+		// Test GetMonitorAs
+		err = client.GetMonitorAs(ctx, monitorID, &redisMonitorRetrieved)
+		require.NoError(t, err)
+		redisMonitor.ID = monitorID
+		redisMonitor.PathName = redisMonitor.Name
+		require.EqualExportedValues(t, redisMonitor, redisMonitorRetrieved)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		// Test UpdateMonitor
+		redisMonitorRetrieved.Name = "Updated Redis Monitor"
+		redisMonitorRetrieved.ConnectionString = "redis://user:password@localhost:6380"
+		err := client.UpdateMonitor(ctx, redisMonitorRetrieved)
+		require.NoError(t, err)
+
+		// Verify update
+		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, "Updated Redis Monitor", updatedMonitor.Name)
+
+		var updatedRedis monitor.Redis
+		err = client.GetMonitorAs(ctx, monitorID, &updatedRedis)
+		require.NoError(t, err)
+		require.Equal(t, "redis://user:password@localhost:6380", updatedRedis.ConnectionString)
+	})
+
+	t.Run("pause", func(t *testing.T) {
+		// Test PauseMonitor
+		err := client.PauseMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("resume", func(t *testing.T) {
+		// Test ResumeMonitor
+		err := client.ResumeMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		// Test DeleteMonitor
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+
+		// Verify deletion
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount, len(monitors))
+	})
+}
+
 func TestClient_MonitorGrpcKeywordCRUD(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
