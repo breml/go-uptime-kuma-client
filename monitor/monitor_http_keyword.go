@@ -54,6 +54,8 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	raw["type"] = "keyword"
 	raw["name"] = h.Name
 	raw["description"] = h.Description
+	// Don't set pathName, server generates it.
+	// raw["pathName"] = h.PathName
 	raw["parent"] = h.Parent
 	raw["interval"] = h.Interval
 	raw["retryInterval"] = h.RetryInterval
@@ -62,12 +64,14 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	raw["upsideDown"] = h.UpsideDown
 	raw["active"] = h.IsActive
 
+	// Update notification IDs.
 	ids := map[string]bool{}
 	for _, id := range h.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
 	raw["notificationIDList"] = ids
 
+	// Always override with current HTTP-specific field values.
 	raw["url"] = h.URL
 	raw["timeout"] = h.Timeout
 	raw["expiryNotification"] = h.ExpiryNotification
@@ -92,6 +96,8 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	raw["oauth_client_id"] = h.OAuthClientID
 	raw["oauth_client_secret"] = h.OAuthClientSecret
 	raw["oauth_scopes"] = h.OAuthScopes
+
+	// Always override with current keyword-specific field values.
 	raw["keyword"] = h.Keyword
 	raw["invertKeyword"] = h.InvertKeyword
 

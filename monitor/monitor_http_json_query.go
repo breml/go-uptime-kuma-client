@@ -71,7 +71,7 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	}
 	raw["notificationIDList"] = ids
 
-	// HTTP-specific fields
+	// Always override with current HTTP-specific field values.
 	raw["url"] = h.URL
 	raw["timeout"] = h.Timeout
 	raw["expiryNotification"] = h.ExpiryNotification
@@ -97,7 +97,7 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	raw["oauth_client_secret"] = h.OAuthClientSecret
 	raw["oauth_scopes"] = h.OAuthScopes
 
-	// JSON Query specific fields
+	// Always override with current JSON Query-specific field values.
 	raw["jsonPath"] = h.JSONPath
 	raw["expectedValue"] = h.ExpectedValue
 

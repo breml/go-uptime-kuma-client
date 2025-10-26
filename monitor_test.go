@@ -140,7 +140,7 @@ func TestClient_MonitorGroupCRUD(t *testing.T) {
 			ResendInterval: 0,
 			MaxRetries:     0,
 			UpsideDown:     false,
-			IsActive:       false,
+			IsActive:       true,
 		},
 	}
 
@@ -194,6 +194,18 @@ func TestClient_MonitorGroupCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &updatedGroup)
 		require.NoError(t, err)
 		require.Equal(t, "Updated Group Monitor", updatedGroup.Name)
+	})
+
+	t.Run("pause", func(t *testing.T) {
+		// Test PauseMonitor
+		err := client.PauseMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("resume", func(t *testing.T) {
+		// Test ResumeMonitor
+		err := client.ResumeMonitor(ctx, monitorID)
+		require.NoError(t, err)
 	})
 
 	t.Run("delete", func(t *testing.T) {
