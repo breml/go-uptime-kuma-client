@@ -850,3 +850,119 @@ func TestClient_MonitorDNSCRUD(t *testing.T) {
 		require.Equal(t, initialCount, len(monitors))
 	})
 }
+
+func TestClient_MonitorHTTPJSONQueryCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	// Create a test HTTP JSON Query monitor
+	jsonQueryMonitor := monitor.HTTPJSONQuery{
+		Base: monitor.Base{
+			Name:           "Test JSON Query Monitor",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     3,
+			UpsideDown:     false,
+			IsActive:       true,
+		},
+		HTTPDetails: monitor.HTTPDetails{
+			URL:                 "https://httpbin.org/json",
+			Timeout:             48,
+			Method:              "GET",
+			ExpiryNotification:  false,
+			IgnoreTLS:           false,
+			MaxRedirects:        10,
+			AcceptedStatusCodes: []string{"200-299"},
+			AuthMethod:          monitor.AuthMethodNone,
+		},
+		HTTPJSONQueryDetails: monitor.HTTPJSONQueryDetails{
+			JSONPath:      "slideshow.title",
+			ExpectedValue: "Sample Slide Show",
+		},
+	}
+
+	var initialCount int
+	t.Run("initial_state", func(t *testing.T) {
+		// Test GetMonitors (should work even if empty)
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		initialCount = len(monitors)
+	})
+
+	var monitorID int64
+	var jsonQueryMonitorRetrieved monitor.HTTPJSONQuery
+	t.Run("create", func(t *testing.T) {
+		// Test CreateMonitor
+		monitorID, err = client.CreateMonitor(ctx, jsonQueryMonitor)
+		require.NoError(t, err)
+		require.Greater(t, monitorID, int64(0))
+
+		// Test GetMonitors after creation
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount+1, len(monitors))
+
+		// Test GetMonitor
+		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, monitorID, retrievedMonitor.ID)
+		require.Equal(t, "Test JSON Query Monitor", retrievedMonitor.Name)
+
+		// Test GetMonitorAs
+		err = client.GetMonitorAs(ctx, monitorID, &jsonQueryMonitorRetrieved)
+		require.NoError(t, err)
+		jsonQueryMonitor.ID = monitorID
+		jsonQueryMonitor.PathName = jsonQueryMonitor.Name
+		require.EqualExportedValues(t, jsonQueryMonitor, jsonQueryMonitorRetrieved)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		// Test UpdateMonitor
+		jsonQueryMonitorRetrieved.Name = "Updated JSON Query Monitor"
+		jsonQueryMonitorRetrieved.JSONPath = "slideshow.author"
+		jsonQueryMonitorRetrieved.ExpectedValue = "Yours Truly"
+		err := client.UpdateMonitor(ctx, jsonQueryMonitorRetrieved)
+		require.NoError(t, err)
+
+		// Verify update
+		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, "Updated JSON Query Monitor", updatedMonitor.Name)
+
+		var updatedJSONQuery monitor.HTTPJSONQuery
+		err = client.GetMonitorAs(ctx, monitorID, &updatedJSONQuery)
+		require.NoError(t, err)
+		require.Equal(t, "slideshow.author", updatedJSONQuery.JSONPath)
+		require.Equal(t, "Yours Truly", updatedJSONQuery.ExpectedValue)
+	})
+
+	t.Run("pause", func(t *testing.T) {
+		// Test PauseMonitor
+		err := client.PauseMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("resume", func(t *testing.T) {
+		// Test ResumeMonitor
+		err := client.ResumeMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		// Test DeleteMonitor
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+
+		// Verify deletion
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount, len(monitors))
+	})
+}
