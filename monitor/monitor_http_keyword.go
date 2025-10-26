@@ -8,6 +8,7 @@ import (
 
 type HTTPKeyword struct {
 	Base
+	HTTPDetails
 	HTTPKeywordDetails
 }
 
@@ -16,7 +17,7 @@ func (h HTTPKeyword) Type() string {
 }
 
 func (h HTTPKeyword) String() string {
-	return fmt.Sprintf("%s, %s", formatMonitor(h.Base, false), formatMonitor(h.HTTPKeywordDetails, true))
+	return fmt.Sprintf("%s, %s, %s", formatMonitor(h.Base, false), formatMonitor(h.HTTPDetails, true), formatMonitor(h.HTTPKeywordDetails, true))
 }
 
 func (h *HTTPKeyword) UnmarshalJSON(data []byte) error {
@@ -26,15 +27,22 @@ func (h *HTTPKeyword) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	details := HTTPKeywordDetails{}
-	err = json.Unmarshal(data, &details)
+	httpDetails := HTTPDetails{}
+	err = json.Unmarshal(data, &httpDetails)
+	if err != nil {
+		return err
+	}
+
+	keywordDetails := HTTPKeywordDetails{}
+	err = json.Unmarshal(data, &keywordDetails)
 	if err != nil {
 		return err
 	}
 
 	*h = HTTPKeyword{
 		Base:               base,
-		HTTPKeywordDetails: details,
+		HTTPDetails:        httpDetails,
+		HTTPKeywordDetails: keywordDetails,
 	}
 
 	return nil
@@ -91,7 +99,6 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 }
 
 type HTTPKeywordDetails struct {
-	HTTPDetails
 	Keyword       string `json:"keyword"`
 	InvertKeyword bool   `json:"invertKeyword"`
 }
