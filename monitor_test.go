@@ -966,3 +966,109 @@ func TestClient_MonitorHTTPJSONQueryCRUD(t *testing.T) {
 		require.Equal(t, initialCount, len(monitors))
 	})
 }
+
+func TestClient_MonitorGrpcKeywordCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	// Create a test gRPC Keyword monitor
+	grpcKeywordMonitor := monitor.GrpcKeyword{
+		Base: monitor.Base{
+			Name:           "Test gRPC Keyword Monitor",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     3,
+			UpsideDown:     false,
+			IsActive:       false, // Set to false to avoid actual gRPC calls during testing
+		},
+		GrpcKeywordDetails: monitor.GrpcKeywordDetails{
+			GrpcURL:             "localhost:50051",
+			GrpcProtobuf:        "syntax = \"proto3\";\n\npackage grpc.health.v1;\n\nservice Health {\n  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);\n}\n\nmessage HealthCheckRequest {\n  string service = 1;\n}\n\nmessage HealthCheckResponse {\n  enum ServingStatus {\n    UNKNOWN = 0;\n    SERVING = 1;\n    NOT_SERVING = 2;\n  }\n  ServingStatus status = 1;\n}\n",
+			GrpcServiceName:     "Health",
+			GrpcMethod:          "Check",
+			GrpcEnableTLS:       false,
+			GrpcBody:            "{\"service\":\"\"}",
+			Keyword:             "SERVING",
+			InvertKeyword:       false,
+			MaxRedirects:        10,
+			AcceptedStatusCodes: []string{"200-299"},
+		},
+	}
+
+	var initialCount int
+	t.Run("initial_state", func(t *testing.T) {
+		// Test GetMonitors (should work even if empty)
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		initialCount = len(monitors)
+	})
+
+	var monitorID int64
+	var grpcKeywordMonitorRetrieved monitor.GrpcKeyword
+	t.Run("create", func(t *testing.T) {
+		// Test CreateMonitor
+		monitorID, err = client.CreateMonitor(ctx, grpcKeywordMonitor)
+		require.NoError(t, err)
+		require.Greater(t, monitorID, int64(0))
+
+		// Test GetMonitors after creation
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount+1, len(monitors))
+
+		// Test GetMonitor
+		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, monitorID, retrievedMonitor.ID)
+		require.Equal(t, "Test gRPC Keyword Monitor", retrievedMonitor.Name)
+
+		// Test GetMonitorAs
+		err = client.GetMonitorAs(ctx, monitorID, &grpcKeywordMonitorRetrieved)
+		require.NoError(t, err)
+		grpcKeywordMonitor.ID = monitorID
+		grpcKeywordMonitor.PathName = grpcKeywordMonitor.Name
+		require.EqualExportedValues(t, grpcKeywordMonitor, grpcKeywordMonitorRetrieved)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		// Test UpdateMonitor
+		grpcKeywordMonitorRetrieved.Name = "Updated gRPC Keyword Monitor"
+		grpcKeywordMonitorRetrieved.GrpcURL = "example.com:443"
+		grpcKeywordMonitorRetrieved.Keyword = "NOT_SERVING"
+		grpcKeywordMonitorRetrieved.InvertKeyword = true
+		grpcKeywordMonitorRetrieved.GrpcEnableTLS = true
+		err := client.UpdateMonitor(ctx, grpcKeywordMonitorRetrieved)
+		require.NoError(t, err)
+
+		// Verify update
+		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, "Updated gRPC Keyword Monitor", updatedMonitor.Name)
+
+		var updatedGrpcKeyword monitor.GrpcKeyword
+		err = client.GetMonitorAs(ctx, monitorID, &updatedGrpcKeyword)
+		require.NoError(t, err)
+		require.Equal(t, "example.com:443", updatedGrpcKeyword.GrpcURL)
+		require.Equal(t, "NOT_SERVING", updatedGrpcKeyword.Keyword)
+		require.Equal(t, true, updatedGrpcKeyword.InvertKeyword)
+		require.Equal(t, true, updatedGrpcKeyword.GrpcEnableTLS)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		// Test DeleteMonitor
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+
+		// Verify deletion
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount, len(monitors))
+	})
+}
