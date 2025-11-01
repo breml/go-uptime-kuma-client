@@ -19,6 +19,7 @@ import (
 
 	"github.com/breml/go-uptime-kuma-client/monitor"
 	"github.com/breml/go-uptime-kuma-client/notification"
+	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
 
 var ErrNotFound = fmt.Errorf("not found")
@@ -67,6 +68,7 @@ type setupDatabaseResponse struct {
 type state struct {
 	notifications []notification.Base
 	monitors      []monitor.Base
+	statusPages   map[int64]statuspage.StatusPage
 }
 
 type Client struct {
@@ -279,6 +281,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		"monitorList":      empty,
 		"maintenanceList":  empty,
 		"notificationList": empty,
+		"statusPageList":   empty,
 		"proxyList":        empty,
 		"dockerHostList":   empty,
 		"apiKeyList":       empty,
@@ -364,6 +367,14 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		c.updates.Emit(ctx, "deleteMonitorFromList")
 	})
 
+	client.On("statusPageList", func(statusPageMap map[int64]statuspage.StatusPage) {
+		c.mu.Lock()
+		c.state.statusPages = statusPageMap
+		defer c.mu.Unlock()
+
+		c.updates.Emit(ctx, "statusPageList")
+	})
+
 	connect := make(chan struct{})
 	closeConnect := sync.OnceFunc(func() {
 		close(connect)
@@ -387,7 +398,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	client.OnAny(func(s string, i []any) {
-		if s != "notificationList" && s != "monitorList" {
+		if s != "notificationList" && s != "monitorList" && s != "statusPageList" {
 			c.updates.Emit(ctx, s)
 		}
 	})
@@ -455,14 +466,17 @@ func (c *Client) Disconnect() error {
 }
 
 type ackResponse struct {
-	Msg       string         `json:"msg"`
-	OK        bool           `json:"ok"`
-	ID        int64          `json:"id"`
-	MonitorID int64          `json:"monitorID"`
-	Monitor   map[string]any `json:"monitor"`
-	Data      map[string]any `json:"data"`
-	Tags      []any          `json:"tags"`
-	Tag       map[string]any `json:"tag"`
+	Msg             string         `json:"msg"`
+	OK              bool           `json:"ok"`
+	ID              int64          `json:"id"`
+	MonitorID       int64          `json:"monitorID"`
+	Monitor         map[string]any `json:"monitor"`
+	Data            map[string]any `json:"data"`
+	Tags            []any          `json:"tags"`
+	Tag             map[string]any `json:"tag"`
+	Config          map[string]any `json:"config"`
+	PublicGroupList []any          `json:"publicGroupList"`
+	Incident        map[string]any `json:"incident"`
 }
 
 func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
