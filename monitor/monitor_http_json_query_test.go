@@ -69,7 +69,7 @@ func TestMonitorHTTPJSONQuery_Unmarshal(t *testing.T) {
 					ExpectedValue: "ok",
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"","authWorkstation":"","basic_auth_pass":"","basic_auth_user":"","body":"","description":"API health check","expectedValue":"ok","expiryNotification":false,"headers":"","httpBodyEncoding":"json","id":3,"ignoreTls":false,"interval":60,"jsonPath":"status","maxredirects":10,"maxretries":2,"method":"GET","name":"api.example.com","notificationIDList":{"1":true},"oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":1,"proxyId":null,"resendInterval":0,"retryInterval":60,"timeout":48,"tlsCa":"","tlsCert":"","tlsKey":"","type":"json-query","upsideDown":false,"url":"https://api.example.com/health"}`,
+			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"","authWorkstation":"","basic_auth_pass":"","basic_auth_user":"","body":"","conditions":[],"description":"API health check","expectedValue":"ok","expiryNotification":false,"headers":"","httpBodyEncoding":"json","id":3,"ignoreTls":false,"interval":60,"jsonPath":"status","maxredirects":10,"maxretries":2,"method":"GET","name":"api.example.com","notificationIDList":{"1":true},"oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":1,"proxyId":null,"resendInterval":0,"retryInterval":60,"timeout":48,"tlsCa":"","tlsCert":"","tlsKey":"","type":"json-query","upsideDown":false,"url":"https://api.example.com/health"}`,
 		},
 	}
 

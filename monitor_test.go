@@ -75,7 +75,8 @@ func TestClient_MonitorCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &httpMonitorRetrieved)
 		require.NoError(t, err)
 		httpMonitor.ID = monitorID
-		httpMonitor.PathName = httpMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// httpMonitor.PathName = httpMonitor.Name
 		require.EqualExportedValues(t, httpMonitor, httpMonitorRetrieved)
 	})
 
@@ -175,7 +176,8 @@ func TestClient_MonitorGroupCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &groupMonitorRetrieved)
 		require.NoError(t, err)
 		groupMonitor.ID = monitorID
-		groupMonitor.PathName = groupMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// groupMonitor.PathName = groupMonitor.Name
 		require.EqualExportedValues(t, groupMonitor, groupMonitorRetrieved)
 	})
 
@@ -278,7 +280,8 @@ func TestClient_MonitorPingCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &pingMonitorRetrieved)
 		require.NoError(t, err)
 		pingMonitor.ID = monitorID
-		pingMonitor.PathName = pingMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// pingMonitor.PathName = pingMonitor.Name
 		require.EqualExportedValues(t, pingMonitor, pingMonitorRetrieved)
 	})
 
@@ -383,7 +386,8 @@ func TestClient_MonitorPushCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &pushMonitorRetrieved)
 		require.NoError(t, err)
 		pushMonitor.ID = monitorID
-		pushMonitor.PathName = pushMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// pushMonitor.PathName = pushMonitor.Name
 		require.EqualExportedValues(t, pushMonitor, pushMonitorRetrieved)
 		require.NotEmpty(t, pushMonitorRetrieved.PushToken)
 	})
@@ -476,7 +480,8 @@ func TestClient_MonitorTCPPortCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &tcpPortMonitorRetrieved)
 		require.NoError(t, err)
 		tcpPortMonitor.ID = monitorID
-		tcpPortMonitor.PathName = tcpPortMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// tcpPortMonitor.PathName = tcpPortMonitor.Name
 		require.EqualExportedValues(t, tcpPortMonitor, tcpPortMonitorRetrieved)
 	})
 
@@ -713,7 +718,8 @@ func TestClient_MonitorHTTPKeywordCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &httpKeywordMonitorRetrieved)
 		require.NoError(t, err)
 		httpKeywordMonitor.ID = monitorID
-		httpKeywordMonitor.PathName = httpKeywordMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// httpKeywordMonitor.PathName = httpKeywordMonitor.Name
 		require.EqualExportedValues(t, httpKeywordMonitor, httpKeywordMonitorRetrieved)
 	})
 
@@ -815,7 +821,8 @@ func TestClient_MonitorDNSCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &dnsMonitorRetrieved)
 		require.NoError(t, err)
 		dnsMonitor.ID = monitorID
-		dnsMonitor.PathName = dnsMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// dnsMonitor.PathName = dnsMonitor.Name
 		require.EqualExportedValues(t, dnsMonitor, dnsMonitorRetrieved)
 	})
 
@@ -931,7 +938,8 @@ func TestClient_MonitorHTTPJSONQueryCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &jsonQueryMonitorRetrieved)
 		require.NoError(t, err)
 		jsonQueryMonitor.ID = monitorID
-		jsonQueryMonitor.PathName = jsonQueryMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// jsonQueryMonitor.PathName = jsonQueryMonitor.Name
 		require.EqualExportedValues(t, jsonQueryMonitor, jsonQueryMonitorRetrieved)
 	})
 
@@ -1039,7 +1047,8 @@ func TestClient_MonitorPostgresCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &postgresMonitorRetrieved)
 		require.NoError(t, err)
 		postgresMonitor.ID = monitorID
-		postgresMonitor.PathName = postgresMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// postgresMonitor.PathName = postgresMonitor.Name
 		require.EqualExportedValues(t, postgresMonitor, postgresMonitorRetrieved)
 	})
 
@@ -1136,7 +1145,8 @@ func TestClient_MonitorRealBrowserCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &realBrowserMonitorRetrieved)
 		require.NoError(t, err)
 		realBrowserMonitor.ID = monitorID
-		realBrowserMonitor.PathName = realBrowserMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// realBrowserMonitor.PathName = realBrowserMonitor.Name
 		require.EqualExportedValues(t, realBrowserMonitor, realBrowserMonitorRetrieved)
 	})
 
@@ -1239,7 +1249,8 @@ func TestClient_MonitorRedisCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &redisMonitorRetrieved)
 		require.NoError(t, err)
 		redisMonitor.ID = monitorID
-		redisMonitor.PathName = redisMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// redisMonitor.PathName = redisMonitor.Name
 		require.EqualExportedValues(t, redisMonitor, redisMonitorRetrieved)
 	})
 
@@ -1351,7 +1362,8 @@ func TestClient_MonitorGrpcKeywordCRUD(t *testing.T) {
 		err = client.GetMonitorAs(ctx, monitorID, &grpcKeywordMonitorRetrieved)
 		require.NoError(t, err)
 		grpcKeywordMonitor.ID = monitorID
-		grpcKeywordMonitor.PathName = grpcKeywordMonitor.Name
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// grpcKeywordMonitor.PathName = grpcKeywordMonitor.Name
 		require.EqualExportedValues(t, grpcKeywordMonitor, grpcKeywordMonitorRetrieved)
 	})
 

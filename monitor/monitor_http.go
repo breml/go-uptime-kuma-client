@@ -89,6 +89,9 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw["oauth_client_secret"] = h.OAuthClientSecret
 	raw["oauth_scopes"] = h.OAuthScopes
 
+	// Uptime Kuma v2 requires conditions field (empty array by default)
+	raw["conditions"] = []any{}
+
 	return json.Marshal(raw)
 }
 

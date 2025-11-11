@@ -45,7 +45,7 @@ func TestMonitorDNS_Unmarshal(t *testing.T) {
 					Port:           53,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"description":"Test DNS monitor","dns_resolve_server":"1.1.1.1","dns_resolve_type":"A","hostname":"example.com","id":5,"interval":60,"maxretries":2,"name":"dns-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":53,"resendInterval":0,"retryInterval":60,"type":"dns","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test DNS monitor","dns_resolve_server":"1.1.1.1","dns_resolve_type":"A","hostname":"example.com","id":5,"interval":60,"maxretries":2,"name":"dns-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":53,"resendInterval":0,"retryInterval":60,"type":"dns","upsideDown":false}`,
 		},
 	}
 

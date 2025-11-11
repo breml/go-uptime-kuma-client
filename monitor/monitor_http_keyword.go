@@ -101,6 +101,9 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	raw["keyword"] = h.Keyword
 	raw["invertKeyword"] = h.InvertKeyword
 
+	// Uptime Kuma v2 requires conditions field (empty array by default)
+	raw["conditions"] = []any{}
+
 	return json.Marshal(raw)
 }
 

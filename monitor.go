@@ -74,7 +74,7 @@ func (c *Client) CreateMonitor(ctx context.Context, mon monitor.Monitor) (int64,
 	}
 	monitorData["notificationIDList"] = notificationIDList
 
-	response, err := c.syncEmitWithUpdateEvent(ctx, "add", "monitorList", monitorData)
+	response, err := c.syncEmitWithUpdateEvent(ctx, "add", "updateMonitorIntoList", monitorData)
 	if err != nil {
 		return 0, fmt.Errorf("create monitor: %v", err)
 	}
@@ -101,7 +101,7 @@ func (c *Client) UpdateMonitor(ctx context.Context, mon monitor.Monitor) error {
 	}
 	monitorData["notificationIDList"] = notificationIDList
 
-	_, err = c.syncEmitWithUpdateEvent(ctx, "editMonitor", "monitorList", monitorData)
+	_, err = c.syncEmitWithUpdateEvent(ctx, "editMonitor", "updateMonitorIntoList", monitorData)
 	if err != nil {
 		return fmt.Errorf("update monitor %d: %v", mon.GetID(), err)
 	}
@@ -111,7 +111,7 @@ func (c *Client) UpdateMonitor(ctx context.Context, mon monitor.Monitor) error {
 
 // DeleteMonitor deletes a monitor by ID.
 func (c *Client) DeleteMonitor(ctx context.Context, monitorID int64) error {
-	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteMonitor", "monitorList", monitorID)
+	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteMonitor", "deleteMonitorFromList", monitorID)
 	if err != nil {
 		return fmt.Errorf("delete monitor %d: %v", monitorID, err)
 	}
@@ -121,7 +121,7 @@ func (c *Client) DeleteMonitor(ctx context.Context, monitorID int64) error {
 
 // PauseMonitor pauses a monitor by ID.
 func (c *Client) PauseMonitor(ctx context.Context, monitorID int64) error {
-	_, err := c.syncEmitWithUpdateEvent(ctx, "pauseMonitor", "monitorList", monitorID)
+	_, err := c.syncEmitWithUpdateEvent(ctx, "pauseMonitor", "updateMonitorIntoList", monitorID)
 	if err != nil {
 		return fmt.Errorf("pause monitor %d: %v", monitorID, err)
 	}
@@ -131,7 +131,7 @@ func (c *Client) PauseMonitor(ctx context.Context, monitorID int64) error {
 
 // ResumeMonitor resumes a monitor by ID.
 func (c *Client) ResumeMonitor(ctx context.Context, monitorID int64) error {
-	_, err := c.syncEmitWithUpdateEvent(ctx, "resumeMonitor", "monitorList", monitorID)
+	_, err := c.syncEmitWithUpdateEvent(ctx, "resumeMonitor", "updateMonitorIntoList", monitorID)
 	if err != nil {
 		return fmt.Errorf("resume monitor %d: %v", monitorID, err)
 	}

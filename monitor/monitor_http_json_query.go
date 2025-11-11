@@ -101,6 +101,9 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	raw["jsonPath"] = h.JSONPath
 	raw["expectedValue"] = h.ExpectedValue
 
+	// Uptime Kuma v2 requires conditions field (empty array by default)
+	raw["conditions"] = []any{}
+
 	return json.Marshal(raw)
 }
 
