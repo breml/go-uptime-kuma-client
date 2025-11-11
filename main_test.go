@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:       fmt.Sprintf("uptime-kuma-%s", randomString(8)),
 		Repository: "louislam/uptime-kuma",
-		Tag:        "1",
+		Tag:        "2",
 	}, func(config *docker.HostConfig) {
 		// set AutoRemove to true so that stopped container goes away by itself
 		config.AutoRemove = true

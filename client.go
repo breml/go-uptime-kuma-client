@@ -1,8 +1,12 @@
 package kuma
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -44,6 +48,22 @@ func LogLevel(level string) int {
 
 var empty = struct{}{}
 
+type entryPageResponse struct {
+	Type string `json:"type"`
+}
+
+type dbConfig struct {
+	Type string `json:"type"`
+}
+
+type setupDatabaseRequest struct {
+	DBConfig dbConfig `json:"dbConfig"`
+}
+
+type setupDatabaseResponse struct {
+	OK bool `json:"ok"`
+}
+
 type state struct {
 	notifications []notification.Base
 	monitors      []monitor.Base
@@ -75,6 +95,155 @@ func WithLogLevel(level int) Option {
 	}
 }
 
+// setupDatabase handles the database setup phase for Uptime Kuma v2.
+// It checks if database setup is needed and configures SQLite if required.
+// The function will wait for the server to restart after database configuration.
+func setupDatabase(ctx context.Context, baseURL string) error {
+	// Convert socket.io URL to HTTP URL
+	httpURL := strings.Replace(baseURL, "ws://", "http://", 1)
+	httpURL = strings.Replace(httpURL, "wss://", "https://", 1)
+
+	// Check if database setup is needed
+	entryPageURL := httpURL + "/api/entry-page"
+
+	var entryPage entryPageResponse
+
+	// Check if parent context is already cancelled
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	// Check entry-page without retry - let the caller (pool.Retry) handle retries
+	// Use a longer timeout for the HTTP request itself, independent of parent context
+	httpCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(httpCtx, "GET", entryPageURL, nil)
+	if err != nil {
+		return fmt.Errorf("create entry-page request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		// Return connection errors as-is so caller can retry
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("entry-page returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read entry-page response: %w", err)
+	}
+
+	if err := json.Unmarshal(body, &entryPage); err != nil {
+		return fmt.Errorf("parse entry-page response: %w", err)
+	}
+
+	// If database setup is not needed, return early
+	if entryPage.Type != "setup-database" {
+		return nil
+	}
+
+	// Configure database with SQLite
+	setupDBURL := httpURL + "/setup-database"
+	setupReq := setupDatabaseRequest{
+		DBConfig: dbConfig{
+			Type: "sqlite",
+		},
+	}
+
+	reqBody, err := json.Marshal(setupReq)
+	if err != nil {
+		return fmt.Errorf("marshal setup request: %w", err)
+	}
+
+	httpCtx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req, err = http.NewRequestWithContext(httpCtx, "POST", setupDBURL, bytes.NewReader(reqBody))
+	if err != nil {
+		return fmt.Errorf("create setup-database request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("setup database: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("setup-database returned status %d", resp.StatusCode)
+	}
+
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read setup-database response: %w", err)
+	}
+
+	var setupResp setupDatabaseResponse
+	if err := json.Unmarshal(body, &setupResp); err != nil {
+		return fmt.Errorf("parse setup-database response: %w", err)
+	}
+
+	if !setupResp.OK {
+		return fmt.Errorf("setup-database failed")
+	}
+
+	// Wait for server to restart by polling entry-page until it changes
+	// The server should transition from "setup-database" to "setup" (user setup)
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	timeout := time.After(30 * time.Second)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("wait for server restart: %w", ctx.Err())
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for server restart")
+		case <-ticker.C:
+			// Use a short timeout for each poll attempt
+			pollCtx, pollCancel := context.WithTimeout(context.Background(), 2*time.Second)
+			req, err := http.NewRequestWithContext(pollCtx, "GET", entryPageURL, nil)
+			if err != nil {
+				pollCancel()
+				continue
+			}
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				pollCancel()
+				continue
+			}
+
+			body, err := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			pollCancel()
+			if err != nil {
+				continue
+			}
+
+			var checkEntryPage entryPageResponse
+			if err := json.Unmarshal(body, &checkEntryPage); err != nil {
+				continue
+			}
+
+			// If entry page type changed from "setup-database", server has restarted
+			if checkEntryPage.Type != "setup-database" {
+				return nil
+			}
+		}
+	}
+}
+
 func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
 	c := &Client{
 		socketioLogger: &utils.DefaultLogger{Level: utils.NONE},
@@ -85,6 +254,13 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	for _, opt := range opts {
 		opt(c)
+	}
+
+	// Handle database setup for Uptime Kuma v2 if autosetup is enabled
+	if c.autosetup {
+		if err := setupDatabase(ctx, baseURL); err != nil {
+			return nil, fmt.Errorf("database setup: %w", err)
+		}
 	}
 
 	client, err := socketio.NewClient(
@@ -201,7 +377,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			default:
 			}
 
-			if !strings.Contains(err.Error(), "Incorrect username or password") || !wantSetup {
+			if (!strings.Contains(err.Error(), "Incorrect username or password") && !strings.Contains(err.Error(), "authIncorrectCreds")) || !wantSetup {
 				return nil, fmt.Errorf("login: %v", err)
 			}
 		}
