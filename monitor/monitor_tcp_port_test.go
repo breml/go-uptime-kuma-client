@@ -43,7 +43,7 @@ func TestMonitorTCPPort_Unmarshal(t *testing.T) {
 					Port:     8080,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"description":"Test TCP Port monitor","hostname":"example.com","id":4,"interval":60,"maxretries":2,"name":"tcp-port-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":8080,"resendInterval":0,"retryInterval":60,"type":"port","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test TCP Port monitor","hostname":"example.com","id":4,"interval":60,"maxretries":2,"name":"tcp-port-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":8080,"resendInterval":0,"retryInterval":60,"type":"port","upsideDown":false}`,
 		},
 	}
 

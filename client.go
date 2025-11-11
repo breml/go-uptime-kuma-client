@@ -130,7 +130,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 		// Return connection errors as-is so caller can retry
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("entry-page returned status %d", resp.StatusCode)
@@ -176,7 +176,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	if err != nil {
 		return fmt.Errorf("setup database: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("setup-database returned status %d", resp.StatusCode)
@@ -225,7 +225,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 			}
 
 			body, err := io.ReadAll(resp.Body)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			pollCancel()
 			if err != nil {
 				continue
@@ -323,6 +323,45 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		c.state.monitors = monitors
 
 		c.updates.Emit(ctx, "monitorList")
+	})
+
+	// Uptime Kuma v2 sends updateMonitorIntoList for individual monitor updates (add/edit/pause/resume)
+	client.On("updateMonitorIntoList", func(monitorMap map[string]monitor.Base) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		// Update or add the monitors in the map to our state
+		for _, updatedMonitor := range monitorMap {
+			found := false
+			for i, existingMonitor := range c.state.monitors {
+				if existingMonitor.ID == updatedMonitor.ID {
+					c.state.monitors[i] = updatedMonitor
+					found = true
+					break
+				}
+			}
+			if !found {
+				c.state.monitors = append(c.state.monitors, updatedMonitor)
+			}
+		}
+
+		c.updates.Emit(ctx, "updateMonitorIntoList")
+	})
+
+	// Uptime Kuma v2 sends deleteMonitorFromList when a monitor is deleted
+	client.On("deleteMonitorFromList", func(monitorID int64) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		// Remove the monitor from our state
+		for i, existingMonitor := range c.state.monitors {
+			if existingMonitor.ID == monitorID {
+				c.state.monitors = append(c.state.monitors[:i], c.state.monitors[i+1:]...)
+				break
+			}
+		}
+
+		c.updates.Emit(ctx, "deleteMonitorFromList")
 	})
 
 	connect := make(chan struct{})

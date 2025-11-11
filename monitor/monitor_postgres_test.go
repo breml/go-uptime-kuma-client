@@ -43,7 +43,7 @@ func TestMonitorPostgres_Unmarshal(t *testing.T) {
 					DatabaseQuery:            "SELECT 1",
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"databaseConnectionString":"postgres://username:password@host:port/database","databaseQuery":"SELECT 1","description":"Test PostgreSQL monitor","id":6,"interval":60,"maxretries":2,"name":"postgres-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"type":"postgres","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"postgres://username:password@host:port/database","databaseQuery":"SELECT 1","description":"Test PostgreSQL monitor","id":6,"interval":60,"maxretries":2,"name":"postgres-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"type":"postgres","upsideDown":false}`,
 		},
 	}
 

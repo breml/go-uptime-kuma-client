@@ -75,6 +75,9 @@ func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 	raw["maxredirects"] = g.MaxRedirects
 	raw["accepted_statuscodes"] = g.AcceptedStatusCodes
 
+	// Uptime Kuma v2 requires conditions field (empty array by default)
+	raw["conditions"] = []any{}
+
 	return json.Marshal(raw)
 }
 

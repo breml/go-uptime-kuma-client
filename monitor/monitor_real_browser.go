@@ -71,6 +71,9 @@ func (r RealBrowser) MarshalJSON() ([]byte, error) {
 	raw["accepted_statuscodes"] = r.AcceptedStatusCodes
 	raw["proxyId"] = r.ProxyID
 
+	// Uptime Kuma v2 requires conditions field (empty array by default)
+	raw["conditions"] = []any{}
+
 	return json.Marshal(raw)
 }
 
