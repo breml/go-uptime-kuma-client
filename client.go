@@ -17,6 +17,7 @@ import (
 	"github.com/maldikhan/go.socket.io/utils"
 	"github.com/maniartech/signals"
 
+	"github.com/breml/go-uptime-kuma-client/maintenance"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 	"github.com/breml/go-uptime-kuma-client/notification"
 	"github.com/breml/go-uptime-kuma-client/statuspage"
@@ -69,6 +70,7 @@ type state struct {
 	notifications []notification.Base
 	monitors      []monitor.Base
 	statusPages   map[int64]statuspage.StatusPage
+	maintenances  []maintenance.Maintenance
 }
 
 type Client struct {
@@ -375,6 +377,20 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		c.updates.Emit(ctx, "statusPageList")
 	})
 
+	client.On("maintenanceList", func(maintenanceMap map[string]maintenance.Maintenance) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		// Convert map to slice
+		maintenances := make([]maintenance.Maintenance, 0, len(maintenanceMap))
+		for _, m := range maintenanceMap {
+			maintenances = append(maintenances, m)
+		}
+		c.state.maintenances = maintenances
+
+		c.updates.Emit(ctx, "maintenanceList")
+	})
+
 	connect := make(chan struct{})
 	closeConnect := sync.OnceFunc(func() {
 		close(connect)
@@ -398,7 +414,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	client.OnAny(func(s string, i []any) {
-		if s != "notificationList" && s != "monitorList" && s != "statusPageList" {
+		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" {
 			c.updates.Emit(ctx, s)
 		}
 	})
@@ -470,6 +486,10 @@ type ackResponse struct {
 	OK              bool           `json:"ok"`
 	ID              int64          `json:"id"`
 	MonitorID       int64          `json:"monitorID"`
+	MaintenanceID   int64          `json:"maintenanceID"`
+	Maintenance     map[string]any `json:"maintenance"`
+	Monitors        []any          `json:"monitors"`
+	StatusPages     []any          `json:"statusPages"`
 	Monitor         map[string]any `json:"monitor"`
 	Data            map[string]any `json:"data"`
 	Tags            []any          `json:"tags"`
