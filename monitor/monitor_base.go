@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/breml/go-uptime-kuma-client/tag"
 )
 
 type Monitor interface {
@@ -14,18 +16,19 @@ type Monitor interface {
 }
 
 type Base struct {
-	ID              int64   `json:"id"`
-	Name            string  `json:"name"`
-	Description     *string `json:"description"`
-	PathName        string  `json:"pathName"`
-	Parent          *int64  `json:"parent"`
-	Interval        int64   `json:"interval"`
-	RetryInterval   int64   `json:"retryInterval"`
-	ResendInterval  int64   `json:"resendInterval"`
-	MaxRetries      int64   `json:"maxretries"`
-	UpsideDown      bool    `json:"upsideDown"`
-	NotificationIDs []int64 `json:"-"`
-	IsActive        bool    `json:"active"`
+	ID              int64            `json:"id"`
+	Name            string           `json:"name"`
+	Description     *string          `json:"description"`
+	PathName        string           `json:"pathName"`
+	Parent          *int64           `json:"parent"`
+	Interval        int64            `json:"interval"`
+	RetryInterval   int64            `json:"retryInterval"`
+	ResendInterval  int64            `json:"resendInterval"`
+	MaxRetries      int64            `json:"maxretries"`
+	UpsideDown      bool             `json:"upsideDown"`
+	NotificationIDs []int64          `json:"-"`
+	Tags            []tag.MonitorTag `json:"tags"`
+	IsActive        bool             `json:"active"`
 
 	internalType string
 	raw          []byte
@@ -37,19 +40,20 @@ func (b Base) String() string {
 
 func (b *Base) UnmarshalJSON(data []byte) error {
 	raw := struct {
-		ID              int64           `json:"id"`
-		Type            string          `json:"type"`
-		Name            string          `json:"name"`
-		Description     *string         `json:"description"`
-		PathName        string          `json:"pathName"`
-		Parent          *int64          `json:"parent"`
-		Interval        int64           `json:"interval"`
-		RetryInterval   int64           `json:"retryInterval"`
-		ResendInterval  int64           `json:"resendInterval"`
-		MaxRetries      int64           `json:"maxretries"`
-		UpsideDown      bool            `json:"upsideDown"`
-		NotificationIDs map[string]bool `json:"notificationIDList"`
-		IsActive        bool            `json:"active"`
+		ID              int64            `json:"id"`
+		Type            string           `json:"type"`
+		Name            string           `json:"name"`
+		Description     *string          `json:"description"`
+		PathName        string           `json:"pathName"`
+		Parent          *int64           `json:"parent"`
+		Interval        int64            `json:"interval"`
+		RetryInterval   int64            `json:"retryInterval"`
+		ResendInterval  int64            `json:"resendInterval"`
+		MaxRetries      int64            `json:"maxretries"`
+		UpsideDown      bool             `json:"upsideDown"`
+		NotificationIDs map[string]bool  `json:"notificationIDList"`
+		Tags            []tag.MonitorTag `json:"tags"`
+		IsActive        bool             `json:"active"`
 	}{}
 
 	err := json.Unmarshal(data, &raw)
@@ -72,6 +76,11 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 
 		internalType: raw.Type,
 		raw:          data,
+	}
+
+	// Only set Tags if it's not an empty slice to maintain nil semantics
+	if len(raw.Tags) > 0 {
+		b.Tags = raw.Tags
 	}
 
 	for id := range orderedByKey(raw.NotificationIDs) {

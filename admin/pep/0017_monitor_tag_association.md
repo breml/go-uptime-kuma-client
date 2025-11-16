@@ -6,7 +6,7 @@
 
 ## Abstract
 
-Extend the tag functionality to support associating tags with monitors, including managing tag values and colors for individual monitor-tag relationships. This completes the tag management API by allowing users to organize and categorize monitors using tags.
+Extend the tag functionality to support associating tags with monitors, including managing tag values for individual monitor-tag relationships. This completes the tag management API by allowing users to organize and categorize monitors using tags.
 
 ## Motivation
 
@@ -122,7 +122,7 @@ The addition of `Tags` field to `monitor.Base` should be backward compatible as 
 
 ### Integration Tests
 
-Add integration tests in `main_test.go` that:
+Add integration tests in `tag_test.go` that:
 
 1. Create multiple tags
 2. Create multiple monitors
