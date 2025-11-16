@@ -145,23 +145,27 @@ Listen for `maintenanceList` event during client initialization to populate the 
 ### Data Format Details
 
 #### DateRange Format
+
 - Array with exactly 2 elements: `[startDate, endDate]`
 - Each element can be ISO 8601 datetime string or `null`
 - Example: `["2025-12-25T10:30:00.000Z", "2025-12-25T18:30:00.000Z"]`
 - For recurring strategies, start date can be `null` to indicate "start now"
 
 #### TimeRange Format
+
 - Array with exactly 2 elements: `[startTime, endTime]`
 - Each element is a `TimeOfDay` object: `{hours: int, minutes: int, seconds: int}`
 - Used only for recurring strategies and cron
 - Example: `[{hours: 9, minutes: 0, seconds: 0}, {hours: 17, minutes: 0, seconds: 0}]`
 
 #### Weekdays Format
+
 - Array of integers: 1-7 where Monday=1, Tuesday=2, ..., Sunday=7
 - Used only for "recurring-weekday" strategy
 - Example: `[1, 3, 5]` for Monday, Wednesday, Friday
 
 #### DaysOfMonth Format
+
 - Array of integers (1-31) or special strings
 - Integers: day of month (1-31)
 - Special strings: "lastDay1", "lastDay2", "lastDay3", "lastDay4" (last day, 2nd to last, etc.)
@@ -169,6 +173,7 @@ Listen for `maintenanceList` event during client initialization to populate the 
 - Example: `[1, 15, "lastDay1"]` for 1st, 15th, and last day of month
 
 #### Monitor/StatusPage Association Format
+
 - When sending to server: array of objects with `id` field: `[{id: 1}, {id: 2}]`
 - When receiving from server: array of objects with `id` field (monitors) or `id` and `title` (status pages)
 - Client methods should accept/return simple `[]int64` and handle conversion
