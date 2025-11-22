@@ -83,7 +83,6 @@ type RealBrowserDetails struct {
 	IgnoreTLS           bool     `json:"ignoreTls"`
 	MaxRedirects        int      `json:"maxredirects"`
 	AcceptedStatusCodes []string `json:"accepted_statuscodes"`
-	ProxyID             *int64   `json:"proxyId"`
 }
 
 func (r RealBrowserDetails) Type() string {

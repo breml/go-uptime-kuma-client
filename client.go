@@ -20,6 +20,7 @@ import (
 	"github.com/breml/go-uptime-kuma-client/maintenance"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 	"github.com/breml/go-uptime-kuma-client/notification"
+	"github.com/breml/go-uptime-kuma-client/proxy"
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
 
@@ -71,6 +72,7 @@ type state struct {
 	monitors      []monitor.Base
 	statusPages   map[int64]statuspage.StatusPage
 	maintenances  []maintenance.Maintenance
+	proxies       []proxy.Proxy
 }
 
 type Client struct {
@@ -391,6 +393,15 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		c.updates.Emit(ctx, "maintenanceList")
 	})
 
+	client.On("proxyList", func(proxyList []proxy.Proxy) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		c.state.proxies = proxyList
+
+		c.updates.Emit(ctx, "proxyList")
+	})
+
 	connect := make(chan struct{})
 	closeConnect := sync.OnceFunc(func() {
 		close(connect)
@@ -414,7 +425,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	client.OnAny(func(s string, i []any) {
-		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" {
+		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" && s != "proxyList" {
 			c.updates.Emit(ctx, s)
 		}
 	})

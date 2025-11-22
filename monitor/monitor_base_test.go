@@ -39,7 +39,7 @@ func TestBase_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "parent null",
-			data: []byte(`{"id":1,"name":"top-level","description":null,"pathName":"top-level","parent":null,"childrenIDs":[],"maxretries":0,"weight":2000,"active":true,"type":"group","interval":60,"retryInterval":60,"resendInterval":0,"upsideDown":false,"notificationIDList":{},"tags":[],"maintenance":false}`),
+			data: []byte(`{"id":1,"name":"top-level","description":null,"pathName":"top-level","parent":null,"proxyId":null,"childrenIDs":[],"maxretries":0,"weight":2000,"active":true,"type":"group","interval":60,"retryInterval":60,"resendInterval":0,"upsideDown":false,"notificationIDList":{},"tags":[],"maintenance":false}`),
 
 			want: monitor.Base{
 				ID:              1,
@@ -47,6 +47,7 @@ func TestBase_Unmarshal(t *testing.T) {
 				Description:     nil,
 				PathName:        "top-level",
 				Parent:          nil,
+				ProxyID:         nil,
 				Interval:        60,
 				RetryInterval:   60,
 				ResendInterval:  0,
