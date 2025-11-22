@@ -102,7 +102,6 @@ type HTTPDetails struct {
 	IgnoreTLS           bool       `json:"ignoreTls"`
 	MaxRedirects        int        `json:"maxredirects"`
 	AcceptedStatusCodes []string   `json:"accepted_statuscodes"`
-	ProxyID             *int64     `json:"proxyId"`
 	Method              string     `json:"method"`
 	HTTPBodyEncoding    string     `json:"httpBodyEncoding"`
 	Body                string     `json:"body"`

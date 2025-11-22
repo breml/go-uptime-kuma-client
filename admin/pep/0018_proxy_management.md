@@ -79,13 +79,16 @@ Add the following methods to the main `Client` type in `proxy.go`:
 
 ```go
 // Get all proxies
-func (c *Client) GetProxyList(ctx context.Context) ([]proxy.Proxy, error)
+func (c *Client) GetProxyList(ctx context.Context) []proxy.Proxy
 
 // Get specific proxy (query from cached list)
 func (c *Client) GetProxy(ctx context.Context, id int64) (*proxy.Proxy, error)
 
-// Add new proxy or update existing proxy (server uses same event for both)
-func (c *Client) SaveProxy(ctx context.Context, proxyConfig *proxy.ProxyConfig, proxyID *int64) (*proxy.Proxy, error)
+// Create new proxy
+func (c *Client) CreateProxy(ctx context.Context, config proxy.Config) (int64, error)
+
+// Update existing proxy
+func (c *Client) UpdateProxy(ctx context.Context, config proxy.Config) error
 
 // Delete proxy (automatically removes proxy from monitors)
 func (c *Client) DeleteProxy(ctx context.Context, id int64) error
