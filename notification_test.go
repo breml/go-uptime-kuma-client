@@ -299,3 +299,193 @@ func TestTeamsNotificationCRUD(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestWebhookNotificationCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	createNotification := notification.Webhook{
+		Base: notification.Base{
+			ApplyExisting: false,
+			IsDefault:     false,
+			IsActive:      true,
+			Name:          "Test Webhook Created",
+		},
+		WebhookDetails: notification.WebhookDetails{
+			WebhookURL:         "https://example.com/webhook",
+			WebhookContentType: "json",
+		},
+	}
+
+	t.Run("initial_state", func(t *testing.T) {
+		notifications := client.GetNotifications(ctx)
+		t.Logf("Initial notifications count: %d", len(notifications))
+	})
+
+	var id int64
+	t.Run("create", func(t *testing.T) {
+		initialNotifications := client.GetNotifications(ctx)
+		initialCount := len(initialNotifications)
+
+		id, err = client.CreateNotification(ctx, createNotification)
+		require.NoError(t, err)
+		require.Greater(t, id, int64(0))
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, initialCount+1)
+
+		createdNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+		require.Equal(t, "webhook", createdNotification.Type())
+		require.Equal(t, id, createdNotification.GetID())
+
+		specificNotification := notification.Webhook{}
+		err = createdNotification.As(&specificNotification)
+		require.NoError(t, err)
+
+		expectedWebhook := createNotification
+		expectedWebhook.ID = id
+		expectedWebhook.UserID = specificNotification.UserID
+		require.EqualExportedValues(t, expectedWebhook, specificNotification)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		currentNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		current := notification.Webhook{}
+		err = currentNotification.As(&current)
+		require.NoError(t, err)
+
+		current.Name = "Test Webhook Updated"
+		current.WebhookContentType = "custom"
+		current.WebhookCustomBody = `{"title": "Alert - {{ monitorJSON['name'] }}", "message": "{{ msg }}"}`
+		current.WebhookAdditionalHeaders = notification.WebhookAdditionalHeaders{
+			"Authorization": "Bearer test-token",
+			"X-Custom":      "test-value",
+		}
+
+		err = client.UpdateNotification(ctx, current)
+		require.NoError(t, err)
+
+		retrievedNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		retrieved := notification.Webhook{}
+		err = retrievedNotification.As(&retrieved)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, current, retrieved)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		preDeleteNotifications := client.GetNotifications(ctx)
+		preDeleteCount := len(preDeleteNotifications)
+
+		err := client.DeleteNotification(ctx, id)
+		require.NoError(t, err)
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, preDeleteCount-1)
+
+		_, err = client.GetNotification(ctx, id)
+		require.Error(t, err)
+	})
+}
+
+func TestWebhookNotificationVariants(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	t.Run("form-data content type", func(t *testing.T) {
+		createNotification := notification.Webhook{
+			Base: notification.Base{
+				ApplyExisting: false,
+				IsDefault:     false,
+				IsActive:      true,
+				Name:          "Test Webhook Form-Data",
+			},
+			WebhookDetails: notification.WebhookDetails{
+				WebhookURL:         "https://example.com/form-webhook",
+				WebhookContentType: "form-data",
+			},
+		}
+
+		initialNotifications := client.GetNotifications(ctx)
+		initialCount := len(initialNotifications)
+
+		id, err := client.CreateNotification(ctx, createNotification)
+		require.NoError(t, err)
+		require.Greater(t, id, int64(0))
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, initialCount+1)
+
+		createdNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+		require.Equal(t, "webhook", createdNotification.Type())
+
+		specificNotification := notification.Webhook{}
+		err = createdNotification.As(&specificNotification)
+		require.NoError(t, err)
+
+		require.Equal(t, "form-data", specificNotification.WebhookContentType)
+
+		// Cleanup
+		err = client.DeleteNotification(ctx, id)
+		require.NoError(t, err)
+	})
+
+	t.Run("with additional headers", func(t *testing.T) {
+		createNotification := notification.Webhook{
+			Base: notification.Base{
+				ApplyExisting: false,
+				IsDefault:     false,
+				IsActive:      true,
+				Name:          "Test Webhook Headers",
+			},
+			WebhookDetails: notification.WebhookDetails{
+				WebhookURL:         "https://api.example.com/webhook",
+				WebhookContentType: "json",
+				WebhookAdditionalHeaders: notification.WebhookAdditionalHeaders{
+					"Authorization": "Bearer secret-token",
+					"X-App-ID":      "uptime-kuma",
+				},
+			},
+		}
+
+		initialNotifications := client.GetNotifications(ctx)
+		initialCount := len(initialNotifications)
+
+		id, err := client.CreateNotification(ctx, createNotification)
+		require.NoError(t, err)
+		require.Greater(t, id, int64(0))
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, initialCount+1)
+
+		createdNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		specificNotification := notification.Webhook{}
+		err = createdNotification.As(&specificNotification)
+		require.NoError(t, err)
+
+		require.Equal(t, 2, len(specificNotification.WebhookAdditionalHeaders))
+		require.Equal(t, "Bearer secret-token", specificNotification.WebhookAdditionalHeaders["Authorization"])
+		require.Equal(t, "uptime-kuma", specificNotification.WebhookAdditionalHeaders["X-App-ID"])
+
+		// Cleanup
+		err = client.DeleteNotification(ctx, id)
+		require.NoError(t, err)
+	})
+}
