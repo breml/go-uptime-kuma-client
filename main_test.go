@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -19,6 +20,13 @@ import (
 var client *kuma.Client
 
 func TestMain(m *testing.M) {
+	dockerTimeout := uint(60)
+
+	e2eTest, _ := strconv.ParseBool(os.Getenv("E2E_TEST"))
+	if e2eTest {
+		dockerTimeout = 120
+	}
+
 	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
 	pool, err := dockertest.NewPool("")
 	if err != nil {
@@ -36,6 +44,7 @@ func TestMain(m *testing.M) {
 		Name:       fmt.Sprintf("uptime-kuma-%s", randomString(8)),
 		Repository: "louislam/uptime-kuma",
 		Tag:        "2",
+		ExtraHosts: []string{"host.docker.internal:host-gateway"},
 	}, func(config *docker.HostConfig) {
 		// set AutoRemove to true so that stopped container goes away by itself
 		config.AutoRemove = true
@@ -47,12 +56,12 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not start resource: %v", err)
 	}
 
-	err = resource.Expire(60)
+	err = resource.Expire(dockerTimeout)
 	if err != nil {
 		log.Fatalf("Could not connect to Docker: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// exponential backoff-retry, because the application in the container might not be ready to accept connections yet
@@ -64,6 +73,7 @@ func TestMain(m *testing.M) {
 			"admin", "admin1",
 			kuma.WithAutosetup(),
 			kuma.WithLogLevel(kuma.LogLevel(os.Getenv("SOCKETIO_LOG_LEVEL"))),
+			kuma.WithConnectTimeout(10*time.Second),
 		)
 		if err != nil {
 			return err

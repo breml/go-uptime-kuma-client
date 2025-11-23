@@ -23,6 +23,14 @@ tasks:
       - go test -v ./...
     silent: true
 
+  test-e2e:
+    desc: Run end-to-end tests
+    env:
+      E2E_TEST: "true"
+    cmds:
+      - go test -v -timeout 120s ./...
+    silent: true
+
   lint:
     desc: Lint all code
     cmds:

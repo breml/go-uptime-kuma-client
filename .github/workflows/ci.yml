@@ -49,7 +49,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tests
-        run: task test
+        run: task test-e2e
 
   lint:
     name: Lint
