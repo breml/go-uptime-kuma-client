@@ -76,9 +76,10 @@ type state struct {
 }
 
 type Client struct {
-	socketioClient *socketio.Client
-	socketioLogger socketio.Logger
-	autosetup      bool
+	socketioClient               *socketio.Client
+	socketioClientConnectTimeout time.Duration
+	socketioLogger               socketio.Logger
+	autosetup                    bool
 
 	mu      *sync.Mutex
 	updates signals.Signal[string]
@@ -98,6 +99,12 @@ func WithLogLevel(level int) Option {
 		if level >= utils.DEBUG && level <= utils.NONE {
 			c.socketioLogger = &utils.DefaultLogger{Level: level}
 		}
+	}
+}
+
+func WithConnectTimeout(timeout time.Duration) Option {
+	return func(c *Client) {
+		c.socketioClientConnectTimeout = timeout
 	}
 }
 
@@ -262,9 +269,16 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		opt(c)
 	}
 
+	ctxWithConnectTimeout := ctx
+	if c.socketioClientConnectTimeout != 0 {
+		var cancel func()
+		ctxWithConnectTimeout, cancel = context.WithTimeout(ctx, c.socketioClientConnectTimeout)
+		defer cancel()
+	}
+
 	// Handle database setup for Uptime Kuma v2 if autosetup is enabled
 	if c.autosetup {
-		if err := setupDatabase(ctx, baseURL); err != nil {
+		if err := setupDatabase(ctxWithConnectTimeout, baseURL); err != nil {
 			return nil, fmt.Errorf("database setup: %w", err)
 		}
 	}
@@ -315,7 +329,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		c.state.notifications = notificationList
 		defer c.mu.Unlock()
 
-		c.updates.Emit(ctx, "notificationList")
+		c.updates.Emit(context.Background(), "notificationList")
 	})
 
 	client.On("monitorList", func(monitorMap map[string]monitor.Base) {
@@ -329,7 +343,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		}
 		c.state.monitors = monitors
 
-		c.updates.Emit(ctx, "monitorList")
+		c.updates.Emit(context.Background(), "monitorList")
 	})
 
 	// Uptime Kuma v2 sends updateMonitorIntoList for individual monitor updates (add/edit/pause/resume)
@@ -352,7 +366,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			}
 		}
 
-		c.updates.Emit(ctx, "updateMonitorIntoList")
+		c.updates.Emit(context.Background(), "updateMonitorIntoList")
 	})
 
 	// Uptime Kuma v2 sends deleteMonitorFromList when a monitor is deleted
@@ -368,7 +382,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			}
 		}
 
-		c.updates.Emit(ctx, "deleteMonitorFromList")
+		c.updates.Emit(context.Background(), "deleteMonitorFromList")
 	})
 
 	client.On("statusPageList", func(statusPageMap map[int64]statuspage.StatusPage) {
@@ -376,7 +390,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		c.state.statusPages = statusPageMap
 		defer c.mu.Unlock()
 
-		c.updates.Emit(ctx, "statusPageList")
+		c.updates.Emit(context.Background(), "statusPageList")
 	})
 
 	client.On("maintenanceList", func(maintenanceMap map[string]maintenance.Maintenance) {
@@ -390,7 +404,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		}
 		c.state.maintenances = maintenances
 
-		c.updates.Emit(ctx, "maintenanceList")
+		c.updates.Emit(context.Background(), "maintenanceList")
 	})
 
 	client.On("proxyList", func(proxyList []proxy.Proxy) {
@@ -399,7 +413,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 		c.state.proxies = proxyList
 
-		c.updates.Emit(ctx, "proxyList")
+		c.updates.Emit(context.Background(), "proxyList")
 	})
 
 	connect := make(chan struct{})
@@ -426,7 +440,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	client.OnAny(func(s string, i []any) {
 		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" && s != "proxyList" {
-			c.updates.Emit(ctx, s)
+			c.updates.Emit(context.Background(), s)
 		}
 	})
 
@@ -442,7 +456,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	if username != "" && password != "" {
-		_, err = c.syncEmit(ctx, "login", map[string]any{"username": username, "password": password, "token": ""})
+		_, err = c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": ""})
 		if err != nil {
 			// Ensure we had the time to receive a potential setup event.
 			time.Sleep(10 * time.Millisecond)
@@ -472,12 +486,12 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 				return nil, fmt.Errorf("server does require setup, but autosetup is disabled")
 			}
 
-			_, err := c.syncEmit(ctx, "setup", username, password)
+			_, err := c.syncEmit(ctxWithConnectTimeout, "setup", username, password)
 			if err != nil {
 				return nil, fmt.Errorf("setup: %v", err)
 			}
 
-			_, err = c.syncEmit(ctx, "login", map[string]any{"username": username, "password": password, "token": ""})
+			_, err = c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": ""})
 			if err != nil {
 				return nil, fmt.Errorf("login: %v", err)
 			}
