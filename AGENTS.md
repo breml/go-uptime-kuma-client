@@ -13,7 +13,6 @@
 - The client contains integration tests, which launch a real Uptime Kuma instance run as docker container (see `main_test.go`), expect Uptime Kuma to be running when executing the integration tests.
 - **.scratch/uptime-kuma/**: Code of Uptime Kuma itself, copied here for reference
 - **.scratch/**: Temporary code for testing ideas, not linted, not tested, not checked into git
-- **admin/pep/**: Project Enhancement Proposals (PEP) for changes to the codebase
 
 ## Code Style & Conventions
 

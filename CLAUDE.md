@@ -65,7 +65,6 @@ This is a Go client library for the Uptime Kuma API using Socket.IO for real-tim
 
 - `.scratch/uptime-kuma/`: Copy of Uptime Kuma source code for reference
 - `.scratch/`: Temporary code for experiments (not linted, tested, or committed)
-- `admin/pep/`: Project Enhancement Proposals for changes to the codebase
 
 ## Code Style & Conventions
 
