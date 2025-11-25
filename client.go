@@ -86,6 +86,10 @@ type Client struct {
 	mu      *sync.Mutex
 	updates signals.Signal[string]
 	state   state
+
+	// Authentication fields
+	authToken string // Current session token
+	has2FA    bool   // Whether user has 2FA enabled
 }
 
 type Option func(c *Client)
@@ -259,42 +263,144 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	}
 }
 
-func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
-	c := &Client{
-		socketioLogger: &utils.DefaultLogger{Level: utils.NONE},
+// setupEventHandlers configures all Socket.IO event handlers for the client.
+func (c *Client) setupEventHandlers(ctx context.Context) error {
+	c.socketioClient.On("notificationList", func(notificationList []notification.Base) {
+		c.mu.Lock()
+		c.state.notifications = notificationList
+		defer c.mu.Unlock()
 
-		mu:      &sync.Mutex{},
-		updates: signals.New[string](),
-	}
+		c.updates.Emit(context.Background(), "notificationList")
+	})
 
-	for _, opt := range opts {
-		opt(c)
-	}
+	c.socketioClient.On("monitorList", func(monitorMap map[string]monitor.Base) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
 
-	ctxWithConnectTimeout := ctx
-	if c.socketioClientConnectTimeout != 0 {
-		var cancel func()
-		ctxWithConnectTimeout, cancel = context.WithTimeout(ctx, c.socketioClientConnectTimeout)
-		defer cancel()
-	}
-
-	// Handle database setup for Uptime Kuma v2 if autosetup is enabled
-	if c.autosetup {
-		if err := setupDatabase(ctxWithConnectTimeout, baseURL); err != nil {
-			return nil, fmt.Errorf("database setup: %w", err)
+		// Convert map to slice
+		monitors := make([]monitor.Base, 0, len(monitorMap))
+		for _, monitor := range monitorMap {
+			monitors = append(monitors, monitor)
 		}
+		c.state.monitors = monitors
+
+		c.updates.Emit(context.Background(), "monitorList")
+	})
+
+	// Uptime Kuma v2 sends updateMonitorIntoList for individual monitor updates (add/edit/pause/resume)
+	c.socketioClient.On("updateMonitorIntoList", func(monitorMap map[string]monitor.Base) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		// Update or add the monitors in the map to our state
+		for _, updatedMonitor := range monitorMap {
+			found := false
+			for i, existingMonitor := range c.state.monitors {
+				if existingMonitor.ID == updatedMonitor.ID {
+					c.state.monitors[i] = updatedMonitor
+					found = true
+					break
+				}
+			}
+			if !found {
+				c.state.monitors = append(c.state.monitors, updatedMonitor)
+			}
+		}
+
+		c.updates.Emit(context.Background(), "updateMonitorIntoList")
+	})
+
+	// Uptime Kuma v2 sends deleteMonitorFromList when a monitor is deleted
+	c.socketioClient.On("deleteMonitorFromList", func(monitorID int64) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		// Remove the monitor from our state
+		for i, existingMonitor := range c.state.monitors {
+			if existingMonitor.ID == monitorID {
+				c.state.monitors = append(c.state.monitors[:i], c.state.monitors[i+1:]...)
+				break
+			}
+		}
+
+		c.updates.Emit(context.Background(), "deleteMonitorFromList")
+	})
+
+	c.socketioClient.On("statusPageList", func(statusPageMap map[int64]statuspage.StatusPage) {
+		c.mu.Lock()
+		c.state.statusPages = statusPageMap
+		defer c.mu.Unlock()
+
+		c.updates.Emit(context.Background(), "statusPageList")
+	})
+
+	c.socketioClient.On("maintenanceList", func(maintenanceMap map[string]maintenance.Maintenance) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		// Convert map to slice
+		maintenances := make([]maintenance.Maintenance, 0, len(maintenanceMap))
+		for _, m := range maintenanceMap {
+			maintenances = append(maintenances, m)
+		}
+		c.state.maintenances = maintenances
+
+		c.updates.Emit(context.Background(), "maintenanceList")
+	})
+
+	c.socketioClient.On("proxyList", func(proxyList []proxy.Proxy) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		c.state.proxies = proxyList
+
+		c.updates.Emit(context.Background(), "proxyList")
+	})
+
+	c.socketioClient.On("dockerHostList", func(dockerHostList []dockerhost.DockerHost) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		c.state.dockerHosts = dockerHostList
+
+		c.updates.Emit(context.Background(), "dockerHostList")
+	})
+
+	c.socketioClient.OnAny(func(s string, i []any) {
+		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" && s != "proxyList" && s != "dockerHostList" {
+			c.updates.Emit(context.Background(), s)
+		}
+	})
+
+	return nil
+}
+
+// setupConnectHandler sets up the connect event handler and returns a channel that will be closed when connected.
+func (c *Client) setupConnectHandler() chan struct{} {
+	connect := make(chan struct{})
+	closeConnect := sync.OnceFunc(func() {
+		close(connect)
+	})
+
+	c.socketioClient.On("connect", func() {
+		closeConnect()
+	})
+
+	return connect
+}
+
+// waitForConnect waits for the Socket.IO connection to be established.
+func (c *Client) waitForConnect(ctx context.Context, connect chan struct{}) error {
+	select {
+	case <-connect:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("connect to server: %v", ctx.Err())
 	}
+}
 
-	client, err := socketio.NewClient(
-		socketio.WithRawURL(baseURL),
-		socketio.WithLogger(c.socketioLogger),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("create socketio client: %v", err)
-	}
-
-	c.socketioClient = client
-
+// waitForReady waits for all initial data to be loaded.
+func (c *Client) waitForReady(ctx context.Context) error {
 	updateSeenMu := sync.Mutex{}
 	updateSeenMu.Lock()
 	updateSeen := map[string]struct{}{
@@ -326,116 +432,54 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}, "connect-ready")
 	defer c.updates.RemoveListener("connect-ready")
 
-	client.On("notificationList", func(notificationList []notification.Base) {
-		c.mu.Lock()
-		c.state.notifications = notificationList
-		defer c.mu.Unlock()
+	select {
+	case <-ready:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("wait for ready: %v", ctx.Err())
+	}
+}
 
-		c.updates.Emit(context.Background(), "notificationList")
-	})
+func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
+	c := &Client{
+		socketioLogger: &utils.DefaultLogger{Level: utils.NONE},
+		mu:             &sync.Mutex{},
+		updates:        signals.New[string](),
+	}
 
-	client.On("monitorList", func(monitorMap map[string]monitor.Base) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
+	for _, opt := range opts {
+		opt(c)
+	}
 
-		// Convert map to slice
-		monitors := make([]monitor.Base, 0, len(monitorMap))
-		for _, monitor := range monitorMap {
-			monitors = append(monitors, monitor)
+	ctxWithConnectTimeout := ctx
+	if c.socketioClientConnectTimeout != 0 {
+		var cancel func()
+		ctxWithConnectTimeout, cancel = context.WithTimeout(ctx, c.socketioClientConnectTimeout)
+		defer cancel()
+	}
+
+	// Handle database setup for Uptime Kuma v2 if autosetup is enabled
+	if c.autosetup {
+		if err := setupDatabase(ctxWithConnectTimeout, baseURL); err != nil {
+			return nil, fmt.Errorf("database setup: %w", err)
 		}
-		c.state.monitors = monitors
+	}
 
-		c.updates.Emit(context.Background(), "monitorList")
-	})
+	client, err := socketio.NewClient(
+		socketio.WithRawURL(baseURL),
+		socketio.WithLogger(c.socketioLogger),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create socketio client: %v", err)
+	}
 
-	// Uptime Kuma v2 sends updateMonitorIntoList for individual monitor updates (add/edit/pause/resume)
-	client.On("updateMonitorIntoList", func(monitorMap map[string]monitor.Base) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
+	c.socketioClient = client
 
-		// Update or add the monitors in the map to our state
-		for _, updatedMonitor := range monitorMap {
-			found := false
-			for i, existingMonitor := range c.state.monitors {
-				if existingMonitor.ID == updatedMonitor.ID {
-					c.state.monitors[i] = updatedMonitor
-					found = true
-					break
-				}
-			}
-			if !found {
-				c.state.monitors = append(c.state.monitors, updatedMonitor)
-			}
-		}
+	if err := c.setupEventHandlers(ctx); err != nil {
+		return nil, err
+	}
 
-		c.updates.Emit(context.Background(), "updateMonitorIntoList")
-	})
-
-	// Uptime Kuma v2 sends deleteMonitorFromList when a monitor is deleted
-	client.On("deleteMonitorFromList", func(monitorID int64) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		// Remove the monitor from our state
-		for i, existingMonitor := range c.state.monitors {
-			if existingMonitor.ID == monitorID {
-				c.state.monitors = append(c.state.monitors[:i], c.state.monitors[i+1:]...)
-				break
-			}
-		}
-
-		c.updates.Emit(context.Background(), "deleteMonitorFromList")
-	})
-
-	client.On("statusPageList", func(statusPageMap map[int64]statuspage.StatusPage) {
-		c.mu.Lock()
-		c.state.statusPages = statusPageMap
-		defer c.mu.Unlock()
-
-		c.updates.Emit(context.Background(), "statusPageList")
-	})
-
-	client.On("maintenanceList", func(maintenanceMap map[string]maintenance.Maintenance) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		// Convert map to slice
-		maintenances := make([]maintenance.Maintenance, 0, len(maintenanceMap))
-		for _, m := range maintenanceMap {
-			maintenances = append(maintenances, m)
-		}
-		c.state.maintenances = maintenances
-
-		c.updates.Emit(context.Background(), "maintenanceList")
-	})
-
-	client.On("proxyList", func(proxyList []proxy.Proxy) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		c.state.proxies = proxyList
-
-		c.updates.Emit(context.Background(), "proxyList")
-	})
-
-	client.On("dockerHostList", func(dockerHostList []dockerhost.DockerHost) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		c.state.dockerHosts = dockerHostList
-
-		c.updates.Emit(context.Background(), "dockerHostList")
-	})
-
-	connect := make(chan struct{})
-	closeConnect := sync.OnceFunc(func() {
-		close(connect)
-	})
-	defer closeConnect()
-
-	client.On("connect", func() {
-		closeConnect()
-	})
+	connect := c.setupConnectHandler()
 
 	setupRequired := make(chan struct{})
 	closeSetupRequired := sync.OnceFunc(func() {
@@ -444,26 +488,18 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	defer closeSetupRequired()
 
 	if c.autosetup {
-		client.On("setup", func() {
+		c.socketioClient.On("setup", func() {
 			closeSetupRequired()
 		})
 	}
-
-	client.OnAny(func(s string, i []any) {
-		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" && s != "proxyList" && s != "dockerHostList" {
-			c.updates.Emit(context.Background(), s)
-		}
-	})
 
 	err = client.Connect(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("connect to server: %v", err)
 	}
 
-	select {
-	case <-connect:
-	case <-ctx.Done():
-		return nil, fmt.Errorf("connect to server: %v", ctx.Err())
+	if err := c.waitForConnect(ctx, connect); err != nil {
+		return nil, err
 	}
 
 	if username != "" && password != "" {
@@ -485,32 +521,30 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		}
 	}
 
-	for {
-		select {
-		case <-ready:
-			return c, nil
-
-		case <-setupRequired:
-			setupRequired = nil
-
-			if !c.autosetup {
-				return nil, fmt.Errorf("server does require setup, but autosetup is disabled")
-			}
-
-			_, err := c.syncEmit(ctxWithConnectTimeout, "setup", username, password)
-			if err != nil {
-				return nil, fmt.Errorf("setup: %v", err)
-			}
-
-			_, err = c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": ""})
-			if err != nil {
-				return nil, fmt.Errorf("login: %v", err)
-			}
-
-		case <-ctx.Done():
-			return nil, fmt.Errorf("wait for ready: %v", ctx.Err())
+	// Handle setup if required
+	select {
+	case <-setupRequired:
+		if !c.autosetup {
+			return nil, fmt.Errorf("server does require setup, but autosetup is disabled")
 		}
+
+		_, err := c.syncEmit(ctxWithConnectTimeout, "setup", username, password)
+		if err != nil {
+			return nil, fmt.Errorf("setup: %v", err)
+		}
+
+		_, err = c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": ""})
+		if err != nil {
+			return nil, fmt.Errorf("login: %v", err)
+		}
+	default:
 	}
+
+	if err := c.waitForReady(ctx); err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
 
 func (c *Client) Disconnect() error {
