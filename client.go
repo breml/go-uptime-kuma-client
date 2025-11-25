@@ -17,6 +17,7 @@ import (
 	"github.com/maldikhan/go.socket.io/utils"
 	"github.com/maniartech/signals"
 
+	"github.com/breml/go-uptime-kuma-client/dockerhost"
 	"github.com/breml/go-uptime-kuma-client/maintenance"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 	"github.com/breml/go-uptime-kuma-client/notification"
@@ -73,6 +74,7 @@ type state struct {
 	statusPages   map[int64]statuspage.StatusPage
 	maintenances  []maintenance.Maintenance
 	proxies       []proxy.Proxy
+	dockerHosts   []dockerhost.DockerHost
 }
 
 type Client struct {
@@ -416,6 +418,15 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		c.updates.Emit(context.Background(), "proxyList")
 	})
 
+	client.On("dockerHostList", func(dockerHostList []dockerhost.DockerHost) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		c.state.dockerHosts = dockerHostList
+
+		c.updates.Emit(context.Background(), "dockerHostList")
+	})
+
 	connect := make(chan struct{})
 	closeConnect := sync.OnceFunc(func() {
 		close(connect)
@@ -439,7 +450,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	client.OnAny(func(s string, i []any) {
-		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" && s != "proxyList" {
+		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" && s != "proxyList" && s != "dockerHostList" {
 			c.updates.Emit(context.Background(), s)
 		}
 	})
