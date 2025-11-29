@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pquerna/otp/totp"
 	socketio "github.com/maldikhan/go.socket.io/socket.io/v5/client"
 	"github.com/maldikhan/go.socket.io/socket.io/v5/client/emit"
 	"github.com/maldikhan/go.socket.io/utils"
@@ -26,6 +27,7 @@ import (
 )
 
 var ErrNotFound = fmt.Errorf("not found")
+var ErrTwoFactorRequired = fmt.Errorf("two-factor authentication required but no TOTP secret provided")
 
 const (
 	LogLevelDebug = utils.DEBUG
@@ -82,21 +84,30 @@ type Client struct {
 	socketioClientConnectTimeout time.Duration
 	socketioLogger               socketio.Logger
 	autosetup                    bool
+	autosetupEnable2FA           bool
 
 	mu      *sync.Mutex
 	updates signals.Signal[string]
 	state   state
 
 	// Authentication fields
-	authToken string // Current session token
-	has2FA    bool   // Whether user has 2FA enabled
+	authToken  string // Current session token
+	has2FA     bool   // Whether user has 2FA enabled
+	totpSecret string // TOTP secret for automatic token generation
 }
 
 type Option func(c *Client)
 
-func WithAutosetup() Option {
+func WithAutosetup(enable2FA bool) Option {
 	return func(c *Client) {
 		c.autosetup = true
+		c.autosetupEnable2FA = enable2FA
+	}
+}
+
+func WithTOTPSecret(secret string) Option {
+	return func(c *Client) {
+		c.totpSecret = secret
 	}
 }
 
@@ -440,6 +451,12 @@ func (c *Client) waitForReady(ctx context.Context) error {
 	}
 }
 
+// generateTOTPToken generates a TOTP token from the given secret.
+// The secret should be base32-encoded (as provided by Uptime Kuma).
+func generateTOTPToken(secret string) (string, error) {
+	return totp.GenerateCode(secret, time.Now())
+}
+
 func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
 	c := &Client{
 		socketioLogger: &utils.DefaultLogger{Level: utils.NONE},
@@ -503,7 +520,16 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	if username != "" && password != "" {
-		_, err = c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": ""})
+		// Generate TOTP token if secret is provided
+		token := ""
+		if c.totpSecret != "" {
+			token, err = generateTOTPToken(c.totpSecret)
+			if err != nil {
+				return nil, fmt.Errorf("generate TOTP token: %w", err)
+			}
+		}
+
+		resp, err := c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": token})
 		if err != nil {
 			// Ensure we had the time to receive a potential setup event.
 			time.Sleep(10 * time.Millisecond)
@@ -519,6 +545,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 				return nil, fmt.Errorf("login: %v", err)
 			}
 		}
+
+		// Check if 2FA is required but no TOTP secret was provided
+		if resp.TokenRequired && c.totpSecret == "" {
+			return nil, ErrTwoFactorRequired
+		}
 	}
 
 	// Handle setup if required
@@ -533,7 +564,23 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			return nil, fmt.Errorf("setup: %v", err)
 		}
 
-		_, err = c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": ""})
+		// If 2FA should be enabled during autosetup, set it up now
+		if c.autosetupEnable2FA {
+			if err := c.setup2FA(ctxWithConnectTimeout, password); err != nil {
+				return nil, fmt.Errorf("setup 2FA: %w", err)
+			}
+		}
+
+		// Generate TOTP token for login if secret is available (set by setup2FA)
+		token := ""
+		if c.totpSecret != "" {
+			token, err = generateTOTPToken(c.totpSecret)
+			if err != nil {
+				return nil, fmt.Errorf("generate TOTP token: %w", err)
+			}
+		}
+
+		_, err = c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": token})
 		if err != nil {
 			return nil, fmt.Errorf("login: %v", err)
 		}
@@ -549,6 +596,106 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 func (c *Client) Disconnect() error {
 	return c.socketioClient.Close()
+}
+
+// prepare2FA initiates 2FA setup and returns the secret and URI.
+// Internal method used during autosetup.
+func (c *Client) prepare2FA(ctx context.Context, password string) (secret string, uri string, err error) {
+	resp, err := c.syncEmit(ctx, "prepare2FA", password)
+	if err != nil {
+		return "", "", err
+	}
+
+	uriVal, ok := resp.Data["uri"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("prepare2FA: invalid response, missing uri")
+	}
+
+	return "", uriVal, nil
+}
+
+// save2FA activates 2FA for the current user.
+// Internal method used during autosetup.
+func (c *Client) save2FA(ctx context.Context, password string) error {
+	_, err := c.syncEmit(ctx, "save2FA", password)
+	return err
+}
+
+// twoFAStatus checks if 2FA is enabled for the current user.
+// Internal method used during autosetup.
+func (c *Client) twoFAStatus(ctx context.Context) (bool, error) {
+	resp, err := c.syncEmit(ctx, "twoFAStatus")
+	if err != nil {
+		return false, err
+	}
+
+	status, ok := resp.Data["status"].(bool)
+	if !ok {
+		return false, fmt.Errorf("twoFAStatus: invalid response")
+	}
+
+	return status, nil
+}
+
+// setup2FA handles the complete 2FA setup flow during autosetup.
+// It calls prepare2FA, extracts the secret, calls save2FA, and stores the secret.
+func (c *Client) setup2FA(ctx context.Context, password string) error {
+	// Prepare 2FA - this generates the secret
+	_, uri, err := c.prepare2FA(ctx, password)
+	if err != nil {
+		return fmt.Errorf("prepare 2FA: %w", err)
+	}
+
+	// Extract secret from URI
+	// Format: otpauth://totp/Uptime%20Kuma:username?secret=BASE32SECRET
+	secret, err := extractSecretFromURI(uri)
+	if err != nil {
+		return fmt.Errorf("extract secret from URI: %w", err)
+	}
+
+	// Save 2FA - this activates it
+	if err := c.save2FA(ctx, password); err != nil {
+		return fmt.Errorf("save 2FA: %w", err)
+	}
+
+	// Store the secret for future use
+	c.totpSecret = secret
+
+	// Verify 2FA is now enabled
+	status, err := c.twoFAStatus(ctx)
+	if err != nil {
+		return fmt.Errorf("verify 2FA status: %w", err)
+	}
+	if !status {
+		return fmt.Errorf("2FA setup completed but status check failed")
+	}
+
+	return nil
+}
+
+// extractSecretFromURI extracts the base32-encoded secret from an otpauth:// URI.
+func extractSecretFromURI(uri string) (string, error) {
+	// URI format: otpauth://totp/Uptime%20Kuma:username?secret=BASE32SECRET
+	if !strings.HasPrefix(uri, "otpauth://") {
+		return "", fmt.Errorf("invalid otpauth URI")
+	}
+
+	// Find the secret parameter
+	parts := strings.Split(uri, "?")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("no query parameters in URI")
+	}
+
+	// Parse query parameters
+	params := strings.Split(parts[1], "&")
+	for _, param := range params {
+		kv := strings.SplitN(param, "=", 2)
+		if len(kv) == 2 && kv[0] == "secret" {
+			return kv[1], nil
+		}
+	}
+
+	return "", fmt.Errorf("secret parameter not found in URI")
 }
 
 type ackResponse struct {
@@ -567,6 +714,7 @@ type ackResponse struct {
 	Config          map[string]any `json:"config"`
 	PublicGroupList []any          `json:"publicGroupList"`
 	Incident        map[string]any `json:"incident"`
+	TokenRequired   bool           `json:"tokenRequired"`
 }
 
 func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
