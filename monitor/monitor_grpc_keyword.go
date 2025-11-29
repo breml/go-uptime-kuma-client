@@ -72,8 +72,9 @@ func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 	raw["grpcBody"] = g.GrpcBody
 	raw["keyword"] = g.Keyword
 	raw["invertKeyword"] = g.InvertKeyword
-	raw["maxredirects"] = g.MaxRedirects
-	raw["accepted_statuscodes"] = g.AcceptedStatusCodes
+
+	// Server expects these fields to be arrays and not null.
+	raw["accepted_statuscodes"] = []string{}
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
@@ -82,16 +83,14 @@ func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 }
 
 type GrpcKeywordDetails struct {
-	GrpcURL             string   `json:"grpcUrl"`
-	GrpcProtobuf        string   `json:"grpcProtobuf"`
-	GrpcServiceName     string   `json:"grpcServiceName"`
-	GrpcMethod          string   `json:"grpcMethod"`
-	GrpcEnableTLS       bool     `json:"grpcEnableTls"`
-	GrpcBody            string   `json:"grpcBody"`
-	Keyword             string   `json:"keyword"`
-	InvertKeyword       bool     `json:"invertKeyword"`
-	MaxRedirects        int      `json:"maxredirects"`
-	AcceptedStatusCodes []string `json:"accepted_statuscodes"`
+	GrpcURL         string `json:"grpcUrl"`
+	GrpcProtobuf    string `json:"grpcProtobuf"`
+	GrpcServiceName string `json:"grpcServiceName"`
+	GrpcMethod      string `json:"grpcMethod"`
+	GrpcEnableTLS   bool   `json:"grpcEnableTls"`
+	GrpcBody        string `json:"grpcBody"`
+	Keyword         string `json:"keyword"`
+	InvertKeyword   bool   `json:"invertKeyword"`
 }
 
 func (g GrpcKeywordDetails) Type() string {
