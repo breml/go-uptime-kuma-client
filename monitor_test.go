@@ -1324,10 +1324,8 @@ func TestClient_MonitorGrpcKeywordCRUD(t *testing.T) {
 			GrpcMethod:          "Check",
 			GrpcEnableTLS:       false,
 			GrpcBody:            "{\"service\":\"\"}",
-			Keyword:             "SERVING",
-			InvertKeyword:       false,
-			MaxRedirects:        10,
-			AcceptedStatusCodes: []string{"200-299"},
+			Keyword:       "SERVING",
+			InvertKeyword: false,
 		},
 	}
 
