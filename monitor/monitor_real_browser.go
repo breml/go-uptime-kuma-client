@@ -70,6 +70,7 @@ func (r RealBrowser) MarshalJSON() ([]byte, error) {
 	raw["maxredirects"] = r.MaxRedirects
 	raw["accepted_statuscodes"] = r.AcceptedStatusCodes
 	raw["proxyId"] = r.ProxyID
+	raw["remote_browser"] = r.RemoteBrowser
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
@@ -83,6 +84,7 @@ type RealBrowserDetails struct {
 	IgnoreTLS           bool     `json:"ignoreTls"`
 	MaxRedirects        int      `json:"maxredirects"`
 	AcceptedStatusCodes []string `json:"accepted_statuscodes"`
+	RemoteBrowser       *int64   `json:"remote_browser,omitempty"`
 }
 
 func (r RealBrowserDetails) Type() string {
