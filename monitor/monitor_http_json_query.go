@@ -100,6 +100,7 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	// Always override with current JSON Query-specific field values.
 	raw["jsonPath"] = h.JSONPath
 	raw["expectedValue"] = h.ExpectedValue
+	raw["jsonPathOperator"] = h.JSONPathOperator
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
@@ -108,8 +109,9 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 }
 
 type HTTPJSONQueryDetails struct {
-	JSONPath      string `json:"jsonPath"`
-	ExpectedValue string `json:"expectedValue"`
+	JSONPath         string `json:"jsonPath"`
+	ExpectedValue    string `json:"expectedValue"`
+	JSONPathOperator string `json:"jsonPathOperator"`
 }
 
 func (h HTTPJSONQueryDetails) Type() string {
