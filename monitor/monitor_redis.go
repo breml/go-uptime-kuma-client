@@ -65,6 +65,7 @@ func (r Redis) MarshalJSON() ([]byte, error) {
 
 	// Always override with current Redis-specific field values.
 	raw["databaseConnectionString"] = r.ConnectionString
+	raw["ignoreTls"] = r.IgnoreTLS
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -77,6 +78,7 @@ func (r Redis) MarshalJSON() ([]byte, error) {
 
 type RedisDetails struct {
 	ConnectionString string `json:"databaseConnectionString"`
+	IgnoreTLS        bool   `json:"ignoreTls"`
 }
 
 func (r RedisDetails) Type() string {
