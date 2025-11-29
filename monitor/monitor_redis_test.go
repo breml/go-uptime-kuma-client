@@ -40,9 +40,10 @@ func TestMonitorRedis_Unmarshal(t *testing.T) {
 				},
 				RedisDetails: monitor.RedisDetails{
 					ConnectionString: "redis://user:password@localhost:6379",
+					IgnoreTLS:        false,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"redis://user:password@localhost:6379","description":"Test Redis monitor","id":6,"interval":60,"maxretries":2,"name":"redis-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"type":"redis","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"redis://user:password@localhost:6379","description":"Test Redis monitor","id":6,"ignoreTls":false,"interval":60,"maxretries":2,"name":"redis-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"type":"redis","upsideDown":false}`,
 		},
 	}
 
