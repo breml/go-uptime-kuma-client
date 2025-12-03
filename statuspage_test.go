@@ -57,7 +57,7 @@ func TestClient_StatusPageCRUD(t *testing.T) {
 		retrievedStatusPage.ShowPoweredBy = false
 		retrievedStatusPage.CustomCSS = "body { background: #000; }"
 
-		err = client.SaveStatusPage(ctx, retrievedStatusPage)
+		_, err = client.SaveStatusPage(ctx, retrievedStatusPage)
 		require.NoError(t, err)
 
 		updated, err := client.GetStatusPage(ctx, slug)
@@ -170,7 +170,7 @@ func TestClient_StatusPageWithMonitors(t *testing.T) {
 			},
 		}
 
-		err = client.SaveStatusPage(ctx, sp)
+		_, err = client.SaveStatusPage(ctx, sp)
 		require.NoError(t, err)
 
 		// Note: GetStatusPage does not return PublicGroupList from the server
@@ -295,7 +295,7 @@ func TestClient_StatusPageThemes(t *testing.T) {
 		require.True(t, statuspage.ValidTheme(statuspage.ThemeLight()))
 		sp.Theme = statuspage.ThemeLight()
 
-		err = client.SaveStatusPage(ctx, sp)
+		_, err = client.SaveStatusPage(ctx, sp)
 		require.NoError(t, err)
 
 		updated, err := client.GetStatusPage(ctx, slug)
@@ -310,7 +310,7 @@ func TestClient_StatusPageThemes(t *testing.T) {
 		require.True(t, statuspage.ValidTheme(statuspage.ThemeDark()))
 		sp.Theme = statuspage.ThemeDark()
 
-		err = client.SaveStatusPage(ctx, sp)
+		_, err = client.SaveStatusPage(ctx, sp)
 		require.NoError(t, err)
 
 		updated, err := client.GetStatusPage(ctx, slug)
@@ -325,7 +325,7 @@ func TestClient_StatusPageThemes(t *testing.T) {
 		require.True(t, statuspage.ValidTheme(statuspage.ThemeAuto()))
 		sp.Theme = statuspage.ThemeAuto()
 
-		err = client.SaveStatusPage(ctx, sp)
+		_, err = client.SaveStatusPage(ctx, sp)
 		require.NoError(t, err)
 
 		updated, err := client.GetStatusPage(ctx, slug)

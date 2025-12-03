@@ -56,8 +56,8 @@ func (c *Client) AddStatusPage(ctx context.Context, title, slug string) error {
 	return nil
 }
 
-// SaveStatusPage updates an existing status page configuration.
-func (c *Client) SaveStatusPage(ctx context.Context, sp *statuspage.StatusPage) error {
+// SaveStatusPage updates an existing status page configuration and returns the updated public group list with IDs.
+func (c *Client) SaveStatusPage(ctx context.Context, sp *statuspage.StatusPage) ([]statuspage.PublicGroup, error) {
 	config := map[string]any{
 		"slug":                  sp.Slug,
 		"title":                 sp.Title,
@@ -96,12 +96,21 @@ func (c *Client) SaveStatusPage(ctx context.Context, sp *statuspage.StatusPage) 
 		}
 	}
 
-	_, err := c.syncEmit(ctx, "saveStatusPage", sp.Slug, config, imgDataURL, publicGroupList)
+	response, err := c.syncEmit(ctx, "saveStatusPage", sp.Slug, config, imgDataURL, publicGroupList)
 	if err != nil {
-		return fmt.Errorf("save status page: %v", err)
+		return nil, fmt.Errorf("save status page: %v", err)
 	}
 
-	return nil
+	// Parse the returned public group list with IDs
+	var groups []statuspage.PublicGroup
+	if response.PublicGroupList != nil {
+		err = convertToStruct(response.PublicGroupList, &groups)
+		if err != nil {
+			return nil, fmt.Errorf("save status page: failed to parse response public group list: %v", err)
+		}
+	}
+
+	return groups, nil
 }
 
 // DeleteStatusPage deletes a status page by slug.
