@@ -49,5 +49,4 @@
 //	base, _ := client.GetMonitor(ctx, id)
 //	var httpMon monitor.HTTP
 //	base.As(&httpMon)
-//
 package kuma

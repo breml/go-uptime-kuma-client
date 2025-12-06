@@ -1318,14 +1318,14 @@ func TestClient_MonitorGrpcKeywordCRUD(t *testing.T) {
 			IsActive:       false, // Set to false to avoid actual gRPC calls during testing
 		},
 		GrpcKeywordDetails: monitor.GrpcKeywordDetails{
-			GrpcURL:             "localhost:50051",
-			GrpcProtobuf:        "syntax = \"proto3\";\n\npackage grpc.health.v1;\n\nservice Health {\n  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);\n}\n\nmessage HealthCheckRequest {\n  string service = 1;\n}\n\nmessage HealthCheckResponse {\n  enum ServingStatus {\n    UNKNOWN = 0;\n    SERVING = 1;\n    NOT_SERVING = 2;\n  }\n  ServingStatus status = 1;\n}\n",
-			GrpcServiceName:     "Health",
-			GrpcMethod:          "Check",
-			GrpcEnableTLS:       false,
-			GrpcBody:            "{\"service\":\"\"}",
-			Keyword:       "SERVING",
-			InvertKeyword: false,
+			GrpcURL:         "localhost:50051",
+			GrpcProtobuf:    "syntax = \"proto3\";\n\npackage grpc.health.v1;\n\nservice Health {\n  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);\n}\n\nmessage HealthCheckRequest {\n  string service = 1;\n}\n\nmessage HealthCheckResponse {\n  enum ServingStatus {\n    UNKNOWN = 0;\n    SERVING = 1;\n    NOT_SERVING = 2;\n  }\n  ServingStatus status = 1;\n}\n",
+			GrpcServiceName: "Health",
+			GrpcMethod:      "Check",
+			GrpcEnableTLS:   false,
+			GrpcBody:        "{\"service\":\"\"}",
+			Keyword:         "SERVING",
+			InvertKeyword:   false,
 		},
 	}
 

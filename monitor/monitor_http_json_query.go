@@ -40,9 +40,9 @@ func (h *HTTPJSONQuery) UnmarshalJSON(data []byte) error {
 	}
 
 	*h = HTTPJSONQuery{
-		Base:                     base,
-		HTTPDetails:              httpDetails,
-		HTTPJSONQueryDetails:     jsonQueryDetails,
+		Base:                 base,
+		HTTPDetails:          httpDetails,
+		HTTPJSONQueryDetails: jsonQueryDetails,
 	}
 
 	return nil

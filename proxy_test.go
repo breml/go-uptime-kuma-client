@@ -223,9 +223,9 @@ func TestProxyWithMonitor(t *testing.T) {
 				ProxyID:  &proxyID,
 			},
 			HTTPDetails: monitor.HTTPDetails{
-				URL:                "https://example.com",
-				Method:             "GET",
-				MaxRedirects:       10,
+				URL:                 "https://example.com",
+				Method:              "GET",
+				MaxRedirects:        10,
 				AcceptedStatusCodes: []string{"200-299"},
 			},
 		}
@@ -310,9 +310,9 @@ func TestProxyApplyExisting(t *testing.T) {
 				Interval: 60,
 			},
 			HTTPDetails: monitor.HTTPDetails{
-				URL:                "https://example1.com",
-				Method:             "GET",
-				MaxRedirects:       10,
+				URL:                 "https://example1.com",
+				Method:              "GET",
+				MaxRedirects:        10,
 				AcceptedStatusCodes: []string{"200-299"},
 			},
 		}
@@ -326,9 +326,9 @@ func TestProxyApplyExisting(t *testing.T) {
 				Interval: 60,
 			},
 			HTTPDetails: monitor.HTTPDetails{
-				URL:                "https://example2.com",
-				Method:             "GET",
-				MaxRedirects:       10,
+				URL:                 "https://example2.com",
+				Method:              "GET",
+				MaxRedirects:        10,
 				AcceptedStatusCodes: []string{"200-299"},
 			},
 		}

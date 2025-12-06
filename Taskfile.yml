@@ -36,3 +36,9 @@ tasks:
     cmds:
       - golangci-lint run
     silent: true
+
+  fmt:
+    dsc: Format code using gofumpt
+    cmds:
+      - gofumpt -w .
+    silent: true

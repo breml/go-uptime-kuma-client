@@ -79,10 +79,10 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 }
 
 type DNSDetails struct {
-	Hostname       string          `json:"hostname"`
-	ResolverServer string          `json:"dns_resolve_server"`
-	ResolveType    DNSResolveType  `json:"dns_resolve_type"`
-	Port           int             `json:"port"`
+	Hostname       string         `json:"hostname"`
+	ResolverServer string         `json:"dns_resolve_server"`
+	ResolveType    DNSResolveType `json:"dns_resolve_type"`
+	Port           int            `json:"port"`
 }
 
 func (d DNSDetails) Type() string {
