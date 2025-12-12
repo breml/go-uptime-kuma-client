@@ -12,7 +12,7 @@ tasks:
   test:
     desc: Run all tests
     cmds:
-      - go test ./...
+      - go test -shuffle on ./...
     silent: true
 
   test-debug:
@@ -20,7 +20,7 @@ tasks:
     env:
       SOCKETIO_LOG_LEVEL: DEBUG
     cmds:
-      - go test -v ./...
+      - go test -v -shuffle on ./...
     silent: true
 
   test-e2e:
@@ -28,7 +28,7 @@ tasks:
     env:
       E2E_TEST: "true"
     cmds:
-      - go test -v -timeout 120s ./...
+      - go test -v -shuffle on -timeout 120s ./...
     silent: true
 
   lint:
