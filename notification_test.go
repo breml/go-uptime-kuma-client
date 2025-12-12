@@ -975,3 +975,98 @@ func TestOpsgenieNotificationCRUD(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestHomeAssistantNotificationCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	createNotification := notification.HomeAssistant{
+		Base: notification.Base{
+			ApplyExisting: true,
+			IsDefault:     false,
+			IsActive:      true,
+			Name:          "Test Home Assistant Created",
+		},
+		HomeAssistantDetails: notification.HomeAssistantDetails{
+			HomeAssistantURL:     "http://192.168.1.100:8123",
+			LongLivedAccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+			NotificationService:  "notify.mobile_app_iphone",
+		},
+	}
+
+	t.Run("initial_state", func(t *testing.T) {
+		notifications := client.GetNotifications(ctx)
+		t.Logf("Initial notifications count: %d", len(notifications))
+	})
+
+	var id int64
+	t.Run("create", func(t *testing.T) {
+		initialNotifications := client.GetNotifications(ctx)
+		initialCount := len(initialNotifications)
+
+		id, err = client.CreateNotification(ctx, createNotification)
+		require.NoError(t, err)
+		require.Greater(t, id, int64(0))
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, initialCount+1)
+
+		createdNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+		require.Equal(t, "HomeAssistant", createdNotification.Type())
+		require.Equal(t, id, createdNotification.GetID())
+
+		specificNotification := notification.HomeAssistant{}
+		err = createdNotification.As(&specificNotification)
+		require.NoError(t, err)
+
+		expectedHomeAssistant := createNotification
+		expectedHomeAssistant.ID = id
+		expectedHomeAssistant.UserID = specificNotification.UserID
+		require.EqualExportedValues(t, expectedHomeAssistant, specificNotification)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		currentNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		current := notification.HomeAssistant{}
+		err = currentNotification.As(&current)
+		require.NoError(t, err)
+
+		current.Name = "Test Home Assistant Updated"
+		current.HomeAssistantURL = "http://ha.example.com:8123"
+		current.NotificationService = "notify.persistent_notification"
+
+		err = client.UpdateNotification(ctx, current)
+		require.NoError(t, err)
+
+		retrievedNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		retrieved := notification.HomeAssistant{}
+		err = retrievedNotification.As(&retrieved)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, current, retrieved)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		preDeleteNotifications := client.GetNotifications(ctx)
+		preDeleteCount := len(preDeleteNotifications)
+
+		err := client.DeleteNotification(ctx, id)
+		require.NoError(t, err)
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, preDeleteCount-1)
+
+		_, err = client.GetNotification(ctx, id)
+		require.Error(t, err)
+	})
+}
