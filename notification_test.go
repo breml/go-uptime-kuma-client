@@ -1344,9 +1344,6 @@ func TestGrafanaOncallNotificationCRUD(t *testing.T) {
 		require.NoError(t, err)
 
 		retrieved := notification.GrafanaOncall{}
-=======
-		retrieved := notification.Pushover{}
->>>>>>> cb5ed6e (feat: add support for Pushover notifications)
 		err = retrievedNotification.As(&retrieved)
 		require.NoError(t, err)
 		require.EqualExportedValues(t, current, retrieved)
