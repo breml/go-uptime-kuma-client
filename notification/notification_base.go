@@ -91,7 +91,6 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	}
 
 	genericDetails := GenericDetails{}
-	fmt.Println(b.configStr)
 	err := json.Unmarshal([]byte(b.configStr), &genericDetails)
 	if err != nil {
 		return nil, fmt.Errorf("invalid internal state for configStr, failed to unmarshal: %w", err)
