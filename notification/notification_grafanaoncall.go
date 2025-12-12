@@ -10,7 +10,7 @@ type GrafanaOncall struct {
 }
 
 type GrafanaOncallDetails struct {
-	GrafanaOncallURL string `json:"grafanaOncallURL"`
+	GrafanaOncallURL string `json:"GrafanaOncallURL"`
 }
 
 func (g GrafanaOncall) Type() string {
