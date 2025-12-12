@@ -19,7 +19,7 @@ func TestNotificationGrafanaOncall_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Grafana OnCall Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Grafana OnCall Alert\",\"GrafanaOncallURL\":\"https://alerts.grafana.com/api/v1/incidents/create\",\"type\":\"GrafanaOncall\"}"}`),
+			data: []byte(`{"id":1,"name":"My Grafana OnCall Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Grafana OnCall Alert\",\"grafanaOncallURL\":\"https://alerts.grafana.com/api/v1/incidents/create\",\"type\":\"GrafanaOncall\"}"}`),
 
 			want: notification.GrafanaOncall{
 				Base: notification.Base{
@@ -34,11 +34,11 @@ func TestNotificationGrafanaOncall_Unmarshal(t *testing.T) {
 					GrafanaOncallURL: "https://alerts.grafana.com/api/v1/incidents/create",
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":true,"GrafanaOncallURL":"https://alerts.grafana.com/api/v1/incidents/create","id":1,"isDefault":true,"name":"My Grafana OnCall Alert","type":"GrafanaOncall","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":true,"grafanaOncallURL":"https://alerts.grafana.com/api/v1/incidents/create","id":1,"isDefault":true,"name":"My Grafana OnCall Alert","type":"GrafanaOncall","userId":1}`,
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Grafana OnCall","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Grafana OnCall\",\"GrafanaOncallURL\":\"https://oncall.example.com/api/v1/incidents/create\",\"type\":\"GrafanaOncall\"}"}`),
+			data: []byte(`{"id":2,"name":"Simple Grafana OnCall","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Grafana OnCall\",\"grafanaOncallURL\":\"https://oncall.example.com/api/v1/incidents/create\",\"type\":\"GrafanaOncall\"}"}`),
 
 			want: notification.GrafanaOncall{
 				Base: notification.Base{
@@ -53,7 +53,7 @@ func TestNotificationGrafanaOncall_Unmarshal(t *testing.T) {
 					GrafanaOncallURL: "https://oncall.example.com/api/v1/incidents/create",
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":false,"GrafanaOncallURL":"https://oncall.example.com/api/v1/incidents/create","id":2,"isDefault":false,"name":"Simple Grafana OnCall","type":"GrafanaOncall","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":false,"grafanaOncallURL":"https://oncall.example.com/api/v1/incidents/create","id":2,"isDefault":false,"name":"Simple Grafana OnCall","type":"GrafanaOncall","userId":1}`,
 		},
 	}
 
