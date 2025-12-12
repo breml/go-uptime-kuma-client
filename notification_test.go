@@ -398,6 +398,100 @@ func TestWebhookNotificationCRUD(t *testing.T) {
 	})
 }
 
+func TestTelegramNotificationCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	createNotification := notification.Telegram{
+		Base: notification.Base{
+			ApplyExisting: true,
+			IsDefault:     false,
+			IsActive:      true,
+			Name:          "Test Telegram Created",
+		},
+		TelegramDetails: notification.TelegramDetails{
+			BotToken: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
+			ChatID:   "@mychannel",
+		},
+	}
+
+	t.Run("initial_state", func(t *testing.T) {
+		notifications := client.GetNotifications(ctx)
+		t.Logf("Initial notifications count: %d", len(notifications))
+	})
+
+	var id int64
+	t.Run("create", func(t *testing.T) {
+		initialNotifications := client.GetNotifications(ctx)
+		initialCount := len(initialNotifications)
+
+		id, err = client.CreateNotification(ctx, createNotification)
+		require.NoError(t, err)
+		require.Greater(t, id, int64(0))
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, initialCount+1)
+
+		createdNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+		require.Equal(t, "telegram", createdNotification.Type())
+		require.Equal(t, id, createdNotification.GetID())
+
+		specificNotification := notification.Telegram{}
+		err = createdNotification.As(&specificNotification)
+		require.NoError(t, err)
+
+		expectedTelegram := createNotification
+		expectedTelegram.ID = id
+		expectedTelegram.UserID = specificNotification.UserID
+		require.EqualExportedValues(t, expectedTelegram, specificNotification)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		currentNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		current := notification.Telegram{}
+		err = currentNotification.As(&current)
+		require.NoError(t, err)
+
+		current.Name = "Test Telegram Updated"
+		current.ChatID = "123456789"
+		current.SendSilently = true
+
+		err = client.UpdateNotification(ctx, current)
+		require.NoError(t, err)
+
+		retrievedNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		retrieved := notification.Telegram{}
+		err = retrievedNotification.As(&retrieved)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, current, retrieved)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		preDeleteNotifications := client.GetNotifications(ctx)
+		preDeleteCount := len(preDeleteNotifications)
+
+		err := client.DeleteNotification(ctx, id)
+		require.NoError(t, err)
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, preDeleteCount-1)
+
+		_, err = client.GetNotification(ctx, id)
+		require.Error(t, err)
+	})
+}
+
 func TestWebhookNotificationVariants(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
