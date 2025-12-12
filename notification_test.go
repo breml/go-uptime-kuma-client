@@ -689,3 +689,99 @@ func TestWebhookNotificationVariants(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestPagerDutyNotificationCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	createNotification := notification.PagerDuty{
+		Base: notification.Base{
+			ApplyExisting: true,
+			IsDefault:     false,
+			IsActive:      true,
+			Name:          "Test PagerDuty Created",
+		},
+		PagerDutyDetails: notification.PagerDutyDetails{
+			IntegrationURL: "https://events.pagerduty.com/v2/enqueue",
+			IntegrationKey: "test-integration-key-123",
+			Priority:       "warning",
+			AutoResolve:    "resolve",
+		},
+	}
+
+	t.Run("initial_state", func(t *testing.T) {
+		notifications := client.GetNotifications(ctx)
+		t.Logf("Initial notifications count: %d", len(notifications))
+	})
+
+	var id int64
+	t.Run("create", func(t *testing.T) {
+		initialNotifications := client.GetNotifications(ctx)
+		initialCount := len(initialNotifications)
+
+		id, err = client.CreateNotification(ctx, createNotification)
+		require.NoError(t, err)
+		require.Greater(t, id, int64(0))
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, initialCount+1)
+
+		createdNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+		require.Equal(t, "PagerDuty", createdNotification.Type())
+		require.Equal(t, id, createdNotification.GetID())
+
+		specificNotification := notification.PagerDuty{}
+		err = createdNotification.As(&specificNotification)
+		require.NoError(t, err)
+
+		expectedPagerDuty := createNotification
+		expectedPagerDuty.ID = id
+		expectedPagerDuty.UserID = specificNotification.UserID
+		require.EqualExportedValues(t, expectedPagerDuty, specificNotification)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		currentNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		current := notification.PagerDuty{}
+		err = currentNotification.As(&current)
+		require.NoError(t, err)
+
+		current.Name = "Test PagerDuty Updated"
+		current.Priority = "critical"
+		current.AutoResolve = "null"
+
+		err = client.UpdateNotification(ctx, current)
+		require.NoError(t, err)
+
+		retrievedNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		retrieved := notification.PagerDuty{}
+		err = retrievedNotification.As(&retrieved)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, current, retrieved)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		preDeleteNotifications := client.GetNotifications(ctx)
+		preDeleteCount := len(preDeleteNotifications)
+
+		err := client.DeleteNotification(ctx, id)
+		require.NoError(t, err)
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, preDeleteCount-1)
+
+		_, err = client.GetNotification(ctx, id)
+		require.Error(t, err)
+	})
+}
