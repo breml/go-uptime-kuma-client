@@ -33,7 +33,7 @@ func (p *Pushbullet) UnmarshalJSON(data []byte) error {
 	}
 
 	*p = Pushbullet{
-		Base:             base,
+		Base:              base,
 		PushbulletDetails: detail,
 	}
 
