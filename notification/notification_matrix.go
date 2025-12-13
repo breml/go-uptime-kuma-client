@@ -10,9 +10,9 @@ type Matrix struct {
 }
 
 type MatrixDetails struct {
-	HomeserverURL  string `json:"homeserverUrl"`
-	InternalRoomID string `json:"internalRoomId"`
-	AccessToken    string `json:"accessToken"`
+	HomeserverURL  string `json:"matrixHomeserverUrl"`
+	InternalRoomID string `json:"matrixInternalRoomId"`
+	AccessToken    string `json:"matrixAccessToken"`
 }
 
 func (m Matrix) Type() string {
