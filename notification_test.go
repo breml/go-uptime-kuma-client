@@ -1646,3 +1646,4 @@ func TestMatrixNotificationCRUD(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
