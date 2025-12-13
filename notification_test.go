@@ -1837,3 +1837,101 @@ func TestMatrixNotificationCRUD(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestRocketChatNotificationCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	createNotification := notification.RocketChat{
+		Base: notification.Base{
+			ApplyExisting: true,
+			IsDefault:     false,
+			IsActive:      true,
+			Name:          "Test Rocket.Chat Created",
+		},
+		RocketChatDetails: notification.RocketChatDetails{
+			WebhookURL: "https://rocket.example.com/hooks/xxx",
+			Channel:    "#alerts",
+			Username:   "Monitor Bot",
+			IconEmoji:  ":smiley:",
+			Button:     "",
+		},
+	}
+
+	t.Run("initial_state", func(t *testing.T) {
+		notifications := client.GetNotifications(ctx)
+		t.Logf("Initial notifications count: %d", len(notifications))
+	})
+
+	var id int64
+	t.Run("create", func(t *testing.T) {
+		initialNotifications := client.GetNotifications(ctx)
+		initialCount := len(initialNotifications)
+
+		id, err = client.CreateNotification(ctx, createNotification)
+		require.NoError(t, err)
+		require.Greater(t, id, int64(0))
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, initialCount+1)
+
+		createdNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+		require.Equal(t, "rocket.chat", createdNotification.Type())
+		require.Equal(t, id, createdNotification.GetID())
+
+		specificNotification := notification.RocketChat{}
+		err = createdNotification.As(&specificNotification)
+		require.NoError(t, err)
+
+		expectedRocketChat := createNotification
+		expectedRocketChat.ID = id
+		expectedRocketChat.UserID = specificNotification.UserID
+		require.EqualExportedValues(t, expectedRocketChat, specificNotification)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		currentNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		current := notification.RocketChat{}
+		err = currentNotification.As(&current)
+		require.NoError(t, err)
+
+		current.Name = "Test Rocket.Chat Updated"
+		current.Channel = "#monitoring"
+		current.Username = "Updated Bot"
+		current.IconEmoji = ":warning:"
+
+		err = client.UpdateNotification(ctx, current)
+		require.NoError(t, err)
+
+		retrievedNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		retrieved := notification.RocketChat{}
+		err = retrievedNotification.As(&retrieved)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, current, retrieved)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		preDeleteNotifications := client.GetNotifications(ctx)
+		preDeleteCount := len(preDeleteNotifications)
+
+		err := client.DeleteNotification(ctx, id)
+		require.NoError(t, err)
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, preDeleteCount-1)
+
+		_, err = client.GetNotification(ctx, id)
+		require.Error(t, err)
+	})
+}
