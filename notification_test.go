@@ -2290,9 +2290,6 @@ func TestGoogleChatNotificationCRUD(t *testing.T) {
 		require.NoError(t, err)
 
 		retrieved := notification.GoogleChat{}
-=======
-		retrieved := notification.Feishu{}
->>>>>>> f222b1b (feat(#46): Add support for Feishu notifications)
 		err = retrievedNotification.As(&retrieved)
 		require.NoError(t, err)
 		require.EqualExportedValues(t, current, retrieved)
