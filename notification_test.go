@@ -2382,9 +2382,6 @@ func TestGoogleChatNotificationCRUD(t *testing.T) {
 		require.NoError(t, err)
 
 		retrieved := notification.GoogleChat{}
-=======
-		retrieved := notification.WeCom{}
->>>>>>> 242da13 (feat(#47): Add support for WeCom notifications)
 		err = retrievedNotification.As(&retrieved)
 		require.NoError(t, err)
 		require.EqualExportedValues(t, current, retrieved)
