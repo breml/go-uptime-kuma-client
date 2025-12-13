@@ -416,15 +416,15 @@ func TestSMTPNotificationCRUD(t *testing.T) {
 			Name:          "Test SMTP Created",
 		},
 		SMTPDetails: notification.SMTPDetails{
-			Host:          "smtp.gmail.com",
-			Port:          587,
-			Secure:        false,
+			Host:           "smtp.gmail.com",
+			Port:           587,
+			Secure:         false,
 			IgnoreTLSError: false,
-			From:          "noreply@example.com",
-			To:            "alerts@example.com",
-			CustomSubject: "Alert: {{ monitorJSON['name'] }}",
-			CustomBody:    "Status: {{ msg }}",
-			HTMLBody:      true,
+			From:           "noreply@example.com",
+			To:             "alerts@example.com",
+			CustomSubject:  "Alert: {{ monitorJSON['name'] }}",
+			CustomBody:     "Status: {{ msg }}",
+			HTMLBody:       true,
 		},
 	}
 
@@ -1252,6 +1252,100 @@ func TestPushoverNotificationCRUD(t *testing.T) {
 		require.NoError(t, err)
 
 		retrieved := notification.Pushover{}
+		err = retrievedNotification.As(&retrieved)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, current, retrieved)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		preDeleteNotifications := client.GetNotifications(ctx)
+		preDeleteCount := len(preDeleteNotifications)
+
+		err := client.DeleteNotification(ctx, id)
+		require.NoError(t, err)
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, preDeleteCount-1)
+
+		_, err = client.GetNotification(ctx, id)
+		require.Error(t, err)
+	})
+}
+
+func TestGotifyNotificationCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	createNotification := notification.Gotify{
+		Base: notification.Base{
+			ApplyExisting: true,
+			IsDefault:     false,
+			IsActive:      true,
+			Name:          "Test Gotify Created",
+		},
+		GotifyDetails: notification.GotifyDetails{
+			ServerURL:        "https://gotify.example.com",
+			ApplicationToken: "test-token",
+			Priority:         8,
+		},
+	}
+
+	t.Run("initial_state", func(t *testing.T) {
+		notifications := client.GetNotifications(ctx)
+		t.Logf("Initial notifications count: %d", len(notifications))
+	})
+
+	var id int64
+	t.Run("create", func(t *testing.T) {
+		initialNotifications := client.GetNotifications(ctx)
+		initialCount := len(initialNotifications)
+
+		id, err = client.CreateNotification(ctx, createNotification)
+		require.NoError(t, err)
+		require.Greater(t, id, int64(0))
+
+		notifications := client.GetNotifications(ctx)
+		require.Len(t, notifications, initialCount+1)
+
+		createdNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+		require.Equal(t, "gotify", createdNotification.Type())
+		require.Equal(t, id, createdNotification.GetID())
+
+		specificNotification := notification.Gotify{}
+		err = createdNotification.As(&specificNotification)
+		require.NoError(t, err)
+
+		expectedGotify := createNotification
+		expectedGotify.ID = id
+		expectedGotify.UserID = specificNotification.UserID
+		require.EqualExportedValues(t, expectedGotify, specificNotification)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		currentNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		current := notification.Gotify{}
+		err = currentNotification.As(&current)
+		require.NoError(t, err)
+
+		current.Name = "Test Gotify Updated"
+		current.Priority = 5
+
+		err = client.UpdateNotification(ctx, current)
+		require.NoError(t, err)
+
+		retrievedNotification, err := client.GetNotification(ctx, id)
+		require.NoError(t, err)
+
+		retrieved := notification.Gotify{}
 		err = retrievedNotification.As(&retrieved)
 		require.NoError(t, err)
 		require.EqualExportedValues(t, current, retrieved)
