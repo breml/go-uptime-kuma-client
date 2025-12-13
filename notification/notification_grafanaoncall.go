@@ -33,7 +33,7 @@ func (g *GrafanaOncall) UnmarshalJSON(data []byte) error {
 	}
 
 	*g = GrafanaOncall{
-		Base:                   base,
+		Base:                 base,
 		GrafanaOncallDetails: detail,
 	}
 

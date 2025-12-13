@@ -10,15 +10,15 @@ type Telegram struct {
 }
 
 type TelegramDetails struct {
-	BotToken             string `json:"telegramBotToken"`
-	ChatID               string `json:"telegramChatID"`
-	ServerURL            string `json:"telegramServerUrl"`
-	SendSilently         bool   `json:"telegramSendSilently"`
-	ProtectContent       bool   `json:"telegramProtectContent"`
-	MessageThreadID      string `json:"telegramMessageThreadID"`
-	UseTemplate          bool   `json:"telegramUseTemplate"`
-	Template             string `json:"telegramTemplate"`
-	TemplateParseMode    string `json:"telegramTemplateParseMode"`
+	BotToken          string `json:"telegramBotToken"`
+	ChatID            string `json:"telegramChatID"`
+	ServerURL         string `json:"telegramServerUrl"`
+	SendSilently      bool   `json:"telegramSendSilently"`
+	ProtectContent    bool   `json:"telegramProtectContent"`
+	MessageThreadID   string `json:"telegramMessageThreadID"`
+	UseTemplate       bool   `json:"telegramUseTemplate"`
+	Template          string `json:"telegramTemplate"`
+	TemplateParseMode string `json:"telegramTemplateParseMode"`
 }
 
 func (t Telegram) Type() string {

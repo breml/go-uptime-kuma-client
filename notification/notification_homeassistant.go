@@ -35,7 +35,7 @@ func (h *HomeAssistant) UnmarshalJSON(data []byte) error {
 	}
 
 	*h = HomeAssistant{
-		Base:                    base,
+		Base:                 base,
 		HomeAssistantDetails: detail,
 	}
 

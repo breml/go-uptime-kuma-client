@@ -35,7 +35,7 @@ func (o *Opsgenie) UnmarshalJSON(data []byte) error {
 	}
 
 	*o = Opsgenie{
-		Base:             base,
+		Base:            base,
 		OpsgenieDetails: detail,
 	}
 

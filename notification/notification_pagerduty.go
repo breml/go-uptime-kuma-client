@@ -36,7 +36,7 @@ func (p *PagerDuty) UnmarshalJSON(data []byte) error {
 	}
 
 	*p = PagerDuty{
-		Base:               base,
+		Base:             base,
 		PagerDutyDetails: detail,
 	}
 
