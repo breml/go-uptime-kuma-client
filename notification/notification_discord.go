@@ -10,13 +10,13 @@ type Discord struct {
 }
 
 type DiscordDetails struct {
-	WebhookURL       string `json:"discordWebhookUrl"`
-	Username         string `json:"discordUsername"`
-	ChannelType      string `json:"discordChannelType"`
-	ThreadID         string `json:"threadId"`
-	PostName         string `json:"postName"`
-	PrefixMessage    string `json:"discordPrefixMessage"`
-	DisableURL       bool   `json:"disableUrl"`
+	WebhookURL    string `json:"discordWebhookUrl"`
+	Username      string `json:"discordUsername"`
+	ChannelType   string `json:"discordChannelType"`
+	ThreadID      string `json:"threadId"`
+	PostName      string `json:"postName"`
+	PrefixMessage string `json:"discordPrefixMessage"`
+	DisableURL    bool   `json:"disableUrl"`
 }
 
 func (d Discord) Type() string {
@@ -39,7 +39,7 @@ func (d *Discord) UnmarshalJSON(data []byte) error {
 	}
 
 	*d = Discord{
-		Base:            base,
+		Base:           base,
 		DiscordDetails: detail,
 	}
 
