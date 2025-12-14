@@ -12,7 +12,7 @@ tasks:
   test:
     desc: Run all tests
     cmds:
-      - go test -shuffle on ./...
+      - go test -shuffle on -coverprofile coverage.out ./...
     silent: true
 
   test-debug:
@@ -28,7 +28,19 @@ tasks:
     env:
       E2E_TEST: "true"
     cmds:
-      - go test -v -shuffle on -timeout 120s ./...
+      - go test -v -shuffle on -coverprofile coverage.out -timeout 120s ./...
+    silent: true
+
+  test-e2e-coverage:
+    desc: Show coverage report for existing coverage.out or run end-to-end tests and generate coverage report
+    env:
+      E2E_TEST: "true"
+    cmds:
+      - |
+        if [ ! -f "coverage.out" ]; then
+          go test -v -shuffle on -coverprofile coverage.out -timeout 120s ./...
+        fi
+      - go tool cover -func=coverage.out | sort -k3 -rn
     silent: true
 
   lint:
@@ -41,4 +53,10 @@ tasks:
     dsc: Format code using gofumpt
     cmds:
       - gofumpt -w .
+    silent: true
+
+  clean:
+    desc: Clean temporary files
+    cmds:
+      - rm -f coverage.out
     silent: true
