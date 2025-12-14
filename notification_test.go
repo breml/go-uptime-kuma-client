@@ -1200,6 +1200,57 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Alerta",
+			expectedType: "alerta",
+			create: notification.Alerta{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Alerta Created",
+				},
+				AlertaDetails: notification.AlertaDetails{
+					ApiEndpoint:  "https://alerta.example.com/api/alerts",
+					ApiKey:       "test_api_key",
+					Environment:  "Production",
+					AlertState:   "critical",
+					RecoverState: "cleared",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				alerta := n.(*notification.Alerta)
+				alerta.Name = "Test Alerta Updated"
+				alerta.Environment = "Staging"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Alerta)
+				require.True(t, ok)
+				var alerta notification.Alerta
+				err := actual.As(&alerta)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = alerta.UserID
+				require.EqualExportedValues(t, exp, alerta)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var alerta notification.Alerta
+				err := base.As(&alerta)
+				require.NoError(t, err)
+				return &alerta
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Alerta)
+				require.True(t, ok)
+				var alerta notification.Alerta
+				err := actual.As(&alerta)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, alerta)
+			},
+		},
+		{
 			name:         "Apprise",
 			expectedType: "apprise",
 			create: notification.Apprise{
