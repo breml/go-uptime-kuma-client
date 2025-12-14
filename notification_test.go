@@ -10,592 +10,1096 @@ import (
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
-func TestNtfyNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Ntfy{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     true,
-			IsActive:      true,
-			Name:          "Test Ntfy Created",
-		},
-		NtfyDetails: notification.NtfyDetails{
-			AuthenticationMethod: "none",
-			Priority:             5,
-			ServerURL:            "https://ntfy.sh",
-			Topic:                "test-topic",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "ntfy", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Ntfy{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedNtfy := createNotification
-		expectedNtfy.ID = id
-		expectedNtfy.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedNtfy, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Ntfy{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Ntfy Updated"
-		current.AuthenticationMethod = "usernamePassword"
-		current.Username = "testuser"
-		current.Password = "testpass"
-		current.Priority = 3
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Ntfy{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
+// notificationTestCase defines a single notification type's CRUD test scenario
+type notificationTestCase struct {
+	name         string                          // Test name (e.g., "Ntfy", "Slack")
+	expectedType string                          // Expected type string from API
+	create       notification.Notification       // Notification to create
+	updateFunc   func(notification.Notification) // Function to modify notification for update test
 }
 
-func TestSlackNotificationCRUD(t *testing.T) {
+func TestNotificationCRUD(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Slack{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Slack Created",
+	testCases := []notificationTestCase{
+		{
+			name:         "Ntfy",
+			expectedType: "ntfy",
+			create: notification.Ntfy{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     true,
+					IsActive:      true,
+					Name:          "Test Ntfy Created",
+				},
+				NtfyDetails: notification.NtfyDetails{
+					AuthenticationMethod: "none",
+					Priority:             5,
+					ServerURL:            "https://ntfy.sh",
+					Topic:                "test-topic",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				ntfy := n.(*notification.Ntfy)
+				ntfy.Name = "Test Ntfy Updated"
+				ntfy.AuthenticationMethod = "usernamePassword"
+				ntfy.Username = "testuser"
+				ntfy.Password = "testpass"
+				ntfy.Priority = 3
+			},
 		},
-		SlackDetails: notification.SlackDetails{
-			WebhookURL:    "https://hooks.slack.com/services/test/webhook/url",
-			Username:      "uptime-kuma",
-			IconEmoji:     ":robot_face:",
-			Channel:       "#alerts",
-			RichMessage:   true,
-			ChannelNotify: false,
+		{
+			name:         "Slack",
+			expectedType: "slack",
+			create: notification.Slack{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Slack Created",
+				},
+				SlackDetails: notification.SlackDetails{
+					WebhookURL:    "https://hooks.slack.com/services/test/webhook/url",
+					Username:      "uptime-kuma",
+					IconEmoji:     ":robot_face:",
+					Channel:       "#alerts",
+					RichMessage:   true,
+					ChannelNotify: false,
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				slack := n.(*notification.Slack)
+				slack.Name = "Test Slack Updated"
+				slack.Username = "uptime-bot"
+				slack.IconEmoji = ":warning:"
+				slack.Channel = "#monitoring"
+				slack.ChannelNotify = true
+			},
+		},
+		{
+			name:         "Teams",
+			expectedType: "teams",
+			create: notification.Teams{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Teams Created",
+				},
+				TeamsDetails: notification.TeamsDetails{
+					WebhookURL: "https://outlook.office.com/webhook/xxx-xxx-xxx/IncomingWebhook/yyy-yyy-yyy",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				teams := n.(*notification.Teams)
+				teams.Name = "Test Teams Updated"
+				teams.WebhookURL = "https://outlook.office.com/webhook/updated-xxx-xxx/IncomingWebhook/updated-yyy-yyy"
+			},
+		},
+		{
+			name:         "Webhook",
+			expectedType: "webhook",
+			create: notification.Webhook{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Webhook Created",
+				},
+				WebhookDetails: notification.WebhookDetails{
+					WebhookURL:         "https://example.com/webhook",
+					WebhookContentType: "json",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				webhook := n.(*notification.Webhook)
+				webhook.Name = "Test Webhook Updated"
+				webhook.WebhookContentType = "custom"
+				webhook.WebhookCustomBody = `{"title": "Alert - {{ monitorJSON['name'] }}", "message": "{{ msg }}"}`
+				webhook.WebhookAdditionalHeaders = notification.WebhookAdditionalHeaders{
+					"Authorization": "Bearer test-token",
+					"X-Custom":      "test-value",
+				}
+			},
+		},
+		{
+			name:         "SMTP",
+			expectedType: "smtp",
+			create: notification.SMTP{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test SMTP Created",
+				},
+				SMTPDetails: notification.SMTPDetails{
+					Host:           "smtp.gmail.com",
+					Port:           587,
+					Secure:         false,
+					IgnoreTLSError: false,
+					From:           "noreply@example.com",
+					To:             "alerts@example.com",
+					CustomSubject:  "Alert: {{ monitorJSON['name'] }}",
+					CustomBody:     "Status: {{ msg }}",
+					HTMLBody:       true,
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				smtp := n.(*notification.SMTP)
+				smtp.Name = "Test SMTP Updated"
+				smtp.Host = "smtp.office365.com"
+				smtp.Port = 25
+				smtp.Username = "user@example.com"
+				smtp.Password = "secretpassword"
+				smtp.CC = "cc@example.com"
+				smtp.BCC = "bcc@example.com"
+				smtp.Secure = true
+			},
+		},
+		{
+			name:         "Telegram",
+			expectedType: "telegram",
+			create: notification.Telegram{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Telegram Created",
+				},
+				TelegramDetails: notification.TelegramDetails{
+					BotToken: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
+					ChatID:   "@mychannel",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				telegram := n.(*notification.Telegram)
+				telegram.Name = "Test Telegram Updated"
+				telegram.ChatID = "123456789"
+				telegram.SendSilently = true
+			},
+		},
+		{
+			name:         "PagerDuty",
+			expectedType: "PagerDuty",
+			create: notification.PagerDuty{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test PagerDuty Created",
+				},
+				PagerDutyDetails: notification.PagerDutyDetails{
+					IntegrationURL: "https://events.pagerduty.com/v2/enqueue",
+					IntegrationKey: "test-integration-key-123",
+					Priority:       "warning",
+					AutoResolve:    "resolve",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				pagerduty := n.(*notification.PagerDuty)
+				pagerduty.Name = "Test PagerDuty Updated"
+				pagerduty.Priority = "critical"
+				pagerduty.AutoResolve = "null"
+			},
+		},
+		{
+			name:         "Signal",
+			expectedType: "signal",
+			create: notification.Signal{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Signal Created",
+				},
+				SignalDetails: notification.SignalDetails{
+					URL:        "http://localhost:9998",
+					Number:     "+1234567890",
+					Recipients: "+9876543210,+1112223333",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				signal := n.(*notification.Signal)
+				signal.Name = "Test Signal Updated"
+				signal.URL = "http://signal-api:9998"
+				signal.Recipients = "+1111111111,+2222222222"
+			},
+		},
+		{
+			name:         "Opsgenie",
+			expectedType: "Opsgenie",
+			create: notification.Opsgenie{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Opsgenie Created",
+				},
+				OpsgenieDetails: notification.OpsgenieDetails{
+					ApiKey:   "test-api-key-123",
+					Region:   "us",
+					Priority: 3,
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				opsgenie := n.(*notification.Opsgenie)
+				opsgenie.Name = "Test Opsgenie Updated"
+				opsgenie.Region = "eu"
+				opsgenie.Priority = 5
+			},
+		},
+		{
+			name:         "HomeAssistant",
+			expectedType: "HomeAssistant",
+			create: notification.HomeAssistant{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Home Assistant Created",
+				},
+				HomeAssistantDetails: notification.HomeAssistantDetails{
+					HomeAssistantURL:     "http://192.168.1.100:8123",
+					LongLivedAccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+					NotificationService:  "notify.mobile_app_iphone",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				ha := n.(*notification.HomeAssistant)
+				ha.Name = "Test Home Assistant Updated"
+				ha.HomeAssistantURL = "http://ha.example.com:8123"
+				ha.NotificationService = "notify.persistent_notification"
+			},
+		},
+		{
+			name:         "Discord",
+			expectedType: "discord",
+			create: notification.Discord{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Discord Created",
+				},
+				DiscordDetails: notification.DiscordDetails{
+					WebhookURL:    "https://discordapp.com/api/webhooks/123456789/abcdefghijklmnopqrstuvwxyz",
+					Username:      "Uptime Monitor",
+					ChannelType:   "postToThread",
+					ThreadID:      "987654321",
+					PrefixMessage: "Alert:",
+					DisableURL:    true,
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				discord := n.(*notification.Discord)
+				discord.Name = "Test Discord Updated"
+				discord.Username = "Updated Monitor"
+				discord.ChannelType = "createNewForumPost"
+				discord.PostName = "System Alert"
+				discord.ThreadID = ""
+			},
+		},
+		{
+			name:         "Pushbullet",
+			expectedType: "pushbullet",
+			create: notification.Pushbullet{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Pushbullet Created",
+				},
+				PushbulletDetails: notification.PushbulletDetails{
+					AccessToken: "o.example_access_token",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				pushbullet := n.(*notification.Pushbullet)
+				pushbullet.Name = "Test Pushbullet Updated"
+				pushbullet.AccessToken = "o.updated_access_token"
+			},
+		},
+		{
+			name:         "Pushover",
+			expectedType: "pushover",
+			create: notification.Pushover{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Pushover Created",
+				},
+				PushoverDetails: notification.PushoverDetails{
+					UserKey:  "userkey123",
+					AppToken: "apptoken456",
+					Sounds:   "echo",
+					SoundsUp: "cashregister",
+					Priority: "1",
+					Title:    "Uptime Kuma Alert",
+					Device:   "iphone",
+					TTL:      "3600",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				pushover := n.(*notification.Pushover)
+				pushover.Name = "Test Pushover Updated"
+				pushover.Title = "Updated Alert"
+				pushover.Priority = "2"
+				pushover.Device = "android"
+			},
+		},
+		{
+			name:         "Gotify",
+			expectedType: "gotify",
+			create: notification.Gotify{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Gotify Created",
+				},
+				GotifyDetails: notification.GotifyDetails{
+					ServerURL:        "https://gotify.example.com",
+					ApplicationToken: "test-token",
+					Priority:         8,
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				gotify := n.(*notification.Gotify)
+				gotify.Name = "Test Gotify Updated"
+				gotify.Priority = 5
+			},
+		},
+		{
+			name:         "GrafanaOncall",
+			expectedType: "GrafanaOncall",
+			create: notification.GrafanaOncall{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Grafana OnCall Created",
+				},
+				GrafanaOncallDetails: notification.GrafanaOncallDetails{
+					GrafanaOncallURL: "https://alerts.grafana.com/api/v1/incidents/create",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				grafana := n.(*notification.GrafanaOncall)
+				grafana.Name = "Test Grafana OnCall Updated"
+				grafana.GrafanaOncallURL = "https://oncall.example.com/api/v1/incidents/create"
+			},
+		},
+		{
+			name:         "Twilio",
+			expectedType: "twilio",
+			create: notification.Twilio{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Twilio Created",
+				},
+				TwilioDetails: notification.TwilioDetails{
+					AccountSID: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+					ApiKey:     "",
+					AuthToken:  "test_auth_token",
+					ToNumber:   "+15551234567",
+					FromNumber: "+15559876543",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				twilio := n.(*notification.Twilio)
+				twilio.Name = "Test Twilio Updated"
+				twilio.ToNumber = "+15559999999"
+			},
+		},
+		{
+			name:         "Mattermost",
+			expectedType: "mattermost",
+			create: notification.Mattermost{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Mattermost Created",
+				},
+				MattermostDetails: notification.MattermostDetails{
+					WebhookURL: "https://mattermost.example.com/hooks/xxx",
+					Username:   "Monitor Bot",
+					Channel:    "#alerts",
+					IconEmoji:  ":smiley:",
+					IconURL:    "https://example.com/icon.png",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				mattermost := n.(*notification.Mattermost)
+				mattermost.Name = "Test Mattermost Updated"
+				mattermost.Username = "Updated Bot"
+				mattermost.Channel = "#monitoring"
+				mattermost.IconEmoji = ":warning:"
+			},
+		},
+		{
+			name:         "Matrix",
+			expectedType: "matrix",
+			create: notification.Matrix{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Matrix Created",
+				},
+				MatrixDetails: notification.MatrixDetails{
+					HomeserverURL:  "https://matrix.example.com",
+					InternalRoomID: "!roomid:example.com",
+					AccessToken:    "test_access_token",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				matrix := n.(*notification.Matrix)
+				matrix.Name = "Test Matrix Updated"
+				matrix.InternalRoomID = "!newroomid:example.com"
+			},
+		},
+		{
+			name:         "RocketChat",
+			expectedType: "rocket.chat",
+			create: notification.RocketChat{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Rocket.Chat Created",
+				},
+				RocketChatDetails: notification.RocketChatDetails{
+					WebhookURL: "https://rocket.example.com/hooks/xxx",
+					Channel:    "#alerts",
+					Username:   "Monitor Bot",
+					IconEmoji:  ":smiley:",
+					Button:     "",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				rocketchat := n.(*notification.RocketChat)
+				rocketchat.Name = "Test Rocket.Chat Updated"
+				rocketchat.Channel = "#monitoring"
+				rocketchat.Username = "Updated Bot"
+				rocketchat.IconEmoji = ":warning:"
+			},
+		},
+		{
+			name:         "WeCom",
+			expectedType: "WeCom",
+			create: notification.WeCom{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test WeCom Created",
+				},
+				WeComDetails: notification.WeComDetails{
+					BotKey: "abc123def456",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				wecom := n.(*notification.WeCom)
+				wecom.Name = "Test WeCom Updated"
+				wecom.BotKey = "xyz789abc123"
+			},
+		},
+		{
+			name:         "Feishu",
+			expectedType: "Feishu",
+			create: notification.Feishu{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Feishu Created",
+				},
+				FeishuDetails: notification.FeishuDetails{
+					WebHookURL: "https://open.feishu.cn/open-apis/bot/v2/hook/xxx",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				feishu := n.(*notification.Feishu)
+				feishu.Name = "Test Feishu Updated"
+				feishu.WebHookURL = "https://open.feishu.cn/open-apis/bot/v2/hook/yyy"
+			},
+		},
+		{
+			name:         "DingDing",
+			expectedType: "DingDing",
+			create: notification.DingDing{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test DingDing Created",
+				},
+				DingDingDetails: notification.DingDingDetails{
+					WebHookURL: "https://oapi.dingtalk.com/robot/send?access_token=xxx",
+					SecretKey:  "secret123",
+					Mentioning: "everyone",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				dingding := n.(*notification.DingDing)
+				dingding.Name = "Test DingDing Updated"
+				dingding.Mentioning = ""
+			},
+		},
+		{
+			name:         "Apprise",
+			expectedType: "apprise",
+			create: notification.Apprise{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Apprise Created",
+				},
+				AppriseDetails: notification.AppriseDetails{
+					AppriseURL: "json://localhost:8080",
+					Title:      "Uptime Kuma Alert",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				apprise := n.(*notification.Apprise)
+				apprise.Name = "Test Apprise Updated"
+				apprise.Title = "Updated Alert"
+			},
+		},
+		{
+			name:         "GoogleChat",
+			expectedType: "GoogleChat",
+			create: notification.GoogleChat{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Google Chat Created",
+				},
+				GoogleChatDetails: notification.GoogleChatDetails{
+					WebhookURL:  "https://chat.googleapis.com/v1/spaces/AAAAAA/messages?key=test",
+					UseTemplate: false,
+					Template:    "",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				googlechat := n.(*notification.GoogleChat)
+				googlechat.Name = "Test Google Chat Updated"
+				googlechat.UseTemplate = true
+				googlechat.Template = "Updated Template"
+			},
 		},
 	}
 
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+			defer cancel()
 
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
+			var err error
 
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
+			t.Run("initial_state", func(t *testing.T) {
+				notifications := client.GetNotifications(ctx)
+				t.Logf("Initial notifications count: %d", len(notifications))
+			})
 
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
+			var id int64
+			t.Run("create", func(t *testing.T) {
+				initialNotifications := client.GetNotifications(ctx)
+				initialCount := len(initialNotifications)
 
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "slack", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
+				id, err = client.CreateNotification(ctx, tc.create)
+				require.NoError(t, err)
+				require.Greater(t, id, int64(0))
 
-		specificNotification := notification.Slack{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
+				notifications := client.GetNotifications(ctx)
+				require.Len(t, notifications, initialCount+1)
 
-		expectedSlack := createNotification
-		expectedSlack.ID = id
-		expectedSlack.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedSlack, specificNotification)
-	})
+				createdNotification, err := client.GetNotification(ctx, id)
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedType, createdNotification.Type())
+				require.Equal(t, id, createdNotification.GetID())
 
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
+				verifyCreatedNotification(t, createdNotification, tc.create, id)
+			})
 
-		current := notification.Slack{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
+			t.Run("update", func(t *testing.T) {
+				currentNotification, err := client.GetNotification(ctx, id)
+				require.NoError(t, err)
 
-		current.Name = "Test Slack Updated"
-		current.Username = "uptime-bot"
-		current.IconEmoji = ":warning:"
-		current.Channel = "#monitoring"
-		current.ChannelNotify = true
+				updated := createTypedNotification(t, currentNotification, tc.create)
+				tc.updateFunc(updated)
 
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
+				err = client.UpdateNotification(ctx, updated)
+				require.NoError(t, err)
 
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
+				retrievedNotification, err := client.GetNotification(ctx, id)
+				require.NoError(t, err)
 
-		retrieved := notification.Slack{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
+				verifyUpdatedNotification(t, retrievedNotification, updated)
+			})
 
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
+			t.Run("delete", func(t *testing.T) {
+				preDeleteNotifications := client.GetNotifications(ctx)
+				preDeleteCount := len(preDeleteNotifications)
 
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
+				err := client.DeleteNotification(ctx, id)
+				require.NoError(t, err)
 
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
+				notifications := client.GetNotifications(ctx)
+				require.Len(t, notifications, preDeleteCount-1)
 
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
+				_, err = client.GetNotification(ctx, id)
+				require.Error(t, err)
+			})
+		})
+	}
 }
 
-func TestTeamsNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
+// verifyCreatedNotification checks that the created notification matches expected values
+func verifyCreatedNotification(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+	t.Helper()
+
+	switch exp := expected.(type) {
+	case notification.Ntfy:
+		var ntfy notification.Ntfy
+		err := actual.As(&ntfy)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = ntfy.UserID
+		require.EqualExportedValues(t, exp, ntfy)
+	case notification.Slack:
+		var slack notification.Slack
+		err := actual.As(&slack)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = slack.UserID
+		require.EqualExportedValues(t, exp, slack)
+	case notification.Teams:
+		var teams notification.Teams
+		err := actual.As(&teams)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = teams.UserID
+		require.EqualExportedValues(t, exp, teams)
+	case notification.Webhook:
+		var webhook notification.Webhook
+		err := actual.As(&webhook)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = webhook.UserID
+		require.EqualExportedValues(t, exp, webhook)
+	case notification.SMTP:
+		var smtp notification.SMTP
+		err := actual.As(&smtp)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = smtp.UserID
+		require.EqualExportedValues(t, exp, smtp)
+	case notification.Telegram:
+		var telegram notification.Telegram
+		err := actual.As(&telegram)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = telegram.UserID
+		require.EqualExportedValues(t, exp, telegram)
+	case notification.PagerDuty:
+		var pagerduty notification.PagerDuty
+		err := actual.As(&pagerduty)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = pagerduty.UserID
+		require.EqualExportedValues(t, exp, pagerduty)
+	case notification.Signal:
+		var signal notification.Signal
+		err := actual.As(&signal)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = signal.UserID
+		require.EqualExportedValues(t, exp, signal)
+	case notification.Opsgenie:
+		var opsgenie notification.Opsgenie
+		err := actual.As(&opsgenie)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = opsgenie.UserID
+		require.EqualExportedValues(t, exp, opsgenie)
+	case notification.HomeAssistant:
+		var ha notification.HomeAssistant
+		err := actual.As(&ha)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = ha.UserID
+		require.EqualExportedValues(t, exp, ha)
+	case notification.Discord:
+		var discord notification.Discord
+		err := actual.As(&discord)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = discord.UserID
+		require.EqualExportedValues(t, exp, discord)
+	case notification.Pushbullet:
+		var pushbullet notification.Pushbullet
+		err := actual.As(&pushbullet)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = pushbullet.UserID
+		require.EqualExportedValues(t, exp, pushbullet)
+	case notification.Pushover:
+		var pushover notification.Pushover
+		err := actual.As(&pushover)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = pushover.UserID
+		require.EqualExportedValues(t, exp, pushover)
+	case notification.Gotify:
+		var gotify notification.Gotify
+		err := actual.As(&gotify)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = gotify.UserID
+		require.EqualExportedValues(t, exp, gotify)
+	case notification.GrafanaOncall:
+		var grafana notification.GrafanaOncall
+		err := actual.As(&grafana)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = grafana.UserID
+		require.EqualExportedValues(t, exp, grafana)
+	case notification.Twilio:
+		var twilio notification.Twilio
+		err := actual.As(&twilio)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = twilio.UserID
+		require.EqualExportedValues(t, exp, twilio)
+	case notification.Mattermost:
+		var mattermost notification.Mattermost
+		err := actual.As(&mattermost)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = mattermost.UserID
+		require.EqualExportedValues(t, exp, mattermost)
+	case notification.Matrix:
+		var matrix notification.Matrix
+		err := actual.As(&matrix)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = matrix.UserID
+		require.EqualExportedValues(t, exp, matrix)
+	case notification.RocketChat:
+		var rocketchat notification.RocketChat
+		err := actual.As(&rocketchat)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = rocketchat.UserID
+		require.EqualExportedValues(t, exp, rocketchat)
+	case notification.WeCom:
+		var wecom notification.WeCom
+		err := actual.As(&wecom)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = wecom.UserID
+		require.EqualExportedValues(t, exp, wecom)
+	case notification.Feishu:
+		var feishu notification.Feishu
+		err := actual.As(&feishu)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = feishu.UserID
+		require.EqualExportedValues(t, exp, feishu)
+	case notification.DingDing:
+		var dingding notification.DingDing
+		err := actual.As(&dingding)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = dingding.UserID
+		require.EqualExportedValues(t, exp, dingding)
+	case notification.Apprise:
+		var apprise notification.Apprise
+		err := actual.As(&apprise)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = apprise.UserID
+		require.EqualExportedValues(t, exp, apprise)
+	case notification.GoogleChat:
+		var googlechat notification.GoogleChat
+		err := actual.As(&googlechat)
+		require.NoError(t, err)
+		exp.ID = id
+		exp.UserID = googlechat.UserID
+		require.EqualExportedValues(t, exp, googlechat)
+	default:
+		t.Fatalf("unknown notification type: %T", expected)
 	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Teams{
-		Base: notification.Base{
-			ApplyExisting: false,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Teams Created",
-		},
-		TeamsDetails: notification.TeamsDetails{
-			WebhookURL: "https://outlook.office.com/webhook/xxx-xxx-xxx/IncomingWebhook/yyy-yyy-yyy",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "teams", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Teams{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedTeams := createNotification
-		expectedTeams.ID = id
-		expectedTeams.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedTeams, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Teams{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Teams Updated"
-		current.WebhookURL = "https://outlook.office.com/webhook/updated-xxx-xxx/IncomingWebhook/updated-yyy-yyy"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Teams{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
 }
 
-func TestWebhookNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
+// createTypedNotification creates a properly typed notification from base notification
+func createTypedNotification(t *testing.T, base notification.Notification, template notification.Notification) notification.Notification {
+	t.Helper()
+
+	switch template.(type) {
+	case notification.Ntfy:
+		var ntfy notification.Ntfy
+		err := base.As(&ntfy)
+		require.NoError(t, err)
+		return &ntfy
+	case notification.Slack:
+		var slack notification.Slack
+		err := base.As(&slack)
+		require.NoError(t, err)
+		return &slack
+	case notification.Teams:
+		var teams notification.Teams
+		err := base.As(&teams)
+		require.NoError(t, err)
+		return &teams
+	case notification.Webhook:
+		var webhook notification.Webhook
+		err := base.As(&webhook)
+		require.NoError(t, err)
+		return &webhook
+	case notification.SMTP:
+		var smtp notification.SMTP
+		err := base.As(&smtp)
+		require.NoError(t, err)
+		return &smtp
+	case notification.Telegram:
+		var telegram notification.Telegram
+		err := base.As(&telegram)
+		require.NoError(t, err)
+		return &telegram
+	case notification.PagerDuty:
+		var pagerduty notification.PagerDuty
+		err := base.As(&pagerduty)
+		require.NoError(t, err)
+		return &pagerduty
+	case notification.Signal:
+		var signal notification.Signal
+		err := base.As(&signal)
+		require.NoError(t, err)
+		return &signal
+	case notification.Opsgenie:
+		var opsgenie notification.Opsgenie
+		err := base.As(&opsgenie)
+		require.NoError(t, err)
+		return &opsgenie
+	case notification.HomeAssistant:
+		var ha notification.HomeAssistant
+		err := base.As(&ha)
+		require.NoError(t, err)
+		return &ha
+	case notification.Discord:
+		var discord notification.Discord
+		err := base.As(&discord)
+		require.NoError(t, err)
+		return &discord
+	case notification.Pushbullet:
+		var pushbullet notification.Pushbullet
+		err := base.As(&pushbullet)
+		require.NoError(t, err)
+		return &pushbullet
+	case notification.Pushover:
+		var pushover notification.Pushover
+		err := base.As(&pushover)
+		require.NoError(t, err)
+		return &pushover
+	case notification.Gotify:
+		var gotify notification.Gotify
+		err := base.As(&gotify)
+		require.NoError(t, err)
+		return &gotify
+	case notification.GrafanaOncall:
+		var grafana notification.GrafanaOncall
+		err := base.As(&grafana)
+		require.NoError(t, err)
+		return &grafana
+	case notification.Twilio:
+		var twilio notification.Twilio
+		err := base.As(&twilio)
+		require.NoError(t, err)
+		return &twilio
+	case notification.Mattermost:
+		var mattermost notification.Mattermost
+		err := base.As(&mattermost)
+		require.NoError(t, err)
+		return &mattermost
+	case notification.Matrix:
+		var matrix notification.Matrix
+		err := base.As(&matrix)
+		require.NoError(t, err)
+		return &matrix
+	case notification.RocketChat:
+		var rocketchat notification.RocketChat
+		err := base.As(&rocketchat)
+		require.NoError(t, err)
+		return &rocketchat
+	case notification.WeCom:
+		var wecom notification.WeCom
+		err := base.As(&wecom)
+		require.NoError(t, err)
+		return &wecom
+	case notification.Feishu:
+		var feishu notification.Feishu
+		err := base.As(&feishu)
+		require.NoError(t, err)
+		return &feishu
+	case notification.DingDing:
+		var dingding notification.DingDing
+		err := base.As(&dingding)
+		require.NoError(t, err)
+		return &dingding
+	case notification.Apprise:
+		var apprise notification.Apprise
+		err := base.As(&apprise)
+		require.NoError(t, err)
+		return &apprise
+	case notification.GoogleChat:
+		var googlechat notification.GoogleChat
+		err := base.As(&googlechat)
+		require.NoError(t, err)
+		return &googlechat
+	default:
+		t.Fatalf("unknown notification type: %T", template)
+		return nil
 	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Webhook{
-		Base: notification.Base{
-			ApplyExisting: false,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Webhook Created",
-		},
-		WebhookDetails: notification.WebhookDetails{
-			WebhookURL:         "https://example.com/webhook",
-			WebhookContentType: "json",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "webhook", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Webhook{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedWebhook := createNotification
-		expectedWebhook.ID = id
-		expectedWebhook.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedWebhook, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Webhook{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Webhook Updated"
-		current.WebhookContentType = "custom"
-		current.WebhookCustomBody = `{"title": "Alert - {{ monitorJSON['name'] }}", "message": "{{ msg }}"}`
-		current.WebhookAdditionalHeaders = notification.WebhookAdditionalHeaders{
-			"Authorization": "Bearer test-token",
-			"X-Custom":      "test-value",
-		}
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Webhook{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
 }
 
-func TestSMTPNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
+// verifyUpdatedNotification checks that the updated notification matches expected values
+func verifyUpdatedNotification(t *testing.T, actual notification.Notification, expected notification.Notification) {
+	t.Helper()
+
+	switch exp := expected.(type) {
+	case *notification.Ntfy:
+		var ntfy notification.Ntfy
+		err := actual.As(&ntfy)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, ntfy)
+	case *notification.Slack:
+		var slack notification.Slack
+		err := actual.As(&slack)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, slack)
+	case *notification.Teams:
+		var teams notification.Teams
+		err := actual.As(&teams)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, teams)
+	case *notification.Webhook:
+		var webhook notification.Webhook
+		err := actual.As(&webhook)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, webhook)
+	case *notification.SMTP:
+		var smtp notification.SMTP
+		err := actual.As(&smtp)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, smtp)
+	case *notification.Telegram:
+		var telegram notification.Telegram
+		err := actual.As(&telegram)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, telegram)
+	case *notification.PagerDuty:
+		var pagerduty notification.PagerDuty
+		err := actual.As(&pagerduty)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, pagerduty)
+	case *notification.Signal:
+		var signal notification.Signal
+		err := actual.As(&signal)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, signal)
+	case *notification.Opsgenie:
+		var opsgenie notification.Opsgenie
+		err := actual.As(&opsgenie)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, opsgenie)
+	case *notification.HomeAssistant:
+		var ha notification.HomeAssistant
+		err := actual.As(&ha)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, ha)
+	case *notification.Discord:
+		var discord notification.Discord
+		err := actual.As(&discord)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, discord)
+	case *notification.Pushbullet:
+		var pushbullet notification.Pushbullet
+		err := actual.As(&pushbullet)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, pushbullet)
+	case *notification.Pushover:
+		var pushover notification.Pushover
+		err := actual.As(&pushover)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, pushover)
+	case *notification.Gotify:
+		var gotify notification.Gotify
+		err := actual.As(&gotify)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, gotify)
+	case *notification.GrafanaOncall:
+		var grafana notification.GrafanaOncall
+		err := actual.As(&grafana)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, grafana)
+	case *notification.Twilio:
+		var twilio notification.Twilio
+		err := actual.As(&twilio)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, twilio)
+	case *notification.Mattermost:
+		var mattermost notification.Mattermost
+		err := actual.As(&mattermost)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, mattermost)
+	case *notification.Matrix:
+		var matrix notification.Matrix
+		err := actual.As(&matrix)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, matrix)
+	case *notification.RocketChat:
+		var rocketchat notification.RocketChat
+		err := actual.As(&rocketchat)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, rocketchat)
+	case *notification.WeCom:
+		var wecom notification.WeCom
+		err := actual.As(&wecom)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, wecom)
+	case *notification.Feishu:
+		var feishu notification.Feishu
+		err := actual.As(&feishu)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, feishu)
+	case *notification.DingDing:
+		var dingding notification.DingDing
+		err := actual.As(&dingding)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, dingding)
+	case *notification.Apprise:
+		var apprise notification.Apprise
+		err := actual.As(&apprise)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, apprise)
+	case *notification.GoogleChat:
+		var googlechat notification.GoogleChat
+		err := actual.As(&googlechat)
+		require.NoError(t, err)
+		require.EqualExportedValues(t, *exp, googlechat)
+	default:
+		t.Fatalf("unknown notification type: %T", expected)
 	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.SMTP{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test SMTP Created",
-		},
-		SMTPDetails: notification.SMTPDetails{
-			Host:           "smtp.gmail.com",
-			Port:           587,
-			Secure:         false,
-			IgnoreTLSError: false,
-			From:           "noreply@example.com",
-			To:             "alerts@example.com",
-			CustomSubject:  "Alert: {{ monitorJSON['name'] }}",
-			CustomBody:     "Status: {{ msg }}",
-			HTMLBody:       true,
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "smtp", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.SMTP{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedSMTP := createNotification
-		expectedSMTP.ID = id
-		expectedSMTP.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedSMTP, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.SMTP{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test SMTP Updated"
-		current.Host = "smtp.office365.com"
-		current.Port = 25
-		current.Username = "user@example.com"
-		current.Password = "secretpassword"
-		current.CC = "cc@example.com"
-		current.BCC = "bcc@example.com"
-		current.Secure = true
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.SMTP{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestTelegramNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Telegram{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Telegram Created",
-		},
-		TelegramDetails: notification.TelegramDetails{
-			BotToken: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
-			ChatID:   "@mychannel",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "telegram", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Telegram{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedTelegram := createNotification
-		expectedTelegram.ID = id
-		expectedTelegram.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedTelegram, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Telegram{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Telegram Updated"
-		current.ChatID = "123456789"
-		current.SendSilently = true
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Telegram{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
 }
 
 func TestWebhookNotificationVariants(t *testing.T) {
@@ -687,1717 +1191,5 @@ func TestWebhookNotificationVariants(t *testing.T) {
 		// Cleanup
 		err = client.DeleteNotification(ctx, id)
 		require.NoError(t, err)
-	})
-}
-
-func TestPagerDutyNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.PagerDuty{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test PagerDuty Created",
-		},
-		PagerDutyDetails: notification.PagerDutyDetails{
-			IntegrationURL: "https://events.pagerduty.com/v2/enqueue",
-			IntegrationKey: "test-integration-key-123",
-			Priority:       "warning",
-			AutoResolve:    "resolve",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "PagerDuty", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.PagerDuty{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedPagerDuty := createNotification
-		expectedPagerDuty.ID = id
-		expectedPagerDuty.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedPagerDuty, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.PagerDuty{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test PagerDuty Updated"
-		current.Priority = "critical"
-		current.AutoResolve = "null"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.PagerDuty{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestSignalNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Signal{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Signal Created",
-		},
-		SignalDetails: notification.SignalDetails{
-			URL:        "http://localhost:9998",
-			Number:     "+1234567890",
-			Recipients: "+9876543210,+1112223333",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "signal", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Signal{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedSignal := createNotification
-		expectedSignal.ID = id
-		expectedSignal.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedSignal, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Signal{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Signal Updated"
-		current.URL = "http://signal-api:9998"
-		current.Recipients = "+1111111111,+2222222222"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Signal{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestOpsgenieNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Opsgenie{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Opsgenie Created",
-		},
-		OpsgenieDetails: notification.OpsgenieDetails{
-			ApiKey:   "test-api-key-123",
-			Region:   "us",
-			Priority: 3,
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "Opsgenie", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Opsgenie{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedOpsgenie := createNotification
-		expectedOpsgenie.ID = id
-		expectedOpsgenie.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedOpsgenie, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Opsgenie{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Opsgenie Updated"
-		current.Region = "eu"
-		current.Priority = 5
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Opsgenie{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestHomeAssistantNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.HomeAssistant{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Home Assistant Created",
-		},
-		HomeAssistantDetails: notification.HomeAssistantDetails{
-			HomeAssistantURL:     "http://192.168.1.100:8123",
-			LongLivedAccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
-			NotificationService:  "notify.mobile_app_iphone",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "HomeAssistant", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.HomeAssistant{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedHomeAssistant := createNotification
-		expectedHomeAssistant.ID = id
-		expectedHomeAssistant.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedHomeAssistant, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.HomeAssistant{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Home Assistant Updated"
-		current.HomeAssistantURL = "http://ha.example.com:8123"
-		current.NotificationService = "notify.persistent_notification"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.HomeAssistant{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestDiscordNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Discord{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Discord Created",
-		},
-		DiscordDetails: notification.DiscordDetails{
-			WebhookURL:    "https://discordapp.com/api/webhooks/123456789/abcdefghijklmnopqrstuvwxyz",
-			Username:      "Uptime Monitor",
-			ChannelType:   "postToThread",
-			ThreadID:      "987654321",
-			PrefixMessage: "Alert:",
-			DisableURL:    true,
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "discord", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Discord{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedDiscord := createNotification
-		expectedDiscord.ID = id
-		expectedDiscord.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedDiscord, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Discord{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Discord Updated"
-		current.Username = "Updated Monitor"
-		current.ChannelType = "createNewForumPost"
-		current.PostName = "System Alert"
-		current.ThreadID = ""
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Discord{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestPushbulletNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Pushbullet{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Pushbullet Created",
-		},
-		PushbulletDetails: notification.PushbulletDetails{
-			AccessToken: "o.example_access_token",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "pushbullet", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Pushbullet{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedPushbullet := createNotification
-		expectedPushbullet.ID = id
-		expectedPushbullet.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedPushbullet, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Pushbullet{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Pushbullet Updated"
-		current.AccessToken = "o.updated_access_token"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Pushbullet{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestPushoverNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Pushover{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Pushover Created",
-		},
-		PushoverDetails: notification.PushoverDetails{
-			UserKey:  "userkey123",
-			AppToken: "apptoken456",
-			Sounds:   "echo",
-			SoundsUp: "cashregister",
-			Priority: "1",
-			Title:    "Uptime Kuma Alert",
-			Device:   "iphone",
-			TTL:      "3600",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "pushover", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Pushover{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedPushover := createNotification
-		expectedPushover.ID = id
-		expectedPushover.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedPushover, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Pushover{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Pushover Updated"
-		current.Title = "Updated Alert"
-		current.Priority = "2"
-		current.Device = "android"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Pushover{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestGotifyNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Gotify{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Gotify Created",
-		},
-		GotifyDetails: notification.GotifyDetails{
-			ServerURL:        "https://gotify.example.com",
-			ApplicationToken: "test-token",
-			Priority:         8,
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "gotify", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Gotify{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedGotify := createNotification
-		expectedGotify.ID = id
-		expectedGotify.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedGotify, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Gotify{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Gotify Updated"
-		current.Priority = 5
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Gotify{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestGrafanaOncallNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.GrafanaOncall{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Grafana OnCall Created",
-		},
-		GrafanaOncallDetails: notification.GrafanaOncallDetails{
-			GrafanaOncallURL: "https://alerts.grafana.com/api/v1/incidents/create",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "GrafanaOncall", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.GrafanaOncall{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedGrafanaOncall := createNotification
-		expectedGrafanaOncall.ID = id
-		expectedGrafanaOncall.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedGrafanaOncall, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.GrafanaOncall{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Grafana OnCall Updated"
-		current.GrafanaOncallURL = "https://oncall.example.com/api/v1/incidents/create"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.GrafanaOncall{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestTwilioNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Twilio{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Twilio Created",
-		},
-		TwilioDetails: notification.TwilioDetails{
-			AccountSID: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-			ApiKey:     "",
-			AuthToken:  "test_auth_token",
-			ToNumber:   "+15551234567",
-			FromNumber: "+15559876543",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "twilio", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Twilio{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedTwilio := createNotification
-		expectedTwilio.ID = id
-		expectedTwilio.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedTwilio, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Twilio{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Twilio Updated"
-		current.ToNumber = "+15559999999"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Twilio{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestMattermostNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Mattermost{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Mattermost Created",
-		},
-		MattermostDetails: notification.MattermostDetails{
-			WebhookURL: "https://mattermost.example.com/hooks/xxx",
-			Username:   "Monitor Bot",
-			Channel:    "#alerts",
-			IconEmoji:  ":smiley:",
-			IconURL:    "https://example.com/icon.png",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "mattermost", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Mattermost{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedMattermost := createNotification
-		expectedMattermost.ID = id
-		expectedMattermost.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedMattermost, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Mattermost{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Mattermost Updated"
-		current.Username = "Updated Bot"
-		current.Channel = "#monitoring"
-		current.IconEmoji = ":warning:"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Mattermost{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestMatrixNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Matrix{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Matrix Created",
-		},
-		MatrixDetails: notification.MatrixDetails{
-			HomeserverURL:  "https://matrix.example.com",
-			InternalRoomID: "!roomid:example.com",
-			AccessToken:    "test_access_token",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "matrix", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Matrix{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedMatrix := createNotification
-		expectedMatrix.ID = id
-		expectedMatrix.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedMatrix, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Matrix{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Matrix Updated"
-		current.InternalRoomID = "!newroomid:example.com"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Matrix{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestRocketChatNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.RocketChat{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Rocket.Chat Created",
-		},
-		RocketChatDetails: notification.RocketChatDetails{
-			WebhookURL: "https://rocket.example.com/hooks/xxx",
-			Channel:    "#alerts",
-			Username:   "Monitor Bot",
-			IconEmoji:  ":smiley:",
-			Button:     "",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "rocket.chat", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.RocketChat{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedRocketChat := createNotification
-		expectedRocketChat.ID = id
-		expectedRocketChat.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedRocketChat, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.RocketChat{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Rocket.Chat Updated"
-		current.Channel = "#monitoring"
-		current.Username = "Updated Bot"
-		current.IconEmoji = ":warning:"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.RocketChat{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestWeComNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.WeCom{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test WeCom Created",
-		},
-		WeComDetails: notification.WeComDetails{
-			BotKey: "abc123def456",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "WeCom", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.WeCom{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedWeCom := createNotification
-		expectedWeCom.ID = id
-		expectedWeCom.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedWeCom, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.WeCom{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test WeCom Updated"
-		current.BotKey = "xyz789abc123"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.WeCom{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestFeishuNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Feishu{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Feishu Created",
-		},
-		FeishuDetails: notification.FeishuDetails{
-			WebHookURL: "https://open.feishu.cn/open-apis/bot/v2/hook/xxx",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "Feishu", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Feishu{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedFeishu := createNotification
-		expectedFeishu.ID = id
-		expectedFeishu.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedFeishu, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Feishu{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Feishu Updated"
-		current.WebHookURL = "https://open.feishu.cn/open-apis/bot/v2/hook/yyy"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Feishu{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestDingDingNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.DingDing{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test DingDing Created",
-		},
-		DingDingDetails: notification.DingDingDetails{
-			WebHookURL: "https://oapi.dingtalk.com/robot/send?access_token=xxx",
-			SecretKey:  "secret123",
-			Mentioning: "everyone",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "DingDing", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.DingDing{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedDingDing := createNotification
-		expectedDingDing.ID = id
-		expectedDingDing.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedDingDing, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.DingDing{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test DingDing Updated"
-		current.Mentioning = ""
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.DingDing{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestAppriseNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.Apprise{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Apprise Created",
-		},
-		AppriseDetails: notification.AppriseDetails{
-			AppriseURL: "json://localhost:8080",
-			Title:      "Uptime Kuma Alert",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "apprise", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.Apprise{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedApprise := createNotification
-		expectedApprise.ID = id
-		expectedApprise.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedApprise, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.Apprise{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Apprise Updated"
-		current.Title = "Updated Alert"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.Apprise{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
-	})
-}
-
-func TestGoogleChatNotificationCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	createNotification := notification.GoogleChat{
-		Base: notification.Base{
-			ApplyExisting: true,
-			IsDefault:     false,
-			IsActive:      true,
-			Name:          "Test Google Chat Created",
-		},
-		GoogleChatDetails: notification.GoogleChatDetails{
-			WebhookURL:  "https://chat.googleapis.com/v1/spaces/AAAAAA/messages?key=test",
-			UseTemplate: false,
-			Template:    "",
-		},
-	}
-
-	t.Run("initial_state", func(t *testing.T) {
-		notifications := client.GetNotifications(ctx)
-		t.Logf("Initial notifications count: %d", len(notifications))
-	})
-
-	var id int64
-	t.Run("create", func(t *testing.T) {
-		initialNotifications := client.GetNotifications(ctx)
-		initialCount := len(initialNotifications)
-
-		id, err = client.CreateNotification(ctx, createNotification)
-		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, initialCount+1)
-
-		createdNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-		require.Equal(t, "GoogleChat", createdNotification.Type())
-		require.Equal(t, id, createdNotification.GetID())
-
-		specificNotification := notification.GoogleChat{}
-		err = createdNotification.As(&specificNotification)
-		require.NoError(t, err)
-
-		expectedGoogleChat := createNotification
-		expectedGoogleChat.ID = id
-		expectedGoogleChat.UserID = specificNotification.UserID
-		require.EqualExportedValues(t, expectedGoogleChat, specificNotification)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		currentNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		current := notification.GoogleChat{}
-		err = currentNotification.As(&current)
-		require.NoError(t, err)
-
-		current.Name = "Test Google Chat Updated"
-		current.UseTemplate = true
-		current.Template = "Updated Template"
-
-		err = client.UpdateNotification(ctx, current)
-		require.NoError(t, err)
-
-		retrievedNotification, err := client.GetNotification(ctx, id)
-		require.NoError(t, err)
-
-		retrieved := notification.GoogleChat{}
-		err = retrievedNotification.As(&retrieved)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, current, retrieved)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		preDeleteNotifications := client.GetNotifications(ctx)
-		preDeleteCount := len(preDeleteNotifications)
-
-		err := client.DeleteNotification(ctx, id)
-		require.NoError(t, err)
-
-		notifications := client.GetNotifications(ctx)
-		require.Len(t, notifications, preDeleteCount-1)
-
-		_, err = client.GetNotification(ctx, id)
-		require.Error(t, err)
 	})
 }
