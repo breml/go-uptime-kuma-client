@@ -1150,6 +1150,56 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "FortySixElks",
+			expectedType: "46elks",
+			create: notification.FortySixElks{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test 46elks Created",
+				},
+				FortySixElksDetails: notification.FortySixElksDetails{
+					Username:   "user@example.com",
+					AuthToken:  "test_token",
+					FromNumber: "1234",
+					ToNumber:   "0701234567",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				elks := n.(*notification.FortySixElks)
+				elks.Name = "Test 46elks Updated"
+				elks.ToNumber = "0709999999"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.FortySixElks)
+				require.True(t, ok)
+				var elks notification.FortySixElks
+				err := actual.As(&elks)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = elks.UserID
+				require.EqualExportedValues(t, exp, elks)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var elks notification.FortySixElks
+				err := base.As(&elks)
+				require.NoError(t, err)
+				return &elks
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.FortySixElks)
+				require.True(t, ok)
+				var elks notification.FortySixElks
+				err := actual.As(&elks)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, elks)
+			},
+		},
+		{
 			name:         "Apprise",
 			expectedType: "apprise",
 			create: notification.Apprise{
