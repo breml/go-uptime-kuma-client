@@ -1298,6 +1298,57 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "AliyunSMS",
+			expectedType: "AliyunSMS",
+			create: notification.AliyunSMS{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test AliyunSMS Created",
+				},
+				AliyunSMSDetails: notification.AliyunSMSDetails{
+					AccessKeyID:     "AKIA123",
+					SecretAccessKey: "secret123",
+					PhoneNumber:     "8613800000001",
+					SignName:        "Uptime Kuma",
+					TemplateCode:    "SMS_1234567890",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				aliyunsms := n.(*notification.AliyunSMS)
+				aliyunsms.Name = "Test AliyunSMS Updated"
+				aliyunsms.PhoneNumber = "8613800000002"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.AliyunSMS)
+				require.True(t, ok)
+				var aliyunsms notification.AliyunSMS
+				err := actual.As(&aliyunsms)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = aliyunsms.UserID
+				require.EqualExportedValues(t, exp, aliyunsms)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var aliyunsms notification.AliyunSMS
+				err := base.As(&aliyunsms)
+				require.NoError(t, err)
+				return &aliyunsms
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.AliyunSMS)
+				require.True(t, ok)
+				var aliyunsms notification.AliyunSMS
+				err := actual.As(&aliyunsms)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, aliyunsms)
+			},
+		},
+		{
 			name:         "Apprise",
 			expectedType: "apprise",
 			create: notification.Apprise{
