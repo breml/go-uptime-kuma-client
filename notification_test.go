@@ -1251,6 +1251,53 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "AlertNow",
+			expectedType: "AlertNow",
+			create: notification.AlertNow{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test AlertNow Created",
+				},
+				AlertNowDetails: notification.AlertNowDetails{
+					WebhookURL: "https://alertnow.example.com/api/webhook",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				alertnow := n.(*notification.AlertNow)
+				alertnow.Name = "Test AlertNow Updated"
+				alertnow.WebhookURL = "https://alertnow.example.com/api/webhook/updated"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.AlertNow)
+				require.True(t, ok)
+				var alertnow notification.AlertNow
+				err := actual.As(&alertnow)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = alertnow.UserID
+				require.EqualExportedValues(t, exp, alertnow)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var alertnow notification.AlertNow
+				err := base.As(&alertnow)
+				require.NoError(t, err)
+				return &alertnow
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.AlertNow)
+				require.True(t, ok)
+				var alertnow notification.AlertNow
+				err := actual.As(&alertnow)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, alertnow)
+			},
+		},
+		{
 			name:         "Apprise",
 			expectedType: "apprise",
 			create: notification.Apprise{
