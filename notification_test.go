@@ -12,10 +12,13 @@ import (
 
 // notificationTestCase defines a single notification type's CRUD test scenario
 type notificationTestCase struct {
-	name         string                          // Test name (e.g., "Ntfy", "Slack")
-	expectedType string                          // Expected type string from API
-	create       notification.Notification       // Notification to create
-	updateFunc   func(notification.Notification) // Function to modify notification for update test
+	name              string                                                                                             // Test name (e.g., "Ntfy", "Slack")
+	expectedType      string                                                                                             // Expected type string from API
+	create            notification.Notification                                                                          // Notification to create
+	updateFunc        func(notification.Notification)                                                                    // Function to modify notification for update test
+	verifyCreatedFunc func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) // Function to verify created notification
+	createTypedFunc   func(t *testing.T, base notification.Notification) notification.Notification                       // Function to create typed notification
+	verifyUpdatedFunc func(t *testing.T, actual notification.Notification, expected notification.Notification)           // Function to verify updated notification
 }
 
 func TestNotificationCRUD(t *testing.T) {
@@ -49,6 +52,33 @@ func TestNotificationCRUD(t *testing.T) {
 				ntfy.Password = "testpass"
 				ntfy.Priority = 3
 			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Ntfy)
+				require.True(t, ok)
+				var ntfy notification.Ntfy
+				err := actual.As(&ntfy)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = ntfy.UserID
+				require.EqualExportedValues(t, exp, ntfy)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var ntfy notification.Ntfy
+				err := base.As(&ntfy)
+				require.NoError(t, err)
+				return &ntfy
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Ntfy)
+				require.True(t, ok)
+				var ntfy notification.Ntfy
+				err := actual.As(&ntfy)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, ntfy)
+			},
 		},
 		{
 			name:         "Slack",
@@ -77,6 +107,33 @@ func TestNotificationCRUD(t *testing.T) {
 				slack.Channel = "#monitoring"
 				slack.ChannelNotify = true
 			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Slack)
+				require.True(t, ok)
+				var slack notification.Slack
+				err := actual.As(&slack)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = slack.UserID
+				require.EqualExportedValues(t, exp, slack)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var slack notification.Slack
+				err := base.As(&slack)
+				require.NoError(t, err)
+				return &slack
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Slack)
+				require.True(t, ok)
+				var slack notification.Slack
+				err := actual.As(&slack)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, slack)
+			},
 		},
 		{
 			name:         "Teams",
@@ -96,6 +153,33 @@ func TestNotificationCRUD(t *testing.T) {
 				teams := n.(*notification.Teams)
 				teams.Name = "Test Teams Updated"
 				teams.WebhookURL = "https://outlook.office.com/webhook/updated-xxx-xxx/IncomingWebhook/updated-yyy-yyy"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Teams)
+				require.True(t, ok)
+				var teams notification.Teams
+				err := actual.As(&teams)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = teams.UserID
+				require.EqualExportedValues(t, exp, teams)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var teams notification.Teams
+				err := base.As(&teams)
+				require.NoError(t, err)
+				return &teams
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Teams)
+				require.True(t, ok)
+				var teams notification.Teams
+				err := actual.As(&teams)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, teams)
 			},
 		},
 		{
@@ -122,6 +206,33 @@ func TestNotificationCRUD(t *testing.T) {
 					"Authorization": "Bearer test-token",
 					"X-Custom":      "test-value",
 				}
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Webhook)
+				require.True(t, ok)
+				var webhook notification.Webhook
+				err := actual.As(&webhook)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = webhook.UserID
+				require.EqualExportedValues(t, exp, webhook)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var webhook notification.Webhook
+				err := base.As(&webhook)
+				require.NoError(t, err)
+				return &webhook
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Webhook)
+				require.True(t, ok)
+				var webhook notification.Webhook
+				err := actual.As(&webhook)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, webhook)
 			},
 		},
 		{
@@ -157,6 +268,33 @@ func TestNotificationCRUD(t *testing.T) {
 				smtp.BCC = "bcc@example.com"
 				smtp.Secure = true
 			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.SMTP)
+				require.True(t, ok)
+				var smtp notification.SMTP
+				err := actual.As(&smtp)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = smtp.UserID
+				require.EqualExportedValues(t, exp, smtp)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var smtp notification.SMTP
+				err := base.As(&smtp)
+				require.NoError(t, err)
+				return &smtp
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.SMTP)
+				require.True(t, ok)
+				var smtp notification.SMTP
+				err := actual.As(&smtp)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, smtp)
+			},
 		},
 		{
 			name:         "Telegram",
@@ -178,6 +316,33 @@ func TestNotificationCRUD(t *testing.T) {
 				telegram.Name = "Test Telegram Updated"
 				telegram.ChatID = "123456789"
 				telegram.SendSilently = true
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Telegram)
+				require.True(t, ok)
+				var telegram notification.Telegram
+				err := actual.As(&telegram)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = telegram.UserID
+				require.EqualExportedValues(t, exp, telegram)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var telegram notification.Telegram
+				err := base.As(&telegram)
+				require.NoError(t, err)
+				return &telegram
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Telegram)
+				require.True(t, ok)
+				var telegram notification.Telegram
+				err := actual.As(&telegram)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, telegram)
 			},
 		},
 		{
@@ -203,6 +368,33 @@ func TestNotificationCRUD(t *testing.T) {
 				pagerduty.Priority = "critical"
 				pagerduty.AutoResolve = "null"
 			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.PagerDuty)
+				require.True(t, ok)
+				var pagerduty notification.PagerDuty
+				err := actual.As(&pagerduty)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = pagerduty.UserID
+				require.EqualExportedValues(t, exp, pagerduty)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var pagerduty notification.PagerDuty
+				err := base.As(&pagerduty)
+				require.NoError(t, err)
+				return &pagerduty
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.PagerDuty)
+				require.True(t, ok)
+				var pagerduty notification.PagerDuty
+				err := actual.As(&pagerduty)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, pagerduty)
+			},
 		},
 		{
 			name:         "Signal",
@@ -225,6 +417,33 @@ func TestNotificationCRUD(t *testing.T) {
 				signal.Name = "Test Signal Updated"
 				signal.URL = "http://signal-api:9998"
 				signal.Recipients = "+1111111111,+2222222222"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Signal)
+				require.True(t, ok)
+				var signal notification.Signal
+				err := actual.As(&signal)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = signal.UserID
+				require.EqualExportedValues(t, exp, signal)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var signal notification.Signal
+				err := base.As(&signal)
+				require.NoError(t, err)
+				return &signal
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Signal)
+				require.True(t, ok)
+				var signal notification.Signal
+				err := actual.As(&signal)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, signal)
 			},
 		},
 		{
@@ -249,6 +468,33 @@ func TestNotificationCRUD(t *testing.T) {
 				opsgenie.Region = "eu"
 				opsgenie.Priority = 5
 			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Opsgenie)
+				require.True(t, ok)
+				var opsgenie notification.Opsgenie
+				err := actual.As(&opsgenie)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = opsgenie.UserID
+				require.EqualExportedValues(t, exp, opsgenie)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var opsgenie notification.Opsgenie
+				err := base.As(&opsgenie)
+				require.NoError(t, err)
+				return &opsgenie
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Opsgenie)
+				require.True(t, ok)
+				var opsgenie notification.Opsgenie
+				err := actual.As(&opsgenie)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, opsgenie)
+			},
 		},
 		{
 			name:         "HomeAssistant",
@@ -271,6 +517,33 @@ func TestNotificationCRUD(t *testing.T) {
 				ha.Name = "Test Home Assistant Updated"
 				ha.HomeAssistantURL = "http://ha.example.com:8123"
 				ha.NotificationService = "notify.persistent_notification"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.HomeAssistant)
+				require.True(t, ok)
+				var ha notification.HomeAssistant
+				err := actual.As(&ha)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = ha.UserID
+				require.EqualExportedValues(t, exp, ha)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var ha notification.HomeAssistant
+				err := base.As(&ha)
+				require.NoError(t, err)
+				return &ha
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.HomeAssistant)
+				require.True(t, ok)
+				var ha notification.HomeAssistant
+				err := actual.As(&ha)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, ha)
 			},
 		},
 		{
@@ -300,6 +573,33 @@ func TestNotificationCRUD(t *testing.T) {
 				discord.PostName = "System Alert"
 				discord.ThreadID = ""
 			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Discord)
+				require.True(t, ok)
+				var discord notification.Discord
+				err := actual.As(&discord)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = discord.UserID
+				require.EqualExportedValues(t, exp, discord)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var discord notification.Discord
+				err := base.As(&discord)
+				require.NoError(t, err)
+				return &discord
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Discord)
+				require.True(t, ok)
+				var discord notification.Discord
+				err := actual.As(&discord)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, discord)
+			},
 		},
 		{
 			name:         "Pushbullet",
@@ -319,6 +619,33 @@ func TestNotificationCRUD(t *testing.T) {
 				pushbullet := n.(*notification.Pushbullet)
 				pushbullet.Name = "Test Pushbullet Updated"
 				pushbullet.AccessToken = "o.updated_access_token"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Pushbullet)
+				require.True(t, ok)
+				var pushbullet notification.Pushbullet
+				err := actual.As(&pushbullet)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = pushbullet.UserID
+				require.EqualExportedValues(t, exp, pushbullet)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var pushbullet notification.Pushbullet
+				err := base.As(&pushbullet)
+				require.NoError(t, err)
+				return &pushbullet
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Pushbullet)
+				require.True(t, ok)
+				var pushbullet notification.Pushbullet
+				err := actual.As(&pushbullet)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, pushbullet)
 			},
 		},
 		{
@@ -349,6 +676,33 @@ func TestNotificationCRUD(t *testing.T) {
 				pushover.Priority = "2"
 				pushover.Device = "android"
 			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Pushover)
+				require.True(t, ok)
+				var pushover notification.Pushover
+				err := actual.As(&pushover)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = pushover.UserID
+				require.EqualExportedValues(t, exp, pushover)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var pushover notification.Pushover
+				err := base.As(&pushover)
+				require.NoError(t, err)
+				return &pushover
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Pushover)
+				require.True(t, ok)
+				var pushover notification.Pushover
+				err := actual.As(&pushover)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, pushover)
+			},
 		},
 		{
 			name:         "Gotify",
@@ -371,6 +725,33 @@ func TestNotificationCRUD(t *testing.T) {
 				gotify.Name = "Test Gotify Updated"
 				gotify.Priority = 5
 			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Gotify)
+				require.True(t, ok)
+				var gotify notification.Gotify
+				err := actual.As(&gotify)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = gotify.UserID
+				require.EqualExportedValues(t, exp, gotify)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var gotify notification.Gotify
+				err := base.As(&gotify)
+				require.NoError(t, err)
+				return &gotify
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Gotify)
+				require.True(t, ok)
+				var gotify notification.Gotify
+				err := actual.As(&gotify)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, gotify)
+			},
 		},
 		{
 			name:         "GrafanaOncall",
@@ -390,6 +771,33 @@ func TestNotificationCRUD(t *testing.T) {
 				grafana := n.(*notification.GrafanaOncall)
 				grafana.Name = "Test Grafana OnCall Updated"
 				grafana.GrafanaOncallURL = "https://oncall.example.com/api/v1/incidents/create"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.GrafanaOncall)
+				require.True(t, ok)
+				var grafana notification.GrafanaOncall
+				err := actual.As(&grafana)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = grafana.UserID
+				require.EqualExportedValues(t, exp, grafana)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var grafana notification.GrafanaOncall
+				err := base.As(&grafana)
+				require.NoError(t, err)
+				return &grafana
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.GrafanaOncall)
+				require.True(t, ok)
+				var grafana notification.GrafanaOncall
+				err := actual.As(&grafana)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, grafana)
 			},
 		},
 		{
@@ -414,6 +822,33 @@ func TestNotificationCRUD(t *testing.T) {
 				twilio := n.(*notification.Twilio)
 				twilio.Name = "Test Twilio Updated"
 				twilio.ToNumber = "+15559999999"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Twilio)
+				require.True(t, ok)
+				var twilio notification.Twilio
+				err := actual.As(&twilio)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = twilio.UserID
+				require.EqualExportedValues(t, exp, twilio)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var twilio notification.Twilio
+				err := base.As(&twilio)
+				require.NoError(t, err)
+				return &twilio
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Twilio)
+				require.True(t, ok)
+				var twilio notification.Twilio
+				err := actual.As(&twilio)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, twilio)
 			},
 		},
 		{
@@ -441,6 +876,33 @@ func TestNotificationCRUD(t *testing.T) {
 				mattermost.Channel = "#monitoring"
 				mattermost.IconEmoji = ":warning:"
 			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Mattermost)
+				require.True(t, ok)
+				var mattermost notification.Mattermost
+				err := actual.As(&mattermost)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = mattermost.UserID
+				require.EqualExportedValues(t, exp, mattermost)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var mattermost notification.Mattermost
+				err := base.As(&mattermost)
+				require.NoError(t, err)
+				return &mattermost
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Mattermost)
+				require.True(t, ok)
+				var mattermost notification.Mattermost
+				err := actual.As(&mattermost)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, mattermost)
+			},
 		},
 		{
 			name:         "Matrix",
@@ -462,6 +924,33 @@ func TestNotificationCRUD(t *testing.T) {
 				matrix := n.(*notification.Matrix)
 				matrix.Name = "Test Matrix Updated"
 				matrix.InternalRoomID = "!newroomid:example.com"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Matrix)
+				require.True(t, ok)
+				var matrix notification.Matrix
+				err := actual.As(&matrix)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = matrix.UserID
+				require.EqualExportedValues(t, exp, matrix)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var matrix notification.Matrix
+				err := base.As(&matrix)
+				require.NoError(t, err)
+				return &matrix
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Matrix)
+				require.True(t, ok)
+				var matrix notification.Matrix
+				err := actual.As(&matrix)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, matrix)
 			},
 		},
 		{
@@ -489,6 +978,33 @@ func TestNotificationCRUD(t *testing.T) {
 				rocketchat.Username = "Updated Bot"
 				rocketchat.IconEmoji = ":warning:"
 			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.RocketChat)
+				require.True(t, ok)
+				var rocketchat notification.RocketChat
+				err := actual.As(&rocketchat)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = rocketchat.UserID
+				require.EqualExportedValues(t, exp, rocketchat)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var rocketchat notification.RocketChat
+				err := base.As(&rocketchat)
+				require.NoError(t, err)
+				return &rocketchat
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.RocketChat)
+				require.True(t, ok)
+				var rocketchat notification.RocketChat
+				err := actual.As(&rocketchat)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, rocketchat)
+			},
 		},
 		{
 			name:         "WeCom",
@@ -501,13 +1017,40 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test WeCom Created",
 				},
 				WeComDetails: notification.WeComDetails{
-					BotKey: "abc123def456",
+					BotKey: "xxxx",
 				},
 			},
 			updateFunc: func(n notification.Notification) {
 				wecom := n.(*notification.WeCom)
 				wecom.Name = "Test WeCom Updated"
-				wecom.BotKey = "xyz789abc123"
+				wecom.BotKey = "yyyy"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.WeCom)
+				require.True(t, ok)
+				var wecom notification.WeCom
+				err := actual.As(&wecom)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = wecom.UserID
+				require.EqualExportedValues(t, exp, wecom)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var wecom notification.WeCom
+				err := base.As(&wecom)
+				require.NoError(t, err)
+				return &wecom
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.WeCom)
+				require.True(t, ok)
+				var wecom notification.WeCom
+				err := actual.As(&wecom)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, wecom)
 			},
 		},
 		{
@@ -521,13 +1064,40 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test Feishu Created",
 				},
 				FeishuDetails: notification.FeishuDetails{
-					WebHookURL: "https://open.feishu.cn/open-apis/bot/v2/hook/xxx",
+					WebHookURL: "https://open.feishu.cn/open-apis/bot/v2/hook/xxxx",
 				},
 			},
 			updateFunc: func(n notification.Notification) {
 				feishu := n.(*notification.Feishu)
 				feishu.Name = "Test Feishu Updated"
-				feishu.WebHookURL = "https://open.feishu.cn/open-apis/bot/v2/hook/yyy"
+				feishu.WebHookURL = "https://open.feishu.cn/open-apis/bot/v2/hook/yyyy"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Feishu)
+				require.True(t, ok)
+				var feishu notification.Feishu
+				err := actual.As(&feishu)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = feishu.UserID
+				require.EqualExportedValues(t, exp, feishu)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var feishu notification.Feishu
+				err := base.As(&feishu)
+				require.NoError(t, err)
+				return &feishu
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Feishu)
+				require.True(t, ok)
+				var feishu notification.Feishu
+				err := actual.As(&feishu)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, feishu)
 			},
 		},
 		{
@@ -541,15 +1111,42 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test DingDing Created",
 				},
 				DingDingDetails: notification.DingDingDetails{
-					WebHookURL: "https://oapi.dingtalk.com/robot/send?access_token=xxx",
+					WebHookURL: "https://oapi.dingtalk.com/robot/send?access_token=xxxx",
 					SecretKey:  "secret123",
-					Mentioning: "everyone",
+					Mentioning: "@all",
 				},
 			},
 			updateFunc: func(n notification.Notification) {
 				dingding := n.(*notification.DingDing)
 				dingding.Name = "Test DingDing Updated"
 				dingding.Mentioning = ""
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.DingDing)
+				require.True(t, ok)
+				var dingding notification.DingDing
+				err := actual.As(&dingding)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = dingding.UserID
+				require.EqualExportedValues(t, exp, dingding)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var dingding notification.DingDing
+				err := base.As(&dingding)
+				require.NoError(t, err)
+				return &dingding
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.DingDing)
+				require.True(t, ok)
+				var dingding notification.DingDing
+				err := actual.As(&dingding)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, dingding)
 			},
 		},
 		{
@@ -571,6 +1168,33 @@ func TestNotificationCRUD(t *testing.T) {
 				apprise := n.(*notification.Apprise)
 				apprise.Name = "Test Apprise Updated"
 				apprise.Title = "Updated Alert"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Apprise)
+				require.True(t, ok)
+				var apprise notification.Apprise
+				err := actual.As(&apprise)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = apprise.UserID
+				require.EqualExportedValues(t, exp, apprise)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var apprise notification.Apprise
+				err := base.As(&apprise)
+				require.NoError(t, err)
+				return &apprise
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Apprise)
+				require.True(t, ok)
+				var apprise notification.Apprise
+				err := actual.As(&apprise)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, apprise)
 			},
 		},
 		{
@@ -594,6 +1218,33 @@ func TestNotificationCRUD(t *testing.T) {
 				googlechat.Name = "Test Google Chat Updated"
 				googlechat.UseTemplate = true
 				googlechat.Template = "Updated Template"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.GoogleChat)
+				require.True(t, ok)
+				var googlechat notification.GoogleChat
+				err := actual.As(&googlechat)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = googlechat.UserID
+				require.EqualExportedValues(t, exp, googlechat)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var googlechat notification.GoogleChat
+				err := base.As(&googlechat)
+				require.NoError(t, err)
+				return &googlechat
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.GoogleChat)
+				require.True(t, ok)
+				var googlechat notification.GoogleChat
+				err := actual.As(&googlechat)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, googlechat)
 			},
 		},
 	}
@@ -627,14 +1278,16 @@ func TestNotificationCRUD(t *testing.T) {
 				require.Equal(t, tc.expectedType, createdNotification.Type())
 				require.Equal(t, id, createdNotification.GetID())
 
-				verifyCreatedNotification(t, createdNotification, tc.create, id)
+				tc.verifyCreatedFunc(t, createdNotification, tc.create, id)
 			})
 
 			t.Run("update", func(t *testing.T) {
+				require.NotZero(t, id, "create test failed, unable to test update")
+
 				currentNotification, err := client.GetNotification(ctx, id)
 				require.NoError(t, err)
 
-				updated := createTypedNotification(t, currentNotification, tc.create)
+				updated := tc.createTypedFunc(t, currentNotification)
 				tc.updateFunc(updated)
 
 				err = client.UpdateNotification(ctx, updated)
@@ -643,10 +1296,12 @@ func TestNotificationCRUD(t *testing.T) {
 				retrievedNotification, err := client.GetNotification(ctx, id)
 				require.NoError(t, err)
 
-				verifyUpdatedNotification(t, retrievedNotification, updated)
+				tc.verifyUpdatedFunc(t, retrievedNotification, updated)
 			})
 
 			t.Run("delete", func(t *testing.T) {
+				require.NotZero(t, id, "create test failed, unable to test delete")
+
 				preDeleteNotifications := client.GetNotifications(ctx)
 				preDeleteCount := len(preDeleteNotifications)
 
@@ -660,445 +1315,6 @@ func TestNotificationCRUD(t *testing.T) {
 				require.Error(t, err)
 			})
 		})
-	}
-}
-
-// verifyCreatedNotification checks that the created notification matches expected values
-func verifyCreatedNotification(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
-	t.Helper()
-
-	switch exp := expected.(type) {
-	case notification.Ntfy:
-		var ntfy notification.Ntfy
-		err := actual.As(&ntfy)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = ntfy.UserID
-		require.EqualExportedValues(t, exp, ntfy)
-	case notification.Slack:
-		var slack notification.Slack
-		err := actual.As(&slack)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = slack.UserID
-		require.EqualExportedValues(t, exp, slack)
-	case notification.Teams:
-		var teams notification.Teams
-		err := actual.As(&teams)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = teams.UserID
-		require.EqualExportedValues(t, exp, teams)
-	case notification.Webhook:
-		var webhook notification.Webhook
-		err := actual.As(&webhook)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = webhook.UserID
-		require.EqualExportedValues(t, exp, webhook)
-	case notification.SMTP:
-		var smtp notification.SMTP
-		err := actual.As(&smtp)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = smtp.UserID
-		require.EqualExportedValues(t, exp, smtp)
-	case notification.Telegram:
-		var telegram notification.Telegram
-		err := actual.As(&telegram)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = telegram.UserID
-		require.EqualExportedValues(t, exp, telegram)
-	case notification.PagerDuty:
-		var pagerduty notification.PagerDuty
-		err := actual.As(&pagerduty)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = pagerduty.UserID
-		require.EqualExportedValues(t, exp, pagerduty)
-	case notification.Signal:
-		var signal notification.Signal
-		err := actual.As(&signal)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = signal.UserID
-		require.EqualExportedValues(t, exp, signal)
-	case notification.Opsgenie:
-		var opsgenie notification.Opsgenie
-		err := actual.As(&opsgenie)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = opsgenie.UserID
-		require.EqualExportedValues(t, exp, opsgenie)
-	case notification.HomeAssistant:
-		var ha notification.HomeAssistant
-		err := actual.As(&ha)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = ha.UserID
-		require.EqualExportedValues(t, exp, ha)
-	case notification.Discord:
-		var discord notification.Discord
-		err := actual.As(&discord)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = discord.UserID
-		require.EqualExportedValues(t, exp, discord)
-	case notification.Pushbullet:
-		var pushbullet notification.Pushbullet
-		err := actual.As(&pushbullet)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = pushbullet.UserID
-		require.EqualExportedValues(t, exp, pushbullet)
-	case notification.Pushover:
-		var pushover notification.Pushover
-		err := actual.As(&pushover)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = pushover.UserID
-		require.EqualExportedValues(t, exp, pushover)
-	case notification.Gotify:
-		var gotify notification.Gotify
-		err := actual.As(&gotify)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = gotify.UserID
-		require.EqualExportedValues(t, exp, gotify)
-	case notification.GrafanaOncall:
-		var grafana notification.GrafanaOncall
-		err := actual.As(&grafana)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = grafana.UserID
-		require.EqualExportedValues(t, exp, grafana)
-	case notification.Twilio:
-		var twilio notification.Twilio
-		err := actual.As(&twilio)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = twilio.UserID
-		require.EqualExportedValues(t, exp, twilio)
-	case notification.Mattermost:
-		var mattermost notification.Mattermost
-		err := actual.As(&mattermost)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = mattermost.UserID
-		require.EqualExportedValues(t, exp, mattermost)
-	case notification.Matrix:
-		var matrix notification.Matrix
-		err := actual.As(&matrix)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = matrix.UserID
-		require.EqualExportedValues(t, exp, matrix)
-	case notification.RocketChat:
-		var rocketchat notification.RocketChat
-		err := actual.As(&rocketchat)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = rocketchat.UserID
-		require.EqualExportedValues(t, exp, rocketchat)
-	case notification.WeCom:
-		var wecom notification.WeCom
-		err := actual.As(&wecom)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = wecom.UserID
-		require.EqualExportedValues(t, exp, wecom)
-	case notification.Feishu:
-		var feishu notification.Feishu
-		err := actual.As(&feishu)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = feishu.UserID
-		require.EqualExportedValues(t, exp, feishu)
-	case notification.DingDing:
-		var dingding notification.DingDing
-		err := actual.As(&dingding)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = dingding.UserID
-		require.EqualExportedValues(t, exp, dingding)
-	case notification.Apprise:
-		var apprise notification.Apprise
-		err := actual.As(&apprise)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = apprise.UserID
-		require.EqualExportedValues(t, exp, apprise)
-	case notification.GoogleChat:
-		var googlechat notification.GoogleChat
-		err := actual.As(&googlechat)
-		require.NoError(t, err)
-		exp.ID = id
-		exp.UserID = googlechat.UserID
-		require.EqualExportedValues(t, exp, googlechat)
-	default:
-		t.Fatalf("unknown notification type: %T", expected)
-	}
-}
-
-// createTypedNotification creates a properly typed notification from base notification
-func createTypedNotification(t *testing.T, base notification.Notification, template notification.Notification) notification.Notification {
-	t.Helper()
-
-	switch template.(type) {
-	case notification.Ntfy:
-		var ntfy notification.Ntfy
-		err := base.As(&ntfy)
-		require.NoError(t, err)
-		return &ntfy
-	case notification.Slack:
-		var slack notification.Slack
-		err := base.As(&slack)
-		require.NoError(t, err)
-		return &slack
-	case notification.Teams:
-		var teams notification.Teams
-		err := base.As(&teams)
-		require.NoError(t, err)
-		return &teams
-	case notification.Webhook:
-		var webhook notification.Webhook
-		err := base.As(&webhook)
-		require.NoError(t, err)
-		return &webhook
-	case notification.SMTP:
-		var smtp notification.SMTP
-		err := base.As(&smtp)
-		require.NoError(t, err)
-		return &smtp
-	case notification.Telegram:
-		var telegram notification.Telegram
-		err := base.As(&telegram)
-		require.NoError(t, err)
-		return &telegram
-	case notification.PagerDuty:
-		var pagerduty notification.PagerDuty
-		err := base.As(&pagerduty)
-		require.NoError(t, err)
-		return &pagerduty
-	case notification.Signal:
-		var signal notification.Signal
-		err := base.As(&signal)
-		require.NoError(t, err)
-		return &signal
-	case notification.Opsgenie:
-		var opsgenie notification.Opsgenie
-		err := base.As(&opsgenie)
-		require.NoError(t, err)
-		return &opsgenie
-	case notification.HomeAssistant:
-		var ha notification.HomeAssistant
-		err := base.As(&ha)
-		require.NoError(t, err)
-		return &ha
-	case notification.Discord:
-		var discord notification.Discord
-		err := base.As(&discord)
-		require.NoError(t, err)
-		return &discord
-	case notification.Pushbullet:
-		var pushbullet notification.Pushbullet
-		err := base.As(&pushbullet)
-		require.NoError(t, err)
-		return &pushbullet
-	case notification.Pushover:
-		var pushover notification.Pushover
-		err := base.As(&pushover)
-		require.NoError(t, err)
-		return &pushover
-	case notification.Gotify:
-		var gotify notification.Gotify
-		err := base.As(&gotify)
-		require.NoError(t, err)
-		return &gotify
-	case notification.GrafanaOncall:
-		var grafana notification.GrafanaOncall
-		err := base.As(&grafana)
-		require.NoError(t, err)
-		return &grafana
-	case notification.Twilio:
-		var twilio notification.Twilio
-		err := base.As(&twilio)
-		require.NoError(t, err)
-		return &twilio
-	case notification.Mattermost:
-		var mattermost notification.Mattermost
-		err := base.As(&mattermost)
-		require.NoError(t, err)
-		return &mattermost
-	case notification.Matrix:
-		var matrix notification.Matrix
-		err := base.As(&matrix)
-		require.NoError(t, err)
-		return &matrix
-	case notification.RocketChat:
-		var rocketchat notification.RocketChat
-		err := base.As(&rocketchat)
-		require.NoError(t, err)
-		return &rocketchat
-	case notification.WeCom:
-		var wecom notification.WeCom
-		err := base.As(&wecom)
-		require.NoError(t, err)
-		return &wecom
-	case notification.Feishu:
-		var feishu notification.Feishu
-		err := base.As(&feishu)
-		require.NoError(t, err)
-		return &feishu
-	case notification.DingDing:
-		var dingding notification.DingDing
-		err := base.As(&dingding)
-		require.NoError(t, err)
-		return &dingding
-	case notification.Apprise:
-		var apprise notification.Apprise
-		err := base.As(&apprise)
-		require.NoError(t, err)
-		return &apprise
-	case notification.GoogleChat:
-		var googlechat notification.GoogleChat
-		err := base.As(&googlechat)
-		require.NoError(t, err)
-		return &googlechat
-	default:
-		t.Fatalf("unknown notification type: %T", template)
-		return nil
-	}
-}
-
-// verifyUpdatedNotification checks that the updated notification matches expected values
-func verifyUpdatedNotification(t *testing.T, actual notification.Notification, expected notification.Notification) {
-	t.Helper()
-
-	switch exp := expected.(type) {
-	case *notification.Ntfy:
-		var ntfy notification.Ntfy
-		err := actual.As(&ntfy)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, ntfy)
-	case *notification.Slack:
-		var slack notification.Slack
-		err := actual.As(&slack)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, slack)
-	case *notification.Teams:
-		var teams notification.Teams
-		err := actual.As(&teams)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, teams)
-	case *notification.Webhook:
-		var webhook notification.Webhook
-		err := actual.As(&webhook)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, webhook)
-	case *notification.SMTP:
-		var smtp notification.SMTP
-		err := actual.As(&smtp)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, smtp)
-	case *notification.Telegram:
-		var telegram notification.Telegram
-		err := actual.As(&telegram)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, telegram)
-	case *notification.PagerDuty:
-		var pagerduty notification.PagerDuty
-		err := actual.As(&pagerduty)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, pagerduty)
-	case *notification.Signal:
-		var signal notification.Signal
-		err := actual.As(&signal)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, signal)
-	case *notification.Opsgenie:
-		var opsgenie notification.Opsgenie
-		err := actual.As(&opsgenie)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, opsgenie)
-	case *notification.HomeAssistant:
-		var ha notification.HomeAssistant
-		err := actual.As(&ha)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, ha)
-	case *notification.Discord:
-		var discord notification.Discord
-		err := actual.As(&discord)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, discord)
-	case *notification.Pushbullet:
-		var pushbullet notification.Pushbullet
-		err := actual.As(&pushbullet)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, pushbullet)
-	case *notification.Pushover:
-		var pushover notification.Pushover
-		err := actual.As(&pushover)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, pushover)
-	case *notification.Gotify:
-		var gotify notification.Gotify
-		err := actual.As(&gotify)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, gotify)
-	case *notification.GrafanaOncall:
-		var grafana notification.GrafanaOncall
-		err := actual.As(&grafana)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, grafana)
-	case *notification.Twilio:
-		var twilio notification.Twilio
-		err := actual.As(&twilio)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, twilio)
-	case *notification.Mattermost:
-		var mattermost notification.Mattermost
-		err := actual.As(&mattermost)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, mattermost)
-	case *notification.Matrix:
-		var matrix notification.Matrix
-		err := actual.As(&matrix)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, matrix)
-	case *notification.RocketChat:
-		var rocketchat notification.RocketChat
-		err := actual.As(&rocketchat)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, rocketchat)
-	case *notification.WeCom:
-		var wecom notification.WeCom
-		err := actual.As(&wecom)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, wecom)
-	case *notification.Feishu:
-		var feishu notification.Feishu
-		err := actual.As(&feishu)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, feishu)
-	case *notification.DingDing:
-		var dingding notification.DingDing
-		err := actual.As(&dingding)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, dingding)
-	case *notification.Apprise:
-		var apprise notification.Apprise
-		err := actual.As(&apprise)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, apprise)
-	case *notification.GoogleChat:
-		var googlechat notification.GoogleChat
-		err := actual.As(&googlechat)
-		require.NoError(t, err)
-		require.EqualExportedValues(t, *exp, googlechat)
-	default:
-		t.Fatalf("unknown notification type: %T", expected)
 	}
 }
 
