@@ -24,12 +24,12 @@ func (b Bitrix24) Type() string {
 	return b.Bitrix24Details.Type()
 }
 
-// Type returns the notification type identifier for Bitrix24Details.
+// Type returns the notification type identifier for Bitrix24 details.
 func (n Bitrix24Details) Type() string {
 	return "Bitrix24"
 }
 
-// String returns a string representation of the Bitrix24 notification.
+// String returns a human-readable representation of the Bitrix24 notification.
 func (b Bitrix24) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(b.Base, false), formatNotification(b.Bitrix24Details, true))
 }
