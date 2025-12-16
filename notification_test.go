@@ -1753,6 +1753,58 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, clicksendsms)
 			},
 		},
+		{
+			name:         "Evolution",
+			expectedType: "EvolutionApi",
+			create: notification.Evolution{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Evolution Created",
+				},
+				EvolutionDetails: notification.EvolutionDetails{
+					ApiUrl:       "https://evolapicloud.com",
+					InstanceName: "myinstance",
+					AuthToken:    "token123",
+					Recipient:    "5511999999999",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				evolution := n.(*notification.Evolution)
+				evolution.Name = "Test Evolution Updated"
+				evolution.ApiUrl = "https://custom.api.com"
+				evolution.InstanceName = "newinstance"
+				evolution.Recipient = "5521987654321"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Evolution)
+				require.True(t, ok)
+				var evolution notification.Evolution
+				err := actual.As(&evolution)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = evolution.UserID
+				require.EqualExportedValues(t, exp, evolution)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var evolution notification.Evolution
+				err := base.As(&evolution)
+				require.NoError(t, err)
+				return &evolution
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Evolution)
+				require.True(t, ok)
+				var evolution notification.Evolution
+				err := actual.As(&evolution)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, evolution)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
