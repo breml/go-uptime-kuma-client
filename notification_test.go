@@ -1497,6 +1497,54 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, bark)
 			},
 		},
+		{
+			name:         "Bitrix24",
+			expectedType: "Bitrix24",
+			create: notification.Bitrix24{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Bitrix24 Created",
+				},
+				Bitrix24Details: notification.Bitrix24Details{
+					WebhookURL:         "https://bitrix24.example.com/rest/1/webhook/",
+					NotificationUserID: "user123",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				bitrix24 := n.(*notification.Bitrix24)
+				bitrix24.Name = "Test Bitrix24 Updated"
+				bitrix24.NotificationUserID = "admin"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Bitrix24)
+				require.True(t, ok)
+				var bitrix24 notification.Bitrix24
+				err := actual.As(&bitrix24)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = bitrix24.UserID
+				require.EqualExportedValues(t, exp, bitrix24)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var bitrix24 notification.Bitrix24
+				err := base.As(&bitrix24)
+				require.NoError(t, err)
+				return &bitrix24
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Bitrix24)
+				require.True(t, ok)
+				var bitrix24 notification.Bitrix24
+				err := actual.As(&bitrix24)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, bitrix24)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
