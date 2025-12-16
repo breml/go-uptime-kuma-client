@@ -1702,6 +1702,57 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, cellsynt)
 			},
 		},
+		{
+			name:         "ClickSendSMS",
+			expectedType: "clicksendsms",
+			create: notification.ClickSendSMS{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test ClickSend Created",
+				},
+				ClickSendSMSDetails: notification.ClickSendSMSDetails{
+					Login:      "testuser",
+					Password:   "apikey123",
+					ToNumber:   "61412345678",
+					SenderName: "Uptime",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				clicksendsms := n.(*notification.ClickSendSMS)
+				clicksendsms.Name = "Test ClickSend Updated"
+				clicksendsms.ToNumber = "61487654321"
+				clicksendsms.SenderName = "Updated Monitor"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.ClickSendSMS)
+				require.True(t, ok)
+				var clicksendsms notification.ClickSendSMS
+				err := actual.As(&clicksendsms)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = clicksendsms.UserID
+				require.EqualExportedValues(t, exp, clicksendsms)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var clicksendsms notification.ClickSendSMS
+				err := base.As(&clicksendsms)
+				require.NoError(t, err)
+				return &clicksendsms
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.ClickSendSMS)
+				require.True(t, ok)
+				var clicksendsms notification.ClickSendSMS
+				err := actual.As(&clicksendsms)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, clicksendsms)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
