@@ -1647,6 +1647,61 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, callmebot)
 			},
 		},
+		{
+			name:         "Cellsynt",
+			expectedType: "Cellsynt",
+			create: notification.Cellsynt{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Cellsynt Created",
+				},
+				CellsyntDetails: notification.CellsyntDetails{
+					Login:          "testuser",
+					Password:       "testpass",
+					Destination:    "46701234567",
+					Originator:     "Uptime",
+					OriginatorType: "Numeric",
+					AllowLongSMS:   false,
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				cellsynt := n.(*notification.Cellsynt)
+				cellsynt.Name = "Test Cellsynt Updated"
+				cellsynt.Destination = "46709876543"
+				cellsynt.Originator = "Updated"
+				cellsynt.OriginatorType = "Alphanumeric"
+				cellsynt.AllowLongSMS = true
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Cellsynt)
+				require.True(t, ok)
+				var cellsynt notification.Cellsynt
+				err := actual.As(&cellsynt)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = cellsynt.UserID
+				require.EqualExportedValues(t, exp, cellsynt)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var cellsynt notification.Cellsynt
+				err := base.As(&cellsynt)
+				require.NoError(t, err)
+				return &cellsynt
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Cellsynt)
+				require.True(t, ok)
+				var cellsynt notification.Cellsynt
+				err := actual.As(&cellsynt)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, cellsynt)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
