@@ -1600,6 +1600,53 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, brevo)
 			},
 		},
+		{
+			name:         "CallMeBot",
+			expectedType: "CallMeBot",
+			create: notification.CallMeBot{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test CallMeBot Created",
+				},
+				CallMeBotDetails: notification.CallMeBotDetails{
+					Endpoint: "https://api.callmebot.com/start",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				callmebot := n.(*notification.CallMeBot)
+				callmebot.Name = "Test CallMeBot Updated"
+				callmebot.Endpoint = "https://custom.callmebot.endpoint.com/start"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.CallMeBot)
+				require.True(t, ok)
+				var callmebot notification.CallMeBot
+				err := actual.As(&callmebot)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = callmebot.UserID
+				require.EqualExportedValues(t, exp, callmebot)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var callmebot notification.CallMeBot
+				err := base.As(&callmebot)
+				require.NoError(t, err)
+				return &callmebot
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.CallMeBot)
+				require.True(t, ok)
+				var callmebot notification.CallMeBot
+				err := actual.As(&callmebot)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, callmebot)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
