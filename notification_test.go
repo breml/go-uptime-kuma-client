@@ -1545,6 +1545,61 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, bitrix24)
 			},
 		},
+		{
+			name:         "Brevo",
+			expectedType: "brevo",
+			create: notification.Brevo{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Brevo Created",
+				},
+				BrevoDetails: notification.BrevoDetails{
+					APIKey:    "test-api-key",
+					ToEmail:   "recipient@example.com",
+					FromEmail: "sender@example.com",
+					FromName:  "Uptime Kuma",
+					Subject:   "Alert Notification",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				brevo := n.(*notification.Brevo)
+				brevo.Name = "Test Brevo Updated"
+				brevo.ToEmail = "updated@example.com"
+				brevo.FromName = "Updated System"
+				brevo.Subject = "Updated Alert"
+				brevo.CCEmail = "cc@example.com"
+				brevo.BCCEmail = "bcc@example.com"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Brevo)
+				require.True(t, ok)
+				var brevo notification.Brevo
+				err := actual.As(&brevo)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = brevo.UserID
+				require.EqualExportedValues(t, exp, brevo)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var brevo notification.Brevo
+				err := base.As(&brevo)
+				require.NoError(t, err)
+				return &brevo
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Brevo)
+				require.True(t, ok)
+				var brevo notification.Brevo
+				err := actual.As(&brevo)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, brevo)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
