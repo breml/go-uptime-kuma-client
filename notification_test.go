@@ -1957,6 +1957,55 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "GTXMessaging",
+			expectedType: "gtxmessaging",
+			create: notification.GTXMessaging{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test GTX Messaging Created",
+				},
+				GTXMessagingDetails: notification.GTXMessagingDetails{
+					ApiKey: "test-api-key",
+					From:   "Uptime",
+					To:     "+46701234567",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				gtx := n.(*notification.GTXMessaging)
+				gtx.Name = "Test GTX Messaging Updated"
+				gtx.From = "Monitor"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.GTXMessaging)
+				require.True(t, ok)
+				var gtx notification.GTXMessaging
+				err := actual.As(&gtx)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = gtx.UserID
+				require.EqualExportedValues(t, exp, gtx)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var gtx notification.GTXMessaging
+				err := base.As(&gtx)
+				require.NoError(t, err)
+				return &gtx
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.GTXMessaging)
+				require.True(t, ok)
+				var gtx notification.GTXMessaging
+				err := actual.As(&gtx)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, gtx)
+			},
+		},
+		{
 			name:         "FreeMobile",
 			expectedType: "FreeMobile",
 			create: notification.FreeMobile{
