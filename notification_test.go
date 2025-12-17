@@ -2709,6 +2709,56 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, onesender)
 			},
 		},
+		{
+			name:         "PagerTree",
+			expectedType: "PagerTree",
+			create: notification.PagerTree{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test PagerTree Created",
+				},
+				PagerTreeDetails: notification.PagerTreeDetails{
+					IntegrationUrl: "https://api.pagertree.com/api/v2/events",
+					Urgency:        "high",
+					AutoResolve:    "resolve",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				pagertree := n.(*notification.PagerTree)
+				pagertree.Name = "Test PagerTree Updated"
+				pagertree.Urgency = "medium"
+				pagertree.AutoResolve = ""
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.PagerTree)
+				require.True(t, ok)
+				var pagertree notification.PagerTree
+				err := actual.As(&pagertree)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = pagertree.UserID
+				require.EqualExportedValues(t, exp, pagertree)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var pagertree notification.PagerTree
+				err := base.As(&pagertree)
+				require.NoError(t, err)
+				return &pagertree
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.PagerTree)
+				require.True(t, ok)
+				var pagertree notification.PagerTree
+				err := actual.As(&pagertree)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, pagertree)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
