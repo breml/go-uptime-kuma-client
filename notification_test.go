@@ -2657,6 +2657,58 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, notifery)
 			},
 		},
+		{
+			name:         "OneSender",
+			expectedType: "onesender",
+			create: notification.OneSender{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test OneSender Created",
+				},
+				OneSenderDetails: notification.OneSenderDetails{
+					URL:          "https://api.onesender.com/send",
+					Token:        "test-token",
+					Receiver:     "5511999999999",
+					TypeReceiver: "private",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				onesender := n.(*notification.OneSender)
+				onesender.Name = "Test OneSender Updated"
+				onesender.Token = "updated-token"
+				onesender.Receiver = "120363123456789-1234567890"
+				onesender.TypeReceiver = "group"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.OneSender)
+				require.True(t, ok)
+				var onesender notification.OneSender
+				err := actual.As(&onesender)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = onesender.UserID
+				require.EqualExportedValues(t, exp, onesender)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var onesender notification.OneSender
+				err := base.As(&onesender)
+				require.NoError(t, err)
+				return &onesender
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.OneSender)
+				require.True(t, ok)
+				var onesender notification.OneSender
+				err := actual.As(&onesender)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, onesender)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
