@@ -2016,14 +2016,14 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test Heii On-Call Created",
 				},
 				HeiiOnCallDetails: notification.HeiiOnCallDetails{
-					ApiKey:    "test-api-key",
-					TriggerId: "test-trigger-id",
+					APIKey:    "test-api-key",
+					TriggerID: "test-trigger-id",
 				},
 			},
 			updateFunc: func(n notification.Notification) {
 				heii := n.(*notification.HeiiOnCall)
 				heii.Name = "Test Heii On-Call Updated"
-				heii.ApiKey = "updated-api-key"
+				heii.APIKey = "updated-api-key"
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
 				t.Helper()

@@ -31,8 +31,8 @@ func TestNotificationHeiiOnCall_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				HeiiOnCallDetails: notification.HeiiOnCallDetails{
-					ApiKey:    "api-key-123",
-					TriggerId: "trigger-456",
+					APIKey:    "api-key-123",
+					TriggerID: "trigger-456",
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":true,"heiiOnCallApiKey":"api-key-123","heiiOnCallTriggerId":"trigger-456","id":1,"isDefault":true,"name":"My Heii On-Call Alert","type":"HeiiOnCall","userId":1}`,
@@ -51,8 +51,8 @@ func TestNotificationHeiiOnCall_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				HeiiOnCallDetails: notification.HeiiOnCallDetails{
-					ApiKey:    "key-abc",
-					TriggerId: "trig-123",
+					APIKey:    "key-abc",
+					TriggerID: "trig-123",
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"heiiOnCallApiKey":"key-abc","heiiOnCallTriggerId":"trig-123","id":2,"isDefault":false,"name":"Simple Heii","type":"HeiiOnCall","userId":1}`,
@@ -71,8 +71,8 @@ func TestNotificationHeiiOnCall_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				HeiiOnCallDetails: notification.HeiiOnCallDetails{
-					ApiKey:    "prod-key-xyz",
-					TriggerId: "prod-trigger-789",
+					APIKey:    "prod-key-xyz",
+					TriggerID: "prod-trigger-789",
 				},
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"heiiOnCallApiKey":"prod-key-xyz","heiiOnCallTriggerId":"prod-trigger-789","id":3,"isDefault":false,"name":"Heii Production","type":"HeiiOnCall","userId":1}`,

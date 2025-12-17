@@ -13,10 +13,10 @@ type HeiiOnCall struct {
 
 // HeiiOnCallDetails contains the configuration fields for Heii On-Call notifications.
 type HeiiOnCallDetails struct {
-	// ApiKey is the Heii On-Call API key for authentication.
-	ApiKey string `json:"heiiOnCallApiKey"`
-	// TriggerId is the Heii On-Call trigger ID.
-	TriggerId string `json:"heiiOnCallTriggerId"`
+	// APIKey is the Heii On-Call API key for authentication.
+	APIKey string `json:"heiiOnCallApiKey"`
+	// TriggerID is the Heii On-Call trigger ID.
+	TriggerID string `json:"heiiOnCallTriggerId"`
 }
 
 // Type returns the notification type identifier for HeiiOnCall.
