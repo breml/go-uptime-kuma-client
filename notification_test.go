@@ -2555,6 +2555,57 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, octopush)
 			},
 		},
+		{
+			name:         "OneChat",
+			expectedType: "OneChat",
+			create: notification.OneChat{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test OneChat Created",
+				},
+				OneChatDetails: notification.OneChatDetails{
+					AccessToken: "test-token",
+					ReceiverID:  "user123",
+					BotID:       "bot456",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				onechat := n.(*notification.OneChat)
+				onechat.Name = "Test OneChat Updated"
+				onechat.AccessToken = "updated-token"
+				onechat.ReceiverID = "group789"
+				onechat.BotID = "botgroup"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.OneChat)
+				require.True(t, ok)
+				var onechat notification.OneChat
+				err := actual.As(&onechat)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = onechat.UserID
+				require.EqualExportedValues(t, exp, onechat)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var onechat notification.OneChat
+				err := base.As(&onechat)
+				require.NoError(t, err)
+				return &onechat
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.OneChat)
+				require.True(t, ok)
+				var onechat notification.OneChat
+				err := actual.As(&onechat)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, onechat)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
