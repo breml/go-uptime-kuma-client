@@ -2759,6 +2759,60 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, pagertree)
 			},
 		},
+		{
+			name:         "PromoSMS",
+			expectedType: "promosms",
+			create: notification.PromoSMS{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test PromoSMS Created",
+				},
+				PromoSMSDetails: notification.PromoSMSDetails{
+					Login:        "user@example.com",
+					Password:     "password123",
+					PhoneNumber:  "+48123456789",
+					SenderName:   "UptimeKuma",
+					SMSType:      "1",
+					AllowLongSMS: true,
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				promosms := n.(*notification.PromoSMS)
+				promosms.Name = "Test PromoSMS Updated"
+				promosms.Password = "newpassword"
+				promosms.PhoneNumber = "+48987654321"
+				promosms.AllowLongSMS = false
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.PromoSMS)
+				require.True(t, ok)
+				var promosms notification.PromoSMS
+				err := actual.As(&promosms)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = promosms.UserID
+				require.EqualExportedValues(t, exp, promosms)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var promosms notification.PromoSMS
+				err := base.As(&promosms)
+				require.NoError(t, err)
+				return &promosms
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.PromoSMS)
+				require.True(t, ok)
+				var promosms notification.PromoSMS
+				err := actual.As(&promosms)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, promosms)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
