@@ -1805,6 +1805,55 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, evolution)
 			},
 		},
+		{
+			name:         "FlashDuty",
+			expectedType: "FlashDuty",
+			create: notification.FlashDuty{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test FlashDuty Created",
+				},
+				FlashDutyDetails: notification.FlashDutyDetails{
+					IntegrationKey: "test_key_123",
+					Severity:       "Critical",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				flashduty := n.(*notification.FlashDuty)
+				flashduty.Name = "Test FlashDuty Updated"
+				flashduty.Severity = "Warning"
+				flashduty.IntegrationKey = "updated_key_456"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.FlashDuty)
+				require.True(t, ok)
+				var flashduty notification.FlashDuty
+				err := actual.As(&flashduty)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = flashduty.UserID
+				require.EqualExportedValues(t, exp, flashduty)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var flashduty notification.FlashDuty
+				err := base.As(&flashduty)
+				require.NoError(t, err)
+				return &flashduty
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.FlashDuty)
+				require.True(t, ok)
+				var flashduty notification.FlashDuty
+				err := actual.As(&flashduty)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, flashduty)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
