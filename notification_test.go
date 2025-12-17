@@ -2606,6 +2606,57 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, onechat)
 			},
 		},
+		{
+			name:         "Notifery",
+			expectedType: "notifery",
+			create: notification.Notifery{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Notifery Created",
+				},
+				NotiferyDetails: notification.NotiferyDetails{
+					APIKey: "test-api-key",
+					Title:  "Uptime Alert",
+					Group:  "monitoring",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				notifery := n.(*notification.Notifery)
+				notifery.Name = "Test Notifery Updated"
+				notifery.APIKey = "updated-api-key"
+				notifery.Title = "Critical Alert"
+				notifery.Group = "critical"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Notifery)
+				require.True(t, ok)
+				var notifery notification.Notifery
+				err := actual.As(&notifery)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = notifery.UserID
+				require.EqualExportedValues(t, exp, notifery)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var notifery notification.Notifery
+				err := base.As(&notifery)
+				require.NoError(t, err)
+				return &notifery
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Notifery)
+				require.True(t, ok)
+				var notifery notification.Notifery
+				err := actual.As(&notifery)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, notifery)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
