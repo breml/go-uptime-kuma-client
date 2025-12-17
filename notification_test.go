@@ -2501,6 +2501,60 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, onebot)
 			},
 		},
+		{
+			name:         "Octopush",
+			expectedType: "octopush",
+			create: notification.Octopush{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Octopush V2 Created",
+				},
+				OctopushDetails: notification.OctopushDetails{
+					Version:     "2",
+					APIKey:      "test-api-key",
+					Login:       "testuser",
+					PhoneNumber: "+33612345678",
+					SMSType:     "sms_premium",
+					SenderName:  "AlertBot",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				octopush := n.(*notification.Octopush)
+				octopush.Name = "Test Octopush V2 Updated"
+				octopush.APIKey = "updated-api-key"
+				octopush.PhoneNumber = "+33698765432"
+				octopush.SenderName = "UpdatedBot"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Octopush)
+				require.True(t, ok)
+				var octopush notification.Octopush
+				err := actual.As(&octopush)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = octopush.UserID
+				require.EqualExportedValues(t, exp, octopush)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var octopush notification.Octopush
+				err := base.As(&octopush)
+				require.NoError(t, err)
+				return &octopush
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Octopush)
+				require.True(t, ok)
+				var octopush notification.Octopush
+				err := actual.As(&octopush)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, octopush)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
