@@ -2860,6 +2860,55 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, pumble)
 			},
 		},
+		{
+			name:         "PushDeer",
+			expectedType: "PushDeer",
+			create: notification.PushDeer{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test PushDeer Created",
+				},
+				PushDeerDetails: notification.PushDeerDetails{
+					Key:    "PDxxxxxxxxxxxxxx",
+					Server: "https://api2.pushdeer.com",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				pushdeer := n.(*notification.PushDeer)
+				pushdeer.Name = "Test PushDeer Updated"
+				pushdeer.Key = "PDyyyyyyyyyyyyyyyy"
+				pushdeer.Server = "https://custom.pushdeer.com"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.PushDeer)
+				require.True(t, ok)
+				var pushdeer notification.PushDeer
+				err := actual.As(&pushdeer)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = pushdeer.UserID
+				require.EqualExportedValues(t, exp, pushdeer)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var pushdeer notification.PushDeer
+				err := base.As(&pushdeer)
+				require.NoError(t, err)
+				return &pushdeer
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.PushDeer)
+				require.True(t, ok)
+				var pushdeer notification.PushDeer
+				err := actual.As(&pushdeer)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, pushdeer)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
