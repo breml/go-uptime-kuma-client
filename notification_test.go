@@ -1855,6 +1855,54 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "GoAlert",
+			expectedType: "GoAlert",
+			create: notification.GoAlert{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test GoAlert Created",
+				},
+				GoAlertDetails: notification.GoAlertDetails{
+					BaseURL: "https://goalert.example.com",
+					Token:   "test-token-123",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				goalert := n.(*notification.GoAlert)
+				goalert.Name = "Test GoAlert Updated"
+				goalert.Token = "updated-token-456"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.GoAlert)
+				require.True(t, ok)
+				var goalert notification.GoAlert
+				err := actual.As(&goalert)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = goalert.UserID
+				require.EqualExportedValues(t, exp, goalert)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var goalert notification.GoAlert
+				err := base.As(&goalert)
+				require.NoError(t, err)
+				return &goalert
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.GoAlert)
+				require.True(t, ok)
+				var goalert notification.GoAlert
+				err := actual.As(&goalert)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, goalert)
+			},
+		},
+		{
 			name:         "FreeMobile",
 			expectedType: "FreeMobile",
 			create: notification.FreeMobile{
