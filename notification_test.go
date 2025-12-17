@@ -1854,6 +1854,54 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, flashduty)
 			},
 		},
+		{
+			name:         "FreeMobile",
+			expectedType: "FreeMobile",
+			create: notification.FreeMobile{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Free Mobile Created",
+				},
+				FreeMobileDetails: notification.FreeMobileDetails{
+					User: "12345678",
+					Pass: "abcdef123456",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				freemobile := n.(*notification.FreeMobile)
+				freemobile.Name = "Test Free Mobile Updated"
+				freemobile.Pass = "updated123456"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.FreeMobile)
+				require.True(t, ok)
+				var freemobile notification.FreeMobile
+				err := actual.As(&freemobile)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = freemobile.UserID
+				require.EqualExportedValues(t, exp, freemobile)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var freemobile notification.FreeMobile
+				err := base.As(&freemobile)
+				require.NoError(t, err)
+				return &freemobile
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.FreeMobile)
+				require.True(t, ok)
+				var freemobile notification.FreeMobile
+				err := actual.As(&freemobile)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, freemobile)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
