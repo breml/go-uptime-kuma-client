@@ -2102,6 +2102,54 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Kook",
+			expectedType: "Kook",
+			create: notification.Kook{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Kook Created",
+				},
+				KookDetails: notification.KookDetails{
+					BotToken: "test-bot-token",
+					GuildID:  "test-guild-id",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				kook := n.(*notification.Kook)
+				kook.Name = "Test Kook Updated"
+				kook.BotToken = "updated-bot-token"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Kook)
+				require.True(t, ok)
+				var kook notification.Kook
+				err := actual.As(&kook)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = kook.UserID
+				require.EqualExportedValues(t, exp, kook)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var kook notification.Kook
+				err := base.As(&kook)
+				require.NoError(t, err)
+				return &kook
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Kook)
+				require.True(t, ok)
+				var kook notification.Kook
+				err := actual.As(&kook)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, kook)
+			},
+		},
+		{
 			name:         "FreeMobile",
 			expectedType: "FreeMobile",
 			create: notification.FreeMobile{
