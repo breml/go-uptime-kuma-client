@@ -13,8 +13,8 @@ type PagerTree struct {
 
 // PagerTreeDetails contains the configuration fields for PagerTree notifications.
 type PagerTreeDetails struct {
-	// IntegrationUrl is the PagerTree integration endpoint URL.
-	IntegrationUrl string `json:"pagertreeIntegrationUrl"`
+	// IntegrationURL is the PagerTree integration endpoint URL.
+	IntegrationURL string `json:"pagertreeIntegrationUrl"`
 	// Urgency is the urgency level of the alert (e.g., "high", "medium", "low").
 	Urgency string `json:"pagertreeUrgency"`
 	// AutoResolve determines if alerts should be auto-resolved when monitor recovers.

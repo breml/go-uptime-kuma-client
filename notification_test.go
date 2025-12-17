@@ -2720,7 +2720,7 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test PagerTree Created",
 				},
 				PagerTreeDetails: notification.PagerTreeDetails{
-					IntegrationUrl: "https://api.pagertree.com/api/v2/events",
+					IntegrationURL: "https://api.pagertree.com/api/v2/events",
 					Urgency:        "high",
 					AutoResolve:    "resolve",
 				},

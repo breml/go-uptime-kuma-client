@@ -30,7 +30,7 @@ func TestNotificationPagerTree_Unmarshal(t *testing.T) {
 					IsDefault: false,
 				},
 				PagerTreeDetails: notification.PagerTreeDetails{
-					IntegrationUrl: "https://api.pagertree.com/api/v2/events",
+					IntegrationURL: "https://api.pagertree.com/api/v2/events",
 					Urgency:        "high",
 					AutoResolve:    "resolve",
 				},
@@ -51,7 +51,7 @@ func TestNotificationPagerTree_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				PagerTreeDetails: notification.PagerTreeDetails{
-					IntegrationUrl: "https://events.pagertree.com/api/v2/events",
+					IntegrationURL: "https://events.pagertree.com/api/v2/events",
 					Urgency:        "medium",
 					AutoResolve:    "",
 				},
@@ -72,7 +72,7 @@ func TestNotificationPagerTree_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				PagerTreeDetails: notification.PagerTreeDetails{
-					IntegrationUrl: "",
+					IntegrationURL: "",
 					Urgency:        "",
 					AutoResolve:    "",
 				},
