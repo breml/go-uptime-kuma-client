@@ -2909,6 +2909,53 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, pushdeer)
 			},
 		},
+		{
+			name:         "PushPlus",
+			expectedType: "PushPlus",
+			create: notification.PushPlus{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test PushPlus Created",
+				},
+				PushPlusDetails: notification.PushPlusDetails{
+					SendKey: "test_send_key_xxxxx",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				pushplus := n.(*notification.PushPlus)
+				pushplus.Name = "Test PushPlus Updated"
+				pushplus.SendKey = "updated_send_key_yyyyy"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.PushPlus)
+				require.True(t, ok)
+				var pushplus notification.PushPlus
+				err := actual.As(&pushplus)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = pushplus.UserID
+				require.EqualExportedValues(t, exp, pushplus)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var pushplus notification.PushPlus
+				err := base.As(&pushplus)
+				require.NoError(t, err)
+				return &pushplus
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.PushPlus)
+				require.True(t, ok)
+				var pushplus notification.PushPlus
+				err := actual.As(&pushplus)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, pushplus)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
