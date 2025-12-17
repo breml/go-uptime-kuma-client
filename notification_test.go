@@ -2449,6 +2449,58 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, nostr)
 			},
 		},
+		{
+			name:         "OneBot",
+			expectedType: "OneBot",
+			create: notification.OneBot{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test OneBot Created",
+				},
+				OneBotDetails: notification.OneBotDetails{
+					HTTPAddr:    "http://localhost:5700",
+					AccessToken: "test-token",
+					MsgType:     "group",
+					ReceiverID:  "123456789",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				onebot := n.(*notification.OneBot)
+				onebot.Name = "Test OneBot Updated"
+				onebot.AccessToken = "updated-token"
+				onebot.MsgType = "private"
+				onebot.ReceiverID = "987654321"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.OneBot)
+				require.True(t, ok)
+				var onebot notification.OneBot
+				err := actual.As(&onebot)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = onebot.UserID
+				require.EqualExportedValues(t, exp, onebot)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var onebot notification.OneBot
+				err := base.As(&onebot)
+				require.NoError(t, err)
+				return &onebot
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.OneBot)
+				require.True(t, ok)
+				var onebot notification.OneBot
+				err := actual.As(&onebot)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, onebot)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
