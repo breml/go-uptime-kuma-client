@@ -2197,6 +2197,53 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, freemobile)
 			},
 		},
+		{
+			name:         "LineNotify",
+			expectedType: "LineNotify",
+			create: notification.LineNotify{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test LINE Notify Created",
+				},
+				LineNotifyDetails: notification.LineNotifyDetails{
+					AccessToken: "access-token-test",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				linenotify := n.(*notification.LineNotify)
+				linenotify.Name = "Test LINE Notify Updated"
+				linenotify.AccessToken = "updated-token-123"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.LineNotify)
+				require.True(t, ok)
+				var linenotify notification.LineNotify
+				err := actual.As(&linenotify)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = linenotify.UserID
+				require.EqualExportedValues(t, exp, linenotify)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var linenotify notification.LineNotify
+				err := base.As(&linenotify)
+				require.NoError(t, err)
+				return &linenotify
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.LineNotify)
+				require.True(t, ok)
+				var linenotify notification.LineNotify
+				err := actual.As(&linenotify)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, linenotify)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
