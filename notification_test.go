@@ -2198,6 +2198,55 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Line",
+			expectedType: "line",
+			create: notification.Line{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test LINE Created",
+				},
+				LineDetails: notification.LineDetails{
+					ChannelAccessToken: "channel-access-token-test",
+					UserID:             "U1234567890abcdef1234567890abcdef",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				line := n.(*notification.Line)
+				line.Name = "Test LINE Updated"
+				line.ChannelAccessToken = "updated-token-123"
+				line.LineDetails.UserID = "U9876543210fedcba9876543210fedcba"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Line)
+				require.True(t, ok)
+				var line notification.Line
+				err := actual.As(&line)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.Base.UserID = line.Base.UserID
+				require.EqualExportedValues(t, exp, line)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var line notification.Line
+				err := base.As(&line)
+				require.NoError(t, err)
+				return &line
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Line)
+				require.True(t, ok)
+				var line notification.Line
+				err := actual.As(&line)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, line)
+			},
+		},
+		{
 			name:         "LineNotify",
 			expectedType: "LineNotify",
 			create: notification.LineNotify{
