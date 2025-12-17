@@ -2006,6 +2006,54 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "HeiiOnCall",
+			expectedType: "HeiiOnCall",
+			create: notification.HeiiOnCall{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Heii On-Call Created",
+				},
+				HeiiOnCallDetails: notification.HeiiOnCallDetails{
+					APIKey:    "test-api-key",
+					TriggerID: "test-trigger-id",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				heii := n.(*notification.HeiiOnCall)
+				heii.Name = "Test Heii On-Call Updated"
+				heii.APIKey = "updated-api-key"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.HeiiOnCall)
+				require.True(t, ok)
+				var heii notification.HeiiOnCall
+				err := actual.As(&heii)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = heii.UserID
+				require.EqualExportedValues(t, exp, heii)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var heii notification.HeiiOnCall
+				err := base.As(&heii)
+				require.NoError(t, err)
+				return &heii
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.HeiiOnCall)
+				require.True(t, ok)
+				var heii notification.HeiiOnCall
+				err := actual.As(&heii)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, heii)
+			},
+		},
+		{
 			name:         "FreeMobile",
 			expectedType: "FreeMobile",
 			create: notification.FreeMobile{
