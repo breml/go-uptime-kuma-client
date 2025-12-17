@@ -1903,6 +1903,60 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Gorush",
+			expectedType: "gorush",
+			create: notification.Gorush{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Gorush Created",
+				},
+				GorushDetails: notification.GorushDetails{
+					ServerURL:   "https://gorush.example.com",
+					DeviceToken: "test-device-token",
+					Platform:    "ios",
+					Title:       "Uptime Alert",
+					Priority:    "high",
+					Retry:       3,
+					Topic:       "com.example.app",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				gorush := n.(*notification.Gorush)
+				gorush.Name = "Test Gorush Updated"
+				gorush.Priority = "critical"
+				gorush.Retry = 5
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Gorush)
+				require.True(t, ok)
+				var gorush notification.Gorush
+				err := actual.As(&gorush)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = gorush.UserID
+				require.EqualExportedValues(t, exp, gorush)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var gorush notification.Gorush
+				err := base.As(&gorush)
+				require.NoError(t, err)
+				return &gorush
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Gorush)
+				require.True(t, ok)
+				var gorush notification.Gorush
+				err := actual.As(&gorush)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, gorush)
+			},
+		},
+		{
 			name:         "FreeMobile",
 			expectedType: "FreeMobile",
 			create: notification.FreeMobile{
