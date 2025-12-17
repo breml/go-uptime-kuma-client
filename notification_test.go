@@ -2304,16 +2304,16 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test LunaSea Created",
 				},
 				LunaSeaDetails: notification.LunaSeaDetails{
-					Target: "user",
-					UserID: "user-test-123",
-					Device: "",
+					Target:        "user",
+					LunaSeaUserID: "user-test-123",
+					Device:        "",
 				},
 			},
 			updateFunc: func(n notification.Notification) {
 				lunasea := n.(*notification.LunaSea)
 				lunasea.Name = "Test LunaSea Updated"
 				lunasea.Target = "device"
-				lunasea.LunaSeaDetails.UserID = ""
+				lunasea.LunaSeaUserID = ""
 				lunasea.Device = "device-456"
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
@@ -2324,7 +2324,7 @@ func TestNotificationCRUD(t *testing.T) {
 				err := actual.As(&lunasea)
 				require.NoError(t, err)
 				exp.ID = id
-				exp.Base.UserID = lunasea.Base.UserID
+				exp.UserID = lunasea.UserID
 				require.EqualExportedValues(t, exp, lunasea)
 			},
 			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {

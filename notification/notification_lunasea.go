@@ -15,8 +15,8 @@ type LunaSea struct {
 type LunaSeaDetails struct {
 	// Target is the target type: "user" or "device".
 	Target string `json:"lunaseaTarget"`
-	// UserID is the LunaSea user ID (when Target is "user").
-	UserID string `json:"lunaseaUserID"`
+	// LunaSeaUserID is the LunaSea user ID (when Target is "user").
+	LunaSeaUserID string `json:"lunaseaUserID"`
 	// Device is the LunaSea device ID (when Target is "device").
 	Device string `json:"lunaseaDevice"`
 }
