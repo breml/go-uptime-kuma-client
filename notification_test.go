@@ -2398,6 +2398,57 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, nextcloudtalk)
 			},
 		},
+		{
+			name:         "Nostr",
+			expectedType: "nostr",
+			create: notification.Nostr{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Nostr Created",
+				},
+				NostrDetails: notification.NostrDetails{
+					Sender:     "nsec1test-sender",
+					Recipients: "npub1recipient1\nnpub1recipient2",
+					Relays:     "wss://relay1.example.com\nwss://relay2.example.com",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				nostr := n.(*notification.Nostr)
+				nostr.Name = "Test Nostr Updated"
+				nostr.Sender = "nsec1updated-sender"
+				nostr.Recipients = "npub1updated-recipient"
+				nostr.Relays = "wss://updated-relay.example.com"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Nostr)
+				require.True(t, ok)
+				var nostr notification.Nostr
+				err := actual.As(&nostr)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = nostr.UserID
+				require.EqualExportedValues(t, exp, nostr)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var nostr notification.Nostr
+				err := base.As(&nostr)
+				require.NoError(t, err)
+				return &nostr
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Nostr)
+				require.True(t, ok)
+				var nostr notification.Nostr
+				err := actual.As(&nostr)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, nostr)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
