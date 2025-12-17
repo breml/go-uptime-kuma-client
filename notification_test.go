@@ -2293,6 +2293,57 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, linenotify)
 			},
 		},
+		{
+			name:         "LunaSea",
+			expectedType: "lunasea",
+			create: notification.LunaSea{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test LunaSea Created",
+				},
+				LunaSeaDetails: notification.LunaSeaDetails{
+					Target:        "user",
+					LunaSeaUserID: "user-test-123",
+					Device:        "",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				lunasea := n.(*notification.LunaSea)
+				lunasea.Name = "Test LunaSea Updated"
+				lunasea.Target = "device"
+				lunasea.LunaSeaUserID = ""
+				lunasea.Device = "device-456"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.LunaSea)
+				require.True(t, ok)
+				var lunasea notification.LunaSea
+				err := actual.As(&lunasea)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = lunasea.UserID
+				require.EqualExportedValues(t, exp, lunasea)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var lunasea notification.LunaSea
+				err := base.As(&lunasea)
+				require.NoError(t, err)
+				return &lunasea
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.LunaSea)
+				require.True(t, ok)
+				var lunasea notification.LunaSea
+				err := actual.As(&lunasea)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, lunasea)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
