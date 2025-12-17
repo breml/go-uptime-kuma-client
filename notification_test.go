@@ -2813,6 +2813,53 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, promosms)
 			},
 		},
+		{
+			name:         "Pumble",
+			expectedType: "Pumble",
+			create: notification.Pumble{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Pumble Created",
+				},
+				PumbleDetails: notification.PumbleDetails{
+					WebhookURL: "https://pumble.com/webhook/test",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				pumble := n.(*notification.Pumble)
+				pumble.Name = "Test Pumble Updated"
+				pumble.WebhookURL = "https://pumble.com/webhook/updated"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Pumble)
+				require.True(t, ok)
+				var pumble notification.Pumble
+				err := actual.As(&pumble)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = pumble.UserID
+				require.EqualExportedValues(t, exp, pumble)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var pumble notification.Pumble
+				err := base.As(&pumble)
+				require.NoError(t, err)
+				return &pumble
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Pumble)
+				require.True(t, ok)
+				var pumble notification.Pumble
+				err := actual.As(&pumble)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, pumble)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
