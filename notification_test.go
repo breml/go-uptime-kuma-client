@@ -2054,6 +2054,54 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Keep",
+			expectedType: "Keep",
+			create: notification.Keep{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Keep Created",
+				},
+				KeepDetails: notification.KeepDetails{
+					WebhookURL: "https://keep.example.com/webhook",
+					APIKey:     "test-api-key",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				keep := n.(*notification.Keep)
+				keep.Name = "Test Keep Updated"
+				keep.APIKey = "updated-api-key"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Keep)
+				require.True(t, ok)
+				var keep notification.Keep
+				err := actual.As(&keep)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = keep.UserID
+				require.EqualExportedValues(t, exp, keep)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var keep notification.Keep
+				err := base.As(&keep)
+				require.NoError(t, err)
+				return &keep
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Keep)
+				require.True(t, ok)
+				var keep notification.Keep
+				err := actual.As(&keep)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, keep)
+			},
+		},
+		{
 			name:         "FreeMobile",
 			expectedType: "FreeMobile",
 			create: notification.FreeMobile{
