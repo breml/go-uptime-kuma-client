@@ -2344,6 +2344,60 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, lunasea)
 			},
 		},
+		{
+			name:         "NextcloudTalk",
+			expectedType: "NextcloudTalk",
+			create: notification.NextcloudTalk{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Nextcloud Talk Created",
+				},
+				NextcloudTalkDetails: notification.NextcloudTalkDetails{
+					Host:              "https://nextcloud.example.com",
+					ConversationToken: "token-test",
+					BotSecret:         "secret-test",
+					SendSilentUp:      true,
+					SendSilentDown:    false,
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				nextcloudtalk := n.(*notification.NextcloudTalk)
+				nextcloudtalk.Name = "Test Nextcloud Talk Updated"
+				nextcloudtalk.Host = "https://updated.example.com"
+				nextcloudtalk.ConversationToken = "token-updated"
+				nextcloudtalk.SendSilentUp = false
+				nextcloudtalk.SendSilentDown = true
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.NextcloudTalk)
+				require.True(t, ok)
+				var nextcloudtalk notification.NextcloudTalk
+				err := actual.As(&nextcloudtalk)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = nextcloudtalk.UserID
+				require.EqualExportedValues(t, exp, nextcloudtalk)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var nextcloudtalk notification.NextcloudTalk
+				err := base.As(&nextcloudtalk)
+				require.NoError(t, err)
+				return &nextcloudtalk
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.NextcloudTalk)
+				require.True(t, ok)
+				var nextcloudtalk notification.NextcloudTalk
+				err := actual.As(&nextcloudtalk)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, nextcloudtalk)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
