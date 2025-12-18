@@ -3411,6 +3411,56 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, smsmanager)
 			},
 		},
+		{
+			name:         "SMSPartner",
+			expectedType: "SMSPartner",
+			create: notification.SMSPartner{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test SMSPartner Created",
+				},
+				SMSPartnerDetails: notification.SMSPartnerDetails{
+					APIKey:      "test-api-key",
+					PhoneNumber: "33612345678",
+					SenderName:  "Uptime",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				smspartner := n.(*notification.SMSPartner)
+				smspartner.Name = "Test SMSPartner Updated"
+				smspartner.PhoneNumber = "33687654321"
+				smspartner.SenderName = "Monitor"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.SMSPartner)
+				require.True(t, ok)
+				var smspartner notification.SMSPartner
+				err := actual.As(&smspartner)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = smspartner.UserID
+				require.EqualExportedValues(t, exp, smspartner)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var smspartner notification.SMSPartner
+				err := base.As(&smspartner)
+				require.NoError(t, err)
+				return &smspartner
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.SMSPartner)
+				require.True(t, ok)
+				var smspartner notification.SMSPartner
+				err := actual.As(&smspartner)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, smspartner)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
