@@ -3461,6 +3461,56 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, smspartner)
 			},
 		},
+		{
+			name:         "SMSPlanet",
+			expectedType: "SMSPlanet",
+			create: notification.SMSPlanet{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test SMS Planet Created",
+				},
+				SMSPlanetDetails: notification.SMSPlanetDetails{
+					APIToken:     "test-token-123",
+					PhoneNumbers: "48123456789",
+					SenderName:   "Uptime Kuma",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				smsplanet := n.(*notification.SMSPlanet)
+				smsplanet.Name = "Test SMS Planet Updated"
+				smsplanet.PhoneNumbers = "48987654321"
+				smsplanet.SenderName = "Monitor"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.SMSPlanet)
+				require.True(t, ok)
+				var smsplanet notification.SMSPlanet
+				err := actual.As(&smsplanet)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = smsplanet.UserID
+				require.EqualExportedValues(t, exp, smsplanet)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var smsplanet notification.SMSPlanet
+				err := base.As(&smsplanet)
+				require.NoError(t, err)
+				return &smsplanet
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.SMSPlanet)
+				require.True(t, ok)
+				var smsplanet notification.SMSPlanet
+				err := actual.As(&smsplanet)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, smsplanet)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
