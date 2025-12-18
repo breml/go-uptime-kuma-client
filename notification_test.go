@@ -3157,6 +3157,56 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, serwersms)
 			},
 		},
+		{
+			name:         "SevenIO",
+			expectedType: "sevenio",
+			create: notification.SevenIO{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test SevenIO Created",
+				},
+				SevenIODetails: notification.SevenIODetails{
+					APIKey: "test-api-key",
+					Sender: "UptimeKuma",
+					To:     "49123456789",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				sevenio := n.(*notification.SevenIO)
+				sevenio.Name = "Test SevenIO Updated"
+				sevenio.To = "49987654321"
+				sevenio.Sender = "UpdatedAlert"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.SevenIO)
+				require.True(t, ok)
+				var sevenio notification.SevenIO
+				err := actual.As(&sevenio)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = sevenio.UserID
+				require.EqualExportedValues(t, exp, sevenio)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var sevenio notification.SevenIO
+				err := base.As(&sevenio)
+				require.NoError(t, err)
+				return &sevenio
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.SevenIO)
+				require.True(t, ok)
+				var sevenio notification.SevenIO
+				err := actual.As(&sevenio)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, sevenio)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
