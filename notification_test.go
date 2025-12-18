@@ -3059,6 +3059,53 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, sendgrid)
 			},
 		},
+		{
+			name:         "ServerChan",
+			expectedType: "ServerChan",
+			create: notification.ServerChan{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test ServerChan Created",
+				},
+				ServerChanDetails: notification.ServerChanDetails{
+					SendKey: "SCT123456789abcdefghijklmnopqrst",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				serverchan := n.(*notification.ServerChan)
+				serverchan.Name = "Test ServerChan Updated"
+				serverchan.SendKey = "SCT000000000000000000000000000000"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.ServerChan)
+				require.True(t, ok)
+				var serverchan notification.ServerChan
+				err := actual.As(&serverchan)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = serverchan.UserID
+				require.EqualExportedValues(t, exp, serverchan)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var serverchan notification.ServerChan
+				err := base.As(&serverchan)
+				require.NoError(t, err)
+				return &serverchan
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.ServerChan)
+				require.True(t, ok)
+				var serverchan notification.ServerChan
+				err := actual.As(&serverchan)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, serverchan)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
