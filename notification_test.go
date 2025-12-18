@@ -3005,6 +3005,60 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, pushy)
 			},
 		},
+		{
+			name:         "SendGrid",
+			expectedType: "SendGrid",
+			create: notification.SendGrid{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test SendGrid Created",
+				},
+				SendGridDetails: notification.SendGridDetails{
+					APIKey:    "SG.test_api_key_xxxxx",
+					ToEmail:   "test@example.com",
+					FromEmail: "sender@example.com",
+					Subject:   "Test Subject",
+					CcEmail:   "cc@example.com",
+					BccEmail:  "bcc@example.com",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				sendgrid := n.(*notification.SendGrid)
+				sendgrid.Name = "Test SendGrid Updated"
+				sendgrid.APIKey = "SG.updated_api_key_yyyyy"
+				sendgrid.ToEmail = "updated@example.com"
+				sendgrid.Subject = "Updated Subject"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.SendGrid)
+				require.True(t, ok)
+				var sendgrid notification.SendGrid
+				err := actual.As(&sendgrid)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = sendgrid.UserID
+				require.EqualExportedValues(t, exp, sendgrid)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var sendgrid notification.SendGrid
+				err := base.As(&sendgrid)
+				require.NoError(t, err)
+				return &sendgrid
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.SendGrid)
+				require.True(t, ok)
+				var sendgrid notification.SendGrid
+				err := actual.As(&sendgrid)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, sendgrid)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
