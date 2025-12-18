@@ -2956,6 +2956,55 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, pushplus)
 			},
 		},
+		{
+			name:         "Pushy",
+			expectedType: "pushy",
+			create: notification.Pushy{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Pushy Created",
+				},
+				PushyDetails: notification.PushyDetails{
+					APIKey: "test_api_key_xxxxx",
+					Token:  "test_device_token_xxxxx",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				pushy := n.(*notification.Pushy)
+				pushy.Name = "Test Pushy Updated"
+				pushy.APIKey = "updated_api_key_yyyyy"
+				pushy.Token = "updated_device_token_yyyyy"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Pushy)
+				require.True(t, ok)
+				var pushy notification.Pushy
+				err := actual.As(&pushy)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = pushy.UserID
+				require.EqualExportedValues(t, exp, pushy)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var pushy notification.Pushy
+				err := base.As(&pushy)
+				require.NoError(t, err)
+				return &pushy
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Pushy)
+				require.True(t, ok)
+				var pushy notification.Pushy
+				err := actual.As(&pushy)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, pushy)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
