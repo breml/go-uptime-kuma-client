@@ -3306,6 +3306,61 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, smsc)
 			},
 		},
+		{
+			name:         "SMSEagle",
+			expectedType: "SMSEagle",
+			create: notification.SMSEagle{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test SMSEagle Created",
+				},
+				SMSEagleDetails: notification.SMSEagleDetails{
+					URL:           "https://smseagle.example.com",
+					Token:         "test-token-123",
+					RecipientType: "smseagle-to",
+					Recipient:     "1234567890",
+					MsgType:       "smseagle-sms",
+					Priority:      1,
+					Encoding:      false,
+					ApiType:       "smseagle-apiv1",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				smseagle := n.(*notification.SMSEagle)
+				smseagle.Name = "Test SMSEagle Updated"
+				smseagle.Priority = 2
+				smseagle.Encoding = true
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.SMSEagle)
+				require.True(t, ok)
+				var smseagle notification.SMSEagle
+				err := actual.As(&smseagle)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = smseagle.UserID
+				require.EqualExportedValues(t, exp, smseagle)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var smseagle notification.SMSEagle
+				err := base.As(&smseagle)
+				require.NoError(t, err)
+				return &smseagle
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.SMSEagle)
+				require.True(t, ok)
+				var smseagle notification.SMSEagle
+				err := actual.As(&smseagle)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, smseagle)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
