@@ -3254,6 +3254,58 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, signl4)
 			},
 		},
+		{
+			name:         "SMSC",
+			expectedType: "smsc",
+			create: notification.SMSC{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test SMSC Created",
+				},
+				SMSCDetails: notification.SMSCDetails{
+					Login:      "testuser",
+					Password:   "testpass",
+					ToNumber:   "77123456789",
+					SenderName: "Uptime",
+					Translit:   "1",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				smsc := n.(*notification.SMSC)
+				smsc.Name = "Test SMSC Updated"
+				smsc.SenderName = "Updated"
+				smsc.Translit = "0"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.SMSC)
+				require.True(t, ok)
+				var smsc notification.SMSC
+				err := actual.As(&smsc)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = smsc.UserID
+				require.EqualExportedValues(t, exp, smsc)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var smsc notification.SMSC
+				err := base.As(&smsc)
+				require.NoError(t, err)
+				return &smsc
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.SMSC)
+				require.True(t, ok)
+				var smsc notification.SMSC
+				err := actual.As(&smsc)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, smsc)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
