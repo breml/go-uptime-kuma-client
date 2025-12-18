@@ -3511,6 +3511,57 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, smsplanet)
 			},
 		},
+		{
+			name:         "Splunk",
+			expectedType: "Splunk",
+			create: notification.Splunk{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Splunk Created",
+				},
+				SplunkDetails: notification.SplunkDetails{
+					RestURL:        "https://api.victorops.com/api/v1/incidents",
+					Severity:       "CRITICAL",
+					AutoResolve:    "RECOVERY",
+					IntegrationKey: "test-routing-key",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				splunk := n.(*notification.Splunk)
+				splunk.Name = "Test Splunk Updated"
+				splunk.Severity = "HIGH"
+				splunk.AutoResolve = "ACKNOWLEDGED"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Splunk)
+				require.True(t, ok)
+				var splunk notification.Splunk
+				err := actual.As(&splunk)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = splunk.UserID
+				require.EqualExportedValues(t, exp, splunk)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var splunk notification.Splunk
+				err := base.As(&splunk)
+				require.NoError(t, err)
+				return &splunk
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Splunk)
+				require.True(t, ok)
+				var splunk notification.Splunk
+				err := actual.As(&splunk)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, splunk)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
