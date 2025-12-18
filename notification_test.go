@@ -3207,6 +3207,53 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, sevenio)
 			},
 		},
+		{
+			name:         "SIGNL4",
+			expectedType: "SIGNL4",
+			create: notification.SIGNL4{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test SIGNL4 Created",
+				},
+				SIGNL4Details: notification.SIGNL4Details{
+					WebhookURL: "https://connect.signl4.com/webhook/test-webhook",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				signl4 := n.(*notification.SIGNL4)
+				signl4.Name = "Test SIGNL4 Updated"
+				signl4.WebhookURL = "https://connect.signl4.com/webhook/updated-webhook"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.SIGNL4)
+				require.True(t, ok)
+				var signl4 notification.SIGNL4
+				err := actual.As(&signl4)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = signl4.UserID
+				require.EqualExportedValues(t, exp, signl4)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var signl4 notification.SIGNL4
+				err := base.As(&signl4)
+				require.NoError(t, err)
+				return &signl4
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.SIGNL4)
+				require.True(t, ok)
+				var signl4 notification.SIGNL4
+				err := actual.As(&signl4)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, signl4)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
