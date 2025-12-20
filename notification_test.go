@@ -3609,6 +3609,53 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, spugpush)
 			},
 		},
+		{
+			name:         "Squadcast",
+			expectedType: "squadcast",
+			create: notification.Squadcast{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Squadcast Created",
+				},
+				SquadcastDetails: notification.SquadcastDetails{
+					WebhookURL: "https://api.squadcast.com/api/v3/incidents/webhook",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				squadcast := n.(*notification.Squadcast)
+				squadcast.Name = "Test Squadcast Updated"
+				squadcast.WebhookURL = "https://updated.squadcast.com/webhook"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Squadcast)
+				require.True(t, ok)
+				var squadcast notification.Squadcast
+				err := actual.As(&squadcast)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = squadcast.UserID
+				require.EqualExportedValues(t, exp, squadcast)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var squadcast notification.Squadcast
+				err := base.As(&squadcast)
+				require.NoError(t, err)
+				return &squadcast
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Squadcast)
+				require.True(t, ok)
+				var squadcast notification.Squadcast
+				err := actual.As(&squadcast)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, squadcast)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
