@@ -3562,6 +3562,53 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, splunk)
 			},
 		},
+		{
+			name:         "SpugPush",
+			expectedType: "SpugPush",
+			create: notification.SpugPush{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test SpugPush Created",
+				},
+				SpugPushDetails: notification.SpugPushDetails{
+					TemplateKey: "test-template-key",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				spugpush := n.(*notification.SpugPush)
+				spugpush.Name = "Test SpugPush Updated"
+				spugpush.TemplateKey = "updated-template-key"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.SpugPush)
+				require.True(t, ok)
+				var spugpush notification.SpugPush
+				err := actual.As(&spugpush)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = spugpush.UserID
+				require.EqualExportedValues(t, exp, spugpush)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var spugpush notification.SpugPush
+				err := base.As(&spugpush)
+				require.NoError(t, err)
+				return &spugpush
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.SpugPush)
+				require.True(t, ok)
+				var spugpush notification.SpugPush
+				err := actual.As(&spugpush)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, spugpush)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
