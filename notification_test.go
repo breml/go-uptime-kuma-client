@@ -3656,6 +3656,53 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, squadcast)
 			},
 		},
+		{
+			name:         "Stackfield",
+			expectedType: "stackfield",
+			create: notification.Stackfield{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Stackfield Created",
+				},
+				StackfieldDetails: notification.StackfieldDetails{
+					WebhookURL: "https://app.stackfield.com/webhook/v1/xxx",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				stackfield := n.(*notification.Stackfield)
+				stackfield.Name = "Test Stackfield Updated"
+				stackfield.WebhookURL = "https://updated.stackfield.com/webhook"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Stackfield)
+				require.True(t, ok)
+				var stackfield notification.Stackfield
+				err := actual.As(&stackfield)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = stackfield.UserID
+				require.EqualExportedValues(t, exp, stackfield)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var stackfield notification.Stackfield
+				err := base.As(&stackfield)
+				require.NoError(t, err)
+				return &stackfield
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Stackfield)
+				require.True(t, ok)
+				var stackfield notification.Stackfield
+				err := actual.As(&stackfield)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, stackfield)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
