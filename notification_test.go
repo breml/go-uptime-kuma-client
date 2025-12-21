@@ -3703,6 +3703,59 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, stackfield)
 			},
 		},
+		{
+			name:         "TechulusPush",
+			expectedType: "PushByTechulus",
+			create: notification.TechulusPush{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test TechulusPush Created",
+				},
+				TechulusPushDetails: notification.TechulusPushDetails{
+					APIKey:        "test-api-key",
+					Title:         "Alert Title",
+					Sound:         "default",
+					Channel:       "alerts",
+					TimeSensitive: true,
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				techuluspush := n.(*notification.TechulusPush)
+				techuluspush.Name = "Test TechulusPush Updated"
+				techuluspush.Title = "Updated Title"
+				techuluspush.Sound = "bell"
+				techuluspush.Channel = "monitoring"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.TechulusPush)
+				require.True(t, ok)
+				var techuluspush notification.TechulusPush
+				err := actual.As(&techuluspush)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = techuluspush.UserID
+				require.EqualExportedValues(t, exp, techuluspush)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var techuluspush notification.TechulusPush
+				err := base.As(&techuluspush)
+				require.NoError(t, err)
+				return &techuluspush
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.TechulusPush)
+				require.True(t, ok)
+				var techuluspush notification.TechulusPush
+				err := actual.As(&techuluspush)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, techuluspush)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
