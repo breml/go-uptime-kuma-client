@@ -3858,6 +3858,55 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, waha)
 			},
 		},
+		{
+			name:         "Whapi",
+			expectedType: "whapi",
+			create: notification.Whapi{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Whapi Created",
+				},
+				WhapiDetails: notification.WhapiDetails{
+					ApiURL:    "https://gate.whapi.cloud",
+					AuthToken: "test-auth-token",
+					Recipient: "5511999999999",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				whapi := n.(*notification.Whapi)
+				whapi.Name = "Test Whapi Updated"
+				whapi.Recipient = "+5511987654321"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Whapi)
+				require.True(t, ok)
+				var whapi notification.Whapi
+				err := actual.As(&whapi)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = whapi.UserID
+				require.EqualExportedValues(t, exp, whapi)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var whapi notification.Whapi
+				err := base.As(&whapi)
+				require.NoError(t, err)
+				return &whapi
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Whapi)
+				require.True(t, ok)
+				var whapi notification.Whapi
+				err := actual.As(&whapi)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, whapi)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
