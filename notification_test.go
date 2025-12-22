@@ -3807,6 +3807,57 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, threema)
 			},
 		},
+		{
+			name:         "WAHA",
+			expectedType: "waha",
+			create: notification.WAHA{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test WAHA Created",
+				},
+				WAHADetails: notification.WAHADetails{
+					ApiURL:  "https://waha.example.com",
+					Session: "default",
+					ChatID:  "5511999999999",
+					ApiKey:  "test-api-key",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				waha := n.(*notification.WAHA)
+				waha.Name = "Test WAHA Updated"
+				waha.Session = "alerts"
+				waha.ChatID = "+5511987654321"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.WAHA)
+				require.True(t, ok)
+				var waha notification.WAHA
+				err := actual.As(&waha)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = waha.UserID
+				require.EqualExportedValues(t, exp, waha)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var waha notification.WAHA
+				err := base.As(&waha)
+				require.NoError(t, err)
+				return &waha
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.WAHA)
+				require.True(t, ok)
+				var waha notification.WAHA
+				err := actual.As(&waha)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, waha)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
