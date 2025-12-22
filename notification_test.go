@@ -3756,6 +3756,57 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, techuluspush)
 			},
 		},
+		{
+			name:         "Threema",
+			expectedType: "threema",
+			create: notification.Threema{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Threema Created",
+				},
+				ThreemaDetails: notification.ThreemaDetails{
+					SenderIdentity: "GATEWAY1",
+					Secret:         "test-secret",
+					Recipient:      "USERID123",
+					RecipientType:  "identity",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				threema := n.(*notification.Threema)
+				threema.Name = "Test Threema Updated"
+				threema.Recipient = "+41791234567"
+				threema.RecipientType = "phone"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Threema)
+				require.True(t, ok)
+				var threema notification.Threema
+				err := actual.As(&threema)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = threema.UserID
+				require.EqualExportedValues(t, exp, threema)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var threema notification.Threema
+				err := base.As(&threema)
+				require.NoError(t, err)
+				return &threema
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Threema)
+				require.True(t, ok)
+				var threema notification.Threema
+				err := actual.As(&threema)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, threema)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
