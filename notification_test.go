@@ -3955,6 +3955,54 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, wpush)
 			},
 		},
+		{
+			name:         "YZJ",
+			expectedType: "YZJ",
+			create: notification.YZJ{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test YZJ Created",
+				},
+				YZJDetails: notification.YZJDetails{
+					WebHookURL: "https://api.yzj.cn/webhook",
+					Token:      "test-token-123",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				yzj := n.(*notification.YZJ)
+				yzj.Name = "Test YZJ Updated"
+				yzj.Token = "updated-token-456"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.YZJ)
+				require.True(t, ok)
+				var yzj notification.YZJ
+				err := actual.As(&yzj)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = yzj.UserID
+				require.EqualExportedValues(t, exp, yzj)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var yzj notification.YZJ
+				err := base.As(&yzj)
+				require.NoError(t, err)
+				return &yzj
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.YZJ)
+				require.True(t, ok)
+				var yzj notification.YZJ
+				err := actual.As(&yzj)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, yzj)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
