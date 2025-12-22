@@ -4003,6 +4003,53 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, yzj)
 			},
 		},
+		{
+			name:         "ZohoCliq",
+			expectedType: "ZohoCliq",
+			create: notification.ZohoCliq{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test ZohoCliq Created",
+				},
+				ZohoCliqDetails: notification.ZohoCliqDetails{
+					WebhookURL: "https://zoho-cliq.example.com/webhook/test123",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				zohocliq := n.(*notification.ZohoCliq)
+				zohocliq.Name = "Test ZohoCliq Updated"
+				zohocliq.WebhookURL = "https://zoho-cliq.example.com/webhook/updated456"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.ZohoCliq)
+				require.True(t, ok)
+				var zohocliq notification.ZohoCliq
+				err := actual.As(&zohocliq)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = zohocliq.UserID
+				require.EqualExportedValues(t, exp, zohocliq)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var zohocliq notification.ZohoCliq
+				err := base.As(&zohocliq)
+				require.NoError(t, err)
+				return &zohocliq
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.ZohoCliq)
+				require.True(t, ok)
+				var zohocliq notification.ZohoCliq
+				err := actual.As(&zohocliq)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, zohocliq)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
