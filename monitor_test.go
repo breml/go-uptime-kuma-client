@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/dockerhost"
 	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
@@ -801,6 +802,23 @@ func TestMonitorCRUD(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
+			var dockerHostID int64
+			// For Docker monitors, we need to create a Docker host first
+			if tc.name == "Docker" {
+				hostID, err := client.CreateDockerHost(ctx, dockerhost.Config{
+					Name:         "Test Docker Host",
+					DockerDaemon: "unix:///var/run/docker.sock",
+					DockerType:   "socket",
+				})
+				require.NoError(t, err)
+				dockerHostID = hostID
+
+				// Update the monitor's docker_host to use the created host
+				dockerMonitor := tc.create.(monitor.Docker)
+				dockerMonitor.DockerHost = dockerHostID
+				tc.create = dockerMonitor
+			}
+
 			var initialCount int
 			monitors, err := client.GetMonitors(ctx)
 			require.NoError(t, err)
@@ -854,6 +872,12 @@ func TestMonitorCRUD(t *testing.T) {
 			monitors, err = client.GetMonitors(ctx)
 			require.NoError(t, err)
 			require.Equal(t, initialCount, len(monitors))
+
+			// Clean up Docker host if created
+			if dockerHostID > 0 {
+				err = client.DeleteDockerHost(ctx, dockerHostID)
+				require.NoError(t, err)
+			}
 		})
 	}
 }
