@@ -10,1507 +10,750 @@ import (
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
-func TestClient_MonitorCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test HTTP monitor
-	httpMonitor := monitor.HTTP{
-		Base: monitor.Base{
-			Name:           "Test HTTP Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     3,
-			UpsideDown:     false,
-			IsActive:       true,
-		},
-		HTTPDetails: monitor.HTTPDetails{
-			URL:                 "https://httpbin.org/status/200",
-			Timeout:             48,
-			Method:              "GET",
-			ExpiryNotification:  false,
-			IgnoreTLS:           false,
-			MaxRedirects:        10,
-			AcceptedStatusCodes: []string{"200-299"},
-			AuthMethod:          monitor.AuthMethodNone,
-		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var httpMonitorRetrieved monitor.HTTP
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, httpMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test HTTP Monitor", retrievedMonitor.Name)
-
-		// Test GetMonitorAs
-
-		err = client.GetMonitorAs(ctx, monitorID, &httpMonitorRetrieved)
-		require.NoError(t, err)
-		httpMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// httpMonitor.PathName = httpMonitor.Name
-		require.EqualExportedValues(t, httpMonitor, httpMonitorRetrieved)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		httpMonitorRetrieved.Name = "Updated HTTP Monitor"
-		httpMonitorRetrieved.URL = "https://httpbin.org/status/201"
-		err := client.UpdateMonitor(ctx, httpMonitorRetrieved)
-		require.NoError(t, err)
-
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated HTTP Monitor", updatedMonitor.Name)
-
-		var updatedHTTP monitor.HTTP
-		err = client.GetMonitorAs(ctx, monitorID, &updatedHTTP)
-		require.NoError(t, err)
-		require.Equal(t, "https://httpbin.org/status/201", updatedHTTP.URL)
-	})
-
-	t.Run("pause", func(t *testing.T) {
-		// Test PauseMonitor
-		err := client.PauseMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("resume", func(t *testing.T) {
-		// Test ResumeMonitor
-		err := client.ResumeMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
+// monitorTestCase defines a single monitor type's CRUD test scenario
+type monitorTestCase struct {
+	name              string                                                   // Test name (e.g., "HTTP", "Ping")
+	create            monitor.Monitor                                          // Monitor to create
+	updateFunc        func(monitor.Monitor)                                    // Function to modify monitor for update test
+	verifyCreatedFunc func(t *testing.T, actual monitor.Monitor, id int64)     // Function to verify created monitor
+	createTypedFunc   func(t *testing.T, base monitor.Monitor) monitor.Monitor // Function to create typed monitor
+	verifyUpdatedFunc func(t *testing.T, actual monitor.Monitor)               // Function to verify updated monitor
+	testPauseResume   bool                                                     // Whether to test pause/resume functionality
 }
 
-func TestClient_MonitorGroupCRUD(t *testing.T) {
+func TestMonitorCRUD(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test Group monitor
-	groupMonitor := monitor.Group{
-		Base: monitor.Base{
-			Name:           "Test Group Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     0,
-			UpsideDown:     false,
-			IsActive:       true,
-		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var groupMonitorRetrieved monitor.Group
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, groupMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test Group Monitor", retrievedMonitor.Name)
-
-		// Test GetMonitorAs
-		err = client.GetMonitorAs(ctx, monitorID, &groupMonitorRetrieved)
-		require.NoError(t, err)
-		groupMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// groupMonitor.PathName = groupMonitor.Name
-		require.EqualExportedValues(t, groupMonitor, groupMonitorRetrieved)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		groupMonitorRetrieved.Name = "Updated Group Monitor"
-		err := client.UpdateMonitor(ctx, groupMonitorRetrieved)
-		require.NoError(t, err)
-
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated Group Monitor", updatedMonitor.Name)
-
-		var updatedGroup monitor.Group
-		err = client.GetMonitorAs(ctx, monitorID, &updatedGroup)
-		require.NoError(t, err)
-		require.Equal(t, "Updated Group Monitor", updatedGroup.Name)
-	})
-
-	t.Run("pause", func(t *testing.T) {
-		// Test PauseMonitor
-		err := client.PauseMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("resume", func(t *testing.T) {
-		// Test ResumeMonitor
-		err := client.ResumeMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
-}
-
-func TestClient_MonitorPingCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test Ping monitor
-	pingMonitor := monitor.Ping{
-		Base: monitor.Base{
-			Name:           "Test Ping Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     3,
-			UpsideDown:     false,
-			IsActive:       true,
-		},
-		PingDetails: monitor.PingDetails{
-			Hostname:   "8.8.8.8",
-			PacketSize: 56,
-		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var pingMonitorRetrieved monitor.Ping
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, pingMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test Ping Monitor", retrievedMonitor.Name)
-
-		// Test GetMonitorAs
-		err = client.GetMonitorAs(ctx, monitorID, &pingMonitorRetrieved)
-		require.NoError(t, err)
-		pingMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// pingMonitor.PathName = pingMonitor.Name
-		require.EqualExportedValues(t, pingMonitor, pingMonitorRetrieved)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		pingMonitorRetrieved.Name = "Updated Ping Monitor"
-		pingMonitorRetrieved.Hostname = "1.1.1.1"
-		pingMonitorRetrieved.PacketSize = 64
-		err := client.UpdateMonitor(ctx, pingMonitorRetrieved)
-		require.NoError(t, err)
-
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated Ping Monitor", updatedMonitor.Name)
-
-		var updatedPing monitor.Ping
-		err = client.GetMonitorAs(ctx, monitorID, &updatedPing)
-		require.NoError(t, err)
-		require.Equal(t, "1.1.1.1", updatedPing.Hostname)
-		require.Equal(t, 64, updatedPing.PacketSize)
-	})
-
-	t.Run("pause", func(t *testing.T) {
-		// Test PauseMonitor
-		err := client.PauseMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("resume", func(t *testing.T) {
-		// Test ResumeMonitor
-		err := client.ResumeMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
-}
-
-func TestClient_MonitorPushCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test Push monitor
-	pushMonitor := monitor.Push{
-		Base: monitor.Base{
-			Name:           "Test Push Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     0,
-			UpsideDown:     false,
-			IsActive:       true,
-		},
-		PushDetails: monitor.PushDetails{
-			PushToken: "testtoken123",
-		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var pushMonitorRetrieved monitor.Push
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, pushMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test Push Monitor", retrievedMonitor.Name)
-
-		// Test GetMonitorAs
-		err = client.GetMonitorAs(ctx, monitorID, &pushMonitorRetrieved)
-		require.NoError(t, err)
-		pushMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// pushMonitor.PathName = pushMonitor.Name
-		require.EqualExportedValues(t, pushMonitor, pushMonitorRetrieved)
-		require.NotEmpty(t, pushMonitorRetrieved.PushToken)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		pushMonitorRetrieved.Name = "Updated Push Monitor"
-		err := client.UpdateMonitor(ctx, pushMonitorRetrieved)
-		require.NoError(t, err)
-
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated Push Monitor", updatedMonitor.Name)
-
-		var updatedPush monitor.Push
-		err = client.GetMonitorAs(ctx, monitorID, &updatedPush)
-		require.NoError(t, err)
-		require.Equal(t, "Updated Push Monitor", updatedPush.Name)
-		require.Equal(t, pushMonitorRetrieved.PushToken, updatedPush.PushToken)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
-}
-
-func TestClient_MonitorTCPPortCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test TCP Port monitor
-	tcpPortMonitor := monitor.TCPPort{
-		Base: monitor.Base{
-			Name:           "Test TCP Port Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     3,
-			UpsideDown:     false,
-			IsActive:       true,
-		},
-		TCPPortDetails: monitor.TCPPortDetails{
-			Hostname: "example.com",
-			Port:     443,
-		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var tcpPortMonitorRetrieved monitor.TCPPort
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, tcpPortMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test TCP Port Monitor", retrievedMonitor.Name)
-
-		// Test GetMonitorAs
-		err = client.GetMonitorAs(ctx, monitorID, &tcpPortMonitorRetrieved)
-		require.NoError(t, err)
-		tcpPortMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// tcpPortMonitor.PathName = tcpPortMonitor.Name
-		require.EqualExportedValues(t, tcpPortMonitor, tcpPortMonitorRetrieved)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		tcpPortMonitorRetrieved.Name = "Updated TCP Port Monitor"
-		tcpPortMonitorRetrieved.Hostname = "cloudflare.com"
-		tcpPortMonitorRetrieved.Port = 80
-		err := client.UpdateMonitor(ctx, tcpPortMonitorRetrieved)
-		require.NoError(t, err)
-
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated TCP Port Monitor", updatedMonitor.Name)
-
-		var updatedTCPPort monitor.TCPPort
-		err = client.GetMonitorAs(ctx, monitorID, &updatedTCPPort)
-		require.NoError(t, err)
-		require.Equal(t, "cloudflare.com", updatedTCPPort.Hostname)
-		require.Equal(t, 80, updatedTCPPort.Port)
-	})
-
-	t.Run("pause", func(t *testing.T) {
-		// Test PauseMonitor
-		err := client.PauseMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("resume", func(t *testing.T) {
-		// Test ResumeMonitor
-		err := client.ResumeMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
-}
-
-func TestClient_MonitorParent(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	groupMonitor := monitor.Group{
-		Base: monitor.Base{
-			Name:           "Parent Group",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     0,
-			UpsideDown:     false,
-			IsActive:       true,
-		},
-	}
-
-	var parentID int64
-	t.Run("create_parent_group", func(t *testing.T) {
-		parentID, err = client.CreateMonitor(ctx, groupMonitor)
-		require.NoError(t, err)
-		require.Greater(t, parentID, int64(0))
-	})
-
-	var childID int64
-	t.Run("create_monitor_with_parent", func(t *testing.T) {
-		httpMonitor := monitor.HTTP{
-			Base: monitor.Base{
-				Name:           "Child Monitor",
-				Parent:         &parentID,
-				Interval:       60,
-				RetryInterval:  60,
-				ResendInterval: 0,
-				MaxRetries:     3,
-				UpsideDown:     false,
-				IsActive:       true,
+	testCases := []monitorTestCase{
+		{
+			name: "HTTP",
+			create: monitor.HTTP{
+				Base: monitor.Base{
+					Name:           "Test HTTP Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				HTTPDetails: monitor.HTTPDetails{
+					URL:                 "https://httpbin.org/status/200",
+					Timeout:             48,
+					Method:              "GET",
+					ExpiryNotification:  false,
+					IgnoreTLS:           false,
+					MaxRedirects:        10,
+					AcceptedStatusCodes: []string{"200-299"},
+					AuthMethod:          monitor.AuthMethodNone,
+				},
 			},
-			HTTPDetails: monitor.HTTPDetails{
-				URL:                 "https://httpbin.org/status/200",
-				Timeout:             48,
-				Method:              "GET",
-				ExpiryNotification:  false,
-				IgnoreTLS:           false,
-				MaxRedirects:        10,
-				AcceptedStatusCodes: []string{"200-299"},
-				AuthMethod:          monitor.AuthMethodNone,
+			updateFunc: func(m monitor.Monitor) {
+				http := m.(*monitor.HTTP)
+				http.Name = "Updated HTTP Monitor"
+				http.URL = "https://httpbin.org/status/201"
 			},
-		}
-
-		childID, err = client.CreateMonitor(ctx, httpMonitor)
-		require.NoError(t, err)
-		require.Greater(t, childID, int64(0))
-
-		var childMonitorRetrieved monitor.HTTP
-		err = client.GetMonitorAs(ctx, childID, &childMonitorRetrieved)
-		require.NoError(t, err)
-		require.NotNil(t, childMonitorRetrieved.Parent)
-		require.Equal(t, parentID, *childMonitorRetrieved.Parent)
-	})
-
-	var newParentID int64
-	t.Run("update_parent", func(t *testing.T) {
-		newGroupMonitor := monitor.Group{
-			Base: monitor.Base{
-				Name:           "New Parent Group",
-				Interval:       60,
-				RetryInterval:  60,
-				ResendInterval: 0,
-				MaxRetries:     0,
-				UpsideDown:     false,
-				IsActive:       true,
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var http monitor.HTTP
+				err := actual.As(&http)
+				require.NoError(t, err)
+				require.Equal(t, id, http.ID)
+				require.Equal(t, "Test HTTP Monitor", http.Name)
 			},
-		}
-
-		newParentID, err = client.CreateMonitor(ctx, newGroupMonitor)
-		require.NoError(t, err)
-		require.Greater(t, newParentID, int64(0))
-
-		var httpMonitor monitor.HTTP
-		err = client.GetMonitorAs(ctx, childID, &httpMonitor)
-		require.NoError(t, err)
-
-		httpMonitor.Parent = &newParentID
-
-		err = client.UpdateMonitor(ctx, httpMonitor)
-		require.NoError(t, err)
-
-		var updatedMonitor monitor.HTTP
-		err = client.GetMonitorAs(ctx, childID, &updatedMonitor)
-		require.NoError(t, err)
-		require.NotNil(t, updatedMonitor.Parent)
-		require.Equal(t, newParentID, *updatedMonitor.Parent)
-	})
-
-	t.Run("remove_parent", func(t *testing.T) {
-		var httpMonitor monitor.HTTP
-		err = client.GetMonitorAs(ctx, childID, &httpMonitor)
-		require.NoError(t, err)
-
-		httpMonitor.Parent = nil
-
-		err = client.UpdateMonitor(ctx, httpMonitor)
-		require.NoError(t, err)
-
-		var updatedMonitor monitor.HTTP
-		err = client.GetMonitorAs(ctx, childID, &updatedMonitor)
-		require.NoError(t, err)
-		require.Nil(t, updatedMonitor.Parent)
-	})
-
-	t.Run("cleanup", func(t *testing.T) {
-		err := client.DeleteMonitor(ctx, childID)
-		require.NoError(t, err)
-
-		err = client.DeleteMonitor(ctx, newParentID)
-		require.NoError(t, err)
-
-		err = client.DeleteMonitor(ctx, parentID)
-		require.NoError(t, err)
-	})
-}
-
-func TestClient_MonitorHTTPKeywordCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	httpKeywordMonitor := monitor.HTTPKeyword{
-		Base: monitor.Base{
-			Name:           "Test HTTP Keyword Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     3,
-			UpsideDown:     false,
-			IsActive:       true,
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var http monitor.HTTP
+				err := base.As(&http)
+				require.NoError(t, err)
+				return &http
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var http monitor.HTTP
+				err := actual.As(&http)
+				require.NoError(t, err)
+				require.Equal(t, "Updated HTTP Monitor", http.Name)
+				require.Equal(t, "https://httpbin.org/status/201", http.URL)
+			},
+			testPauseResume: true,
 		},
-		HTTPDetails: monitor.HTTPDetails{
-			URL:                 "https://httpbin.org/html",
-			Timeout:             48,
-			Method:              "GET",
-			ExpiryNotification:  false,
-			IgnoreTLS:           false,
-			MaxRedirects:        10,
-			AcceptedStatusCodes: []string{"200-299"},
-			AuthMethod:          monitor.AuthMethodNone,
+		{
+			name: "Monitor Group",
+			create: monitor.Group{
+				Base: monitor.Base{
+					Name:           "Test Monitor Group",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     0,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				group := m.(*monitor.Group)
+				group.Name = "Updated Monitor Group"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var group monitor.Group
+				err := actual.As(&group)
+				require.NoError(t, err)
+				require.Equal(t, id, group.ID)
+				require.Equal(t, "Test Monitor Group", group.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var group monitor.Group
+				err := base.As(&group)
+				require.NoError(t, err)
+				return &group
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var group monitor.Group
+				err := actual.As(&group)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Monitor Group", group.Name)
+			},
+			testPauseResume: true,
 		},
-		HTTPKeywordDetails: monitor.HTTPKeywordDetails{
-			Keyword:       "Herman Melville",
-			InvertKeyword: false,
+		{
+			name: "Ping",
+			create: monitor.Ping{
+				Base: monitor.Base{
+					Name:           "Test Ping Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				PingDetails: monitor.PingDetails{
+					Hostname:   "8.8.8.8",
+					PacketSize: 56,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				ping := m.(*monitor.Ping)
+				ping.Name = "Updated Ping Monitor"
+				ping.Hostname = "1.1.1.1"
+				ping.PacketSize = 64
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var ping monitor.Ping
+				err := actual.As(&ping)
+				require.NoError(t, err)
+				require.Equal(t, id, ping.ID)
+				require.Equal(t, "Test Ping Monitor", ping.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var ping monitor.Ping
+				err := base.As(&ping)
+				require.NoError(t, err)
+				return &ping
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var ping monitor.Ping
+				err := actual.As(&ping)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Ping Monitor", ping.Name)
+				require.Equal(t, "1.1.1.1", ping.Hostname)
+				require.Equal(t, 64, ping.PacketSize)
+			},
+			testPauseResume: true,
 		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var httpKeywordMonitorRetrieved monitor.HTTPKeyword
-	t.Run("create", func(t *testing.T) {
-		monitorID, err = client.CreateMonitor(ctx, httpKeywordMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test HTTP Keyword Monitor", retrievedMonitor.Name)
-
-		err = client.GetMonitorAs(ctx, monitorID, &httpKeywordMonitorRetrieved)
-		require.NoError(t, err)
-		httpKeywordMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// httpKeywordMonitor.PathName = httpKeywordMonitor.Name
-		require.EqualExportedValues(t, httpKeywordMonitor, httpKeywordMonitorRetrieved)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		httpKeywordMonitorRetrieved.Name = "Updated HTTP Keyword Monitor"
-		httpKeywordMonitorRetrieved.Keyword = "Moby Dick"
-		httpKeywordMonitorRetrieved.InvertKeyword = true
-		err := client.UpdateMonitor(ctx, httpKeywordMonitorRetrieved)
-		require.NoError(t, err)
-
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated HTTP Keyword Monitor", updatedMonitor.Name)
-
-		var updatedHTTPKeyword monitor.HTTPKeyword
-		err = client.GetMonitorAs(ctx, monitorID, &updatedHTTPKeyword)
-		require.NoError(t, err)
-		require.Equal(t, "Moby Dick", updatedHTTPKeyword.Keyword)
-		require.Equal(t, true, updatedHTTPKeyword.InvertKeyword)
-	})
-
-	t.Run("pause", func(t *testing.T) {
-		err := client.PauseMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("resume", func(t *testing.T) {
-		err := client.ResumeMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
-}
-
-func TestClient_MonitorDNSCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test DNS monitor
-	dnsMonitor := monitor.DNS{
-		Base: monitor.Base{
-			Name:           "Test DNS Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     3,
-			UpsideDown:     false,
-			IsActive:       true,
+		{
+			name: "Push",
+			create: monitor.Push{
+				Base: monitor.Base{
+					Name:           "Test Push Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     0,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				PushDetails: monitor.PushDetails{
+					PushToken: "testtoken123",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				push := m.(*monitor.Push)
+				push.Name = "Updated Push Monitor"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var push monitor.Push
+				err := actual.As(&push)
+				require.NoError(t, err)
+				require.Equal(t, id, push.ID)
+				require.Equal(t, "Test Push Monitor", push.Name)
+				require.NotEmpty(t, push.PushToken)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var push monitor.Push
+				err := base.As(&push)
+				require.NoError(t, err)
+				return &push
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var push monitor.Push
+				err := actual.As(&push)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Push Monitor", push.Name)
+			},
+			testPauseResume: false,
 		},
-		DNSDetails: monitor.DNSDetails{
-			Hostname:       "example.com",
-			ResolverServer: "1.1.1.1",
-			ResolveType:    monitor.DNSResolveTypeA,
-			Port:           53,
+		{
+			name: "TCP Port",
+			create: monitor.TCPPort{
+				Base: monitor.Base{
+					Name:           "Test TCP Port Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				TCPPortDetails: monitor.TCPPortDetails{
+					Hostname: "example.com",
+					Port:     443,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				tcp := m.(*monitor.TCPPort)
+				tcp.Name = "Updated TCP Port Monitor"
+				tcp.Hostname = "cloudflare.com"
+				tcp.Port = 80
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var tcp monitor.TCPPort
+				err := actual.As(&tcp)
+				require.NoError(t, err)
+				require.Equal(t, id, tcp.ID)
+				require.Equal(t, "Test TCP Port Monitor", tcp.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var tcp monitor.TCPPort
+				err := base.As(&tcp)
+				require.NoError(t, err)
+				return &tcp
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var tcp monitor.TCPPort
+				err := actual.As(&tcp)
+				require.NoError(t, err)
+				require.Equal(t, "Updated TCP Port Monitor", tcp.Name)
+				require.Equal(t, "cloudflare.com", tcp.Hostname)
+				require.Equal(t, 80, tcp.Port)
+			},
+			testPauseResume: true,
 		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var dnsMonitorRetrieved monitor.DNS
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, dnsMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test DNS Monitor", retrievedMonitor.Name)
-
-		// Test GetMonitorAs
-		err = client.GetMonitorAs(ctx, monitorID, &dnsMonitorRetrieved)
-		require.NoError(t, err)
-		dnsMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// dnsMonitor.PathName = dnsMonitor.Name
-		require.EqualExportedValues(t, dnsMonitor, dnsMonitorRetrieved)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		dnsMonitorRetrieved.Name = "Updated DNS Monitor"
-		dnsMonitorRetrieved.Hostname = "cloudflare.com"
-		dnsMonitorRetrieved.ResolveType = monitor.DNSResolveTypeAAAA
-		err := client.UpdateMonitor(ctx, dnsMonitorRetrieved)
-		require.NoError(t, err)
-
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated DNS Monitor", updatedMonitor.Name)
-
-		var updatedDNS monitor.DNS
-		err = client.GetMonitorAs(ctx, monitorID, &updatedDNS)
-		require.NoError(t, err)
-		require.Equal(t, "cloudflare.com", updatedDNS.Hostname)
-		require.Equal(t, monitor.DNSResolveTypeAAAA, updatedDNS.ResolveType)
-	})
-
-	t.Run("pause", func(t *testing.T) {
-		// Test PauseMonitor
-		err := client.PauseMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("resume", func(t *testing.T) {
-		// Test ResumeMonitor
-		err := client.ResumeMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
-}
-
-func TestClient_MonitorHTTPJSONQueryCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test HTTP JSON Query monitor
-	jsonQueryMonitor := monitor.HTTPJSONQuery{
-		Base: monitor.Base{
-			Name:           "Test JSON Query Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     3,
-			UpsideDown:     false,
-			IsActive:       true,
+		{
+			name: "HTTP Keyword",
+			create: monitor.HTTPKeyword{
+				Base: monitor.Base{
+					Name:           "Test HTTP Keyword Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				HTTPDetails: monitor.HTTPDetails{
+					URL:                 "https://httpbin.org/html",
+					Timeout:             48,
+					Method:              "GET",
+					ExpiryNotification:  false,
+					IgnoreTLS:           false,
+					MaxRedirects:        10,
+					AcceptedStatusCodes: []string{"200-299"},
+					AuthMethod:          monitor.AuthMethodNone,
+				},
+				HTTPKeywordDetails: monitor.HTTPKeywordDetails{
+					Keyword:       "Herman Melville",
+					InvertKeyword: false,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				http := m.(*monitor.HTTPKeyword)
+				http.Name = "Updated HTTP Keyword Monitor"
+				http.Keyword = "Moby Dick"
+				http.InvertKeyword = true
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var http monitor.HTTPKeyword
+				err := actual.As(&http)
+				require.NoError(t, err)
+				require.Equal(t, id, http.ID)
+				require.Equal(t, "Test HTTP Keyword Monitor", http.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var http monitor.HTTPKeyword
+				err := base.As(&http)
+				require.NoError(t, err)
+				return &http
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var http monitor.HTTPKeyword
+				err := actual.As(&http)
+				require.NoError(t, err)
+				require.Equal(t, "Updated HTTP Keyword Monitor", http.Name)
+				require.Equal(t, "Moby Dick", http.Keyword)
+				require.Equal(t, true, http.InvertKeyword)
+			},
+			testPauseResume: true,
 		},
-		HTTPDetails: monitor.HTTPDetails{
-			URL:                 "https://httpbin.org/json",
-			Timeout:             48,
-			Method:              "GET",
-			ExpiryNotification:  false,
-			IgnoreTLS:           false,
-			MaxRedirects:        10,
-			AcceptedStatusCodes: []string{"200-299"},
-			AuthMethod:          monitor.AuthMethodNone,
+		{
+			name: "DNS",
+			create: monitor.DNS{
+				Base: monitor.Base{
+					Name:           "Test DNS Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				DNSDetails: monitor.DNSDetails{
+					Hostname:       "example.com",
+					ResolverServer: "1.1.1.1",
+					ResolveType:    monitor.DNSResolveTypeA,
+					Port:           53,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				dns := m.(*monitor.DNS)
+				dns.Name = "Updated DNS Monitor"
+				dns.Hostname = "google.com"
+				dns.ResolverServer = "8.8.8.8"
+				dns.ResolveType = monitor.DNSResolveTypeAAAA
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var dns monitor.DNS
+				err := actual.As(&dns)
+				require.NoError(t, err)
+				require.Equal(t, id, dns.ID)
+				require.Equal(t, "Test DNS Monitor", dns.Name)
+				require.Equal(t, monitor.DNSResolveTypeA, dns.ResolveType)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var dns monitor.DNS
+				err := base.As(&dns)
+				require.NoError(t, err)
+				return &dns
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var dns monitor.DNS
+				err := actual.As(&dns)
+				require.NoError(t, err)
+				require.Equal(t, "Updated DNS Monitor", dns.Name)
+				require.Equal(t, "google.com", dns.Hostname)
+				require.Equal(t, "8.8.8.8", dns.ResolverServer)
+				require.Equal(t, monitor.DNSResolveTypeAAAA, dns.ResolveType)
+			},
+			testPauseResume: true,
 		},
-		HTTPJSONQueryDetails: monitor.HTTPJSONQueryDetails{
-			JSONPath:      "slideshow.title",
-			ExpectedValue: "Sample Slide Show",
+		{
+			name: "HTTP JSON Query",
+			create: monitor.HTTPJSONQuery{
+				Base: monitor.Base{
+					Name:           "Test JSON Query Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				HTTPDetails: monitor.HTTPDetails{
+					URL:                 "https://httpbin.org/json",
+					Timeout:             48,
+					Method:              "GET",
+					ExpiryNotification:  false,
+					IgnoreTLS:           false,
+					MaxRedirects:        10,
+					AcceptedStatusCodes: []string{"200-299"},
+					AuthMethod:          monitor.AuthMethodNone,
+				},
+				HTTPJSONQueryDetails: monitor.HTTPJSONQueryDetails{
+					JSONPath:      "slideshow.title",
+					ExpectedValue: "Sample Slide Show",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				json := m.(*monitor.HTTPJSONQuery)
+				json.Name = "Updated JSON Query Monitor"
+				json.JSONPath = "slideshow.author"
+				json.ExpectedValue = "Yours Truly"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var json monitor.HTTPJSONQuery
+				err := actual.As(&json)
+				require.NoError(t, err)
+				require.Equal(t, id, json.ID)
+				require.Equal(t, "Test JSON Query Monitor", json.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var json monitor.HTTPJSONQuery
+				err := base.As(&json)
+				require.NoError(t, err)
+				return &json
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var json monitor.HTTPJSONQuery
+				err := actual.As(&json)
+				require.NoError(t, err)
+				require.Equal(t, "Updated JSON Query Monitor", json.Name)
+				require.Equal(t, "slideshow.author", json.JSONPath)
+				require.Equal(t, "Yours Truly", json.ExpectedValue)
+			},
+			testPauseResume: true,
 		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var jsonQueryMonitorRetrieved monitor.HTTPJSONQuery
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, jsonQueryMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test JSON Query Monitor", retrievedMonitor.Name)
-
-		// Test GetMonitorAs
-		err = client.GetMonitorAs(ctx, monitorID, &jsonQueryMonitorRetrieved)
-		require.NoError(t, err)
-		jsonQueryMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// jsonQueryMonitor.PathName = jsonQueryMonitor.Name
-		require.EqualExportedValues(t, jsonQueryMonitor, jsonQueryMonitorRetrieved)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		jsonQueryMonitorRetrieved.Name = "Updated JSON Query Monitor"
-		jsonQueryMonitorRetrieved.JSONPath = "slideshow.author"
-		jsonQueryMonitorRetrieved.ExpectedValue = "Yours Truly"
-		err := client.UpdateMonitor(ctx, jsonQueryMonitorRetrieved)
-		require.NoError(t, err)
-
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated JSON Query Monitor", updatedMonitor.Name)
-
-		var updatedJSONQuery monitor.HTTPJSONQuery
-		err = client.GetMonitorAs(ctx, monitorID, &updatedJSONQuery)
-		require.NoError(t, err)
-		require.Equal(t, "slideshow.author", updatedJSONQuery.JSONPath)
-		require.Equal(t, "Yours Truly", updatedJSONQuery.ExpectedValue)
-	})
-
-	t.Run("pause", func(t *testing.T) {
-		// Test PauseMonitor
-		err := client.PauseMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("resume", func(t *testing.T) {
-		// Test ResumeMonitor
-		err := client.ResumeMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
-}
-
-func TestClient_MonitorPostgresCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test Postgres monitor
-	// Note: Using a dummy connection string that won't actually connect
-	// Integration test focuses on CRUD operations, not actual database connectivity
-	postgresMonitor := monitor.Postgres{
-		Base: monitor.Base{
-			Name:           "Test Postgres Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     3,
-			UpsideDown:     false,
-			IsActive:       false, // Keep inactive to avoid connection attempts
+		{
+			name: "Postgres",
+			create: monitor.Postgres{
+				Base: monitor.Base{
+					Name:           "Test Postgres Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       false,
+				},
+				PostgresDetails: monitor.PostgresDetails{
+					DatabaseConnectionString: "postgres://testuser:testpass@localhost:5432/testdb",
+					DatabaseQuery:            "SELECT 1",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				postgres := m.(*monitor.Postgres)
+				postgres.Name = "Updated Postgres Monitor"
+				postgres.DatabaseConnectionString = "postgres://newuser:newpass@localhost:5432/newdb"
+				postgres.DatabaseQuery = "SELECT version()"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var postgres monitor.Postgres
+				err := actual.As(&postgres)
+				require.NoError(t, err)
+				require.Equal(t, id, postgres.ID)
+				require.Equal(t, "Test Postgres Monitor", postgres.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var postgres monitor.Postgres
+				err := base.As(&postgres)
+				require.NoError(t, err)
+				return &postgres
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var postgres monitor.Postgres
+				err := actual.As(&postgres)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Postgres Monitor", postgres.Name)
+				require.Equal(t, "postgres://newuser:newpass@localhost:5432/newdb", postgres.DatabaseConnectionString)
+				require.Equal(t, "SELECT version()", postgres.DatabaseQuery)
+			},
+			testPauseResume: false,
 		},
-		PostgresDetails: monitor.PostgresDetails{
-			DatabaseConnectionString: "postgres://testuser:testpass@localhost:5432/testdb",
-			DatabaseQuery:            "SELECT 1",
+		{
+			name: "Real Browser",
+			create: monitor.RealBrowser{
+				Base: monitor.Base{
+					Name:           "Test RealBrowser Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				RealBrowserDetails: monitor.RealBrowserDetails{
+					URL:                 "https://httpbin.org/status/200",
+					Timeout:             48,
+					IgnoreTLS:           false,
+					MaxRedirects:        10,
+					AcceptedStatusCodes: []string{"200-299"},
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				browser := m.(*monitor.RealBrowser)
+				browser.Name = "Updated RealBrowser Monitor"
+				browser.URL = "https://httpbin.org/status/201"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var browser monitor.RealBrowser
+				err := actual.As(&browser)
+				require.NoError(t, err)
+				require.Equal(t, id, browser.ID)
+				require.Equal(t, "Test RealBrowser Monitor", browser.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var browser monitor.RealBrowser
+				err := base.As(&browser)
+				require.NoError(t, err)
+				return &browser
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var browser monitor.RealBrowser
+				err := actual.As(&browser)
+				require.NoError(t, err)
+				require.Equal(t, "Updated RealBrowser Monitor", browser.Name)
+				require.Equal(t, "https://httpbin.org/status/201", browser.URL)
+			},
+			testPauseResume: true,
 		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var postgresMonitorRetrieved monitor.Postgres
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, postgresMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test Postgres Monitor", retrievedMonitor.Name)
-
-		// Test GetMonitorAs
-		err = client.GetMonitorAs(ctx, monitorID, &postgresMonitorRetrieved)
-		require.NoError(t, err)
-		postgresMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// postgresMonitor.PathName = postgresMonitor.Name
-		require.EqualExportedValues(t, postgresMonitor, postgresMonitorRetrieved)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		postgresMonitorRetrieved.Name = "Updated Postgres Monitor"
-		postgresMonitorRetrieved.DatabaseConnectionString = "postgres://newuser:newpass@localhost:5432/newdb"
-		postgresMonitorRetrieved.DatabaseQuery = "SELECT version()"
-		err := client.UpdateMonitor(ctx, postgresMonitorRetrieved)
-		require.NoError(t, err)
-
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated Postgres Monitor", updatedMonitor.Name)
-
-		var updatedPostgres monitor.Postgres
-		err = client.GetMonitorAs(ctx, monitorID, &updatedPostgres)
-		require.NoError(t, err)
-		require.Equal(t, "postgres://newuser:newpass@localhost:5432/newdb", updatedPostgres.DatabaseConnectionString)
-		require.Equal(t, "SELECT version()", updatedPostgres.DatabaseQuery)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
-}
-
-func TestClient_MonitorRealBrowserCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test RealBrowser monitor
-	realBrowserMonitor := monitor.RealBrowser{
-		Base: monitor.Base{
-			Name:           "Test RealBrowser Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     3,
-			UpsideDown:     false,
-			IsActive:       true,
+		{
+			name: "Redis",
+			create: monitor.Redis{
+				Base: monitor.Base{
+					Name:           "Test Redis Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				RedisDetails: monitor.RedisDetails{
+					ConnectionString: "redis://localhost:6379",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				redis := m.(*monitor.Redis)
+				redis.Name = "Updated Redis Monitor"
+				redis.ConnectionString = "redis://user:password@localhost:6380"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var redis monitor.Redis
+				err := actual.As(&redis)
+				require.NoError(t, err)
+				require.Equal(t, id, redis.ID)
+				require.Equal(t, "Test Redis Monitor", redis.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var redis monitor.Redis
+				err := base.As(&redis)
+				require.NoError(t, err)
+				return &redis
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var redis monitor.Redis
+				err := actual.As(&redis)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Redis Monitor", redis.Name)
+				require.Equal(t, "redis://user:password@localhost:6380", redis.ConnectionString)
+			},
+			testPauseResume: true,
 		},
-		RealBrowserDetails: monitor.RealBrowserDetails{
-			URL:                 "https://httpbin.org/status/200",
-			Timeout:             48,
-			IgnoreTLS:           false,
-			MaxRedirects:        10,
-			AcceptedStatusCodes: []string{"200-299"},
+		{
+			name: "SMTP",
+			create: monitor.SMTP{
+				Base: monitor.Base{
+					Name:           "Test SMTP Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       false,
+				},
+				SMTPDetails: monitor.SMTPDetails{
+					Hostname:     "mail.example.com",
+					Port:         nil,
+					SMTPSecurity: nil,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				smtp := m.(*monitor.SMTP)
+				smtp.Name = "Updated SMTP Monitor"
+				port465 := int64(465)
+				securitySecure := "secure"
+				smtp.Hostname = "smtp.newserver.com"
+				smtp.Port = &port465
+				smtp.SMTPSecurity = &securitySecure
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var smtp monitor.SMTP
+				err := actual.As(&smtp)
+				require.NoError(t, err)
+				require.Equal(t, id, smtp.ID)
+				require.Equal(t, "Test SMTP Monitor", smtp.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var smtp monitor.SMTP
+				err := base.As(&smtp)
+				require.NoError(t, err)
+				return &smtp
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var smtp monitor.SMTP
+				err := actual.As(&smtp)
+				require.NoError(t, err)
+				require.Equal(t, "Updated SMTP Monitor", smtp.Name)
+				require.Equal(t, "smtp.newserver.com", smtp.Hostname)
+				require.Equal(t, int64(465), *smtp.Port)
+				require.Equal(t, "secure", *smtp.SMTPSecurity)
+			},
+			testPauseResume: true,
 		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var realBrowserMonitorRetrieved monitor.RealBrowser
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, realBrowserMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test RealBrowser Monitor", retrievedMonitor.Name)
-
-		// Test GetMonitorAs
-		err = client.GetMonitorAs(ctx, monitorID, &realBrowserMonitorRetrieved)
-		require.NoError(t, err)
-		realBrowserMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// realBrowserMonitor.PathName = realBrowserMonitor.Name
-		require.EqualExportedValues(t, realBrowserMonitor, realBrowserMonitorRetrieved)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		realBrowserMonitorRetrieved.Name = "Updated RealBrowser Monitor"
-		realBrowserMonitorRetrieved.URL = "https://httpbin.org/status/201"
-		err := client.UpdateMonitor(ctx, realBrowserMonitorRetrieved)
-		require.NoError(t, err)
-
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated RealBrowser Monitor", updatedMonitor.Name)
-
-		var updatedRealBrowser monitor.RealBrowser
-		err = client.GetMonitorAs(ctx, monitorID, &updatedRealBrowser)
-		require.NoError(t, err)
-		require.Equal(t, "https://httpbin.org/status/201", updatedRealBrowser.URL)
-	})
-
-	t.Run("pause", func(t *testing.T) {
-		// Test PauseMonitor
-		err := client.PauseMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("resume", func(t *testing.T) {
-		// Test ResumeMonitor
-		err := client.ResumeMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
-}
-
-func TestClient_MonitorRedisCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test Redis monitor
-	redisMonitor := monitor.Redis{
-		Base: monitor.Base{
-			Name:           "Test Redis Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     3,
-			UpsideDown:     false,
-			IsActive:       true,
-		},
-		RedisDetails: monitor.RedisDetails{
-			ConnectionString: "redis://localhost:6379",
-		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var redisMonitorRetrieved monitor.Redis
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, redisMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test Redis Monitor", retrievedMonitor.Name)
-
-		// Test GetMonitorAs
-		err = client.GetMonitorAs(ctx, monitorID, &redisMonitorRetrieved)
-		require.NoError(t, err)
-		redisMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// redisMonitor.PathName = redisMonitor.Name
-		require.EqualExportedValues(t, redisMonitor, redisMonitorRetrieved)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		redisMonitorRetrieved.Name = "Updated Redis Monitor"
-		redisMonitorRetrieved.ConnectionString = "redis://user:password@localhost:6380"
-		err := client.UpdateMonitor(ctx, redisMonitorRetrieved)
-		require.NoError(t, err)
-
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated Redis Monitor", updatedMonitor.Name)
-
-		var updatedRedis monitor.Redis
-		err = client.GetMonitorAs(ctx, monitorID, &updatedRedis)
-		require.NoError(t, err)
-		require.Equal(t, "redis://user:password@localhost:6380", updatedRedis.ConnectionString)
-	})
-
-	t.Run("pause", func(t *testing.T) {
-		// Test PauseMonitor
-		err := client.PauseMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("resume", func(t *testing.T) {
-		// Test ResumeMonitor
-		err := client.ResumeMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
-}
-
-func TestClient_MonitorSMTPCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test SMTP monitor
-	// Note: Using a dummy SMTP server that won't actually connect
-	// Integration test focuses on CRUD operations, not actual SMTP connectivity
-	smtpMonitor := monitor.SMTP{
-		Base: monitor.Base{
-			Name:           "Test SMTP Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     3,
-			UpsideDown:     false,
-			IsActive:       false, // Keep inactive to avoid connection attempts
-		},
-		SMTPDetails: monitor.SMTPDetails{
-			Hostname:     "mail.example.com",
-			Port:         nil,
-			SMTPSecurity: nil,
+		{
+			name: "gRPC Keyword",
+			create: monitor.GrpcKeyword{
+				Base: monitor.Base{
+					Name:           "Test gRPC Keyword Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       false,
+				},
+				GrpcKeywordDetails: monitor.GrpcKeywordDetails{
+					GrpcURL:         "localhost:50051",
+					GrpcProtobuf:    "syntax = \"proto3\";\n\npackage grpc.health.v1;\n\nservice Health {\n  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);\n}\n\nmessage HealthCheckRequest {\n  string service = 1;\n}\n\nmessage HealthCheckResponse {\n  enum ServingStatus {\n    UNKNOWN = 0;\n    SERVING = 1;\n    NOT_SERVING = 2;\n  }\n  ServingStatus status = 1;\n}\n",
+					GrpcServiceName: "Health",
+					GrpcMethod:      "Check",
+					GrpcEnableTLS:   false,
+					GrpcBody:        "{\"service\":\"\"}",
+					Keyword:         "SERVING",
+					InvertKeyword:   false,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				grpc := m.(*monitor.GrpcKeyword)
+				grpc.Name = "Updated gRPC Keyword Monitor"
+				grpc.GrpcURL = "example.com:443"
+				grpc.Keyword = "NOT_SERVING"
+				grpc.InvertKeyword = true
+				grpc.GrpcEnableTLS = true
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var grpc monitor.GrpcKeyword
+				err := actual.As(&grpc)
+				require.NoError(t, err)
+				require.Equal(t, id, grpc.ID)
+				require.Equal(t, "Test gRPC Keyword Monitor", grpc.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var grpc monitor.GrpcKeyword
+				err := base.As(&grpc)
+				require.NoError(t, err)
+				return &grpc
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var grpc monitor.GrpcKeyword
+				err := actual.As(&grpc)
+				require.NoError(t, err)
+				require.Equal(t, "Updated gRPC Keyword Monitor", grpc.Name)
+				require.Equal(t, "example.com:443", grpc.GrpcURL)
+				require.Equal(t, "NOT_SERVING", grpc.Keyword)
+				require.Equal(t, true, grpc.InvertKeyword)
+				require.Equal(t, true, grpc.GrpcEnableTLS)
+			},
+			testPauseResume: false,
 		},
 	}
 
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
 
-	var monitorID int64
-	var smtpMonitorRetrieved monitor.SMTP
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, smtpMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
+			var initialCount int
+			monitors, err := client.GetMonitors(ctx)
+			require.NoError(t, err)
+			initialCount = len(monitors)
 
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
+			// Create
+			created := tc.create
+			monitorID, err := client.CreateMonitor(ctx, created)
+			require.NoError(t, err)
+			require.Greater(t, monitorID, int64(0))
 
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test SMTP Monitor", retrievedMonitor.Name)
+			// Verify count increased
+			monitors, err = client.GetMonitors(ctx)
+			require.NoError(t, err)
+			require.Equal(t, initialCount+1, len(monitors))
 
-		// Test GetMonitorAs
-		err = client.GetMonitorAs(ctx, monitorID, &smtpMonitorRetrieved)
-		require.NoError(t, err)
-		smtpMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// smtpMonitor.PathName = smtpMonitor.Name
-		require.EqualExportedValues(t, smtpMonitor, smtpMonitorRetrieved)
-	})
+			// Retrieve
+			retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+			require.NoError(t, err)
+			require.Equal(t, monitorID, retrievedMonitor.ID)
 
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		port465 := int64(465)
-		securitySecure := "secure"
-		smtpMonitorRetrieved.Name = "Updated SMTP Monitor"
-		smtpMonitorRetrieved.Hostname = "smtp.newserver.com"
-		smtpMonitorRetrieved.Port = &port465
-		smtpMonitorRetrieved.SMTPSecurity = &securitySecure
-		err := client.UpdateMonitor(ctx, smtpMonitorRetrieved)
-		require.NoError(t, err)
+			// Verify retrieved monitor
+			retrieved := tc.createTypedFunc(t, retrievedMonitor)
+			tc.verifyCreatedFunc(t, retrieved, monitorID)
 
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated SMTP Monitor", updatedMonitor.Name)
+			// Update
+			tc.updateFunc(retrieved)
+			err = client.UpdateMonitor(ctx, retrieved)
+			require.NoError(t, err)
 
-		var updatedSMTP monitor.SMTP
-		err = client.GetMonitorAs(ctx, monitorID, &updatedSMTP)
-		require.NoError(t, err)
-		require.Equal(t, "smtp.newserver.com", updatedSMTP.Hostname)
-		require.Equal(t, int64(465), *updatedSMTP.Port)
-		require.Equal(t, "secure", *updatedSMTP.SMTPSecurity)
-	})
+			// Verify update
+			updated, err := client.GetMonitor(ctx, monitorID)
+			require.NoError(t, err)
+			updatedTyped := tc.createTypedFunc(t, updated)
+			tc.verifyUpdatedFunc(t, updatedTyped)
 
-	t.Run("pause", func(t *testing.T) {
-		// Test PauseMonitor
-		err := client.PauseMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
+			// Pause/Resume if supported
+			if tc.testPauseResume {
+				err = client.PauseMonitor(ctx, monitorID)
+				require.NoError(t, err)
 
-	t.Run("resume", func(t *testing.T) {
-		// Test ResumeMonitor
-		err := client.ResumeMonitor(ctx, monitorID)
-		require.NoError(t, err)
-	})
+				err = client.ResumeMonitor(ctx, monitorID)
+				require.NoError(t, err)
+			}
 
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
+			// Delete
+			err = client.DeleteMonitor(ctx, monitorID)
+			require.NoError(t, err)
 
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
-}
-
-func TestClient_MonitorGrpcKeywordCRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
+			// Verify count restored
+			monitors, err = client.GetMonitors(ctx)
+			require.NoError(t, err)
+			require.Equal(t, initialCount, len(monitors))
+		})
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var err error
-
-	// Create a test gRPC Keyword monitor
-	grpcKeywordMonitor := monitor.GrpcKeyword{
-		Base: monitor.Base{
-			Name:           "Test gRPC Keyword Monitor",
-			Interval:       60,
-			RetryInterval:  60,
-			ResendInterval: 0,
-			MaxRetries:     3,
-			UpsideDown:     false,
-			IsActive:       false, // Set to false to avoid actual gRPC calls during testing
-		},
-		GrpcKeywordDetails: monitor.GrpcKeywordDetails{
-			GrpcURL:         "localhost:50051",
-			GrpcProtobuf:    "syntax = \"proto3\";\n\npackage grpc.health.v1;\n\nservice Health {\n  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);\n}\n\nmessage HealthCheckRequest {\n  string service = 1;\n}\n\nmessage HealthCheckResponse {\n  enum ServingStatus {\n    UNKNOWN = 0;\n    SERVING = 1;\n    NOT_SERVING = 2;\n  }\n  ServingStatus status = 1;\n}\n",
-			GrpcServiceName: "Health",
-			GrpcMethod:      "Check",
-			GrpcEnableTLS:   false,
-			GrpcBody:        "{\"service\":\"\"}",
-			Keyword:         "SERVING",
-			InvertKeyword:   false,
-		},
-	}
-
-	var initialCount int
-	t.Run("initial_state", func(t *testing.T) {
-		// Test GetMonitors (should work even if empty)
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		initialCount = len(monitors)
-	})
-
-	var monitorID int64
-	var grpcKeywordMonitorRetrieved monitor.GrpcKeyword
-	t.Run("create", func(t *testing.T) {
-		// Test CreateMonitor
-		monitorID, err = client.CreateMonitor(ctx, grpcKeywordMonitor)
-		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
-
-		// Test GetMonitors after creation
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(monitors))
-
-		// Test GetMonitor
-		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, monitorID, retrievedMonitor.ID)
-		require.Equal(t, "Test gRPC Keyword Monitor", retrievedMonitor.Name)
-
-		// Test GetMonitorAs
-		err = client.GetMonitorAs(ctx, monitorID, &grpcKeywordMonitorRetrieved)
-		require.NoError(t, err)
-		grpcKeywordMonitor.ID = monitorID
-		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
-		// grpcKeywordMonitor.PathName = grpcKeywordMonitor.Name
-		require.EqualExportedValues(t, grpcKeywordMonitor, grpcKeywordMonitorRetrieved)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		// Test UpdateMonitor
-		grpcKeywordMonitorRetrieved.Name = "Updated gRPC Keyword Monitor"
-		grpcKeywordMonitorRetrieved.GrpcURL = "example.com:443"
-		grpcKeywordMonitorRetrieved.Keyword = "NOT_SERVING"
-		grpcKeywordMonitorRetrieved.InvertKeyword = true
-		grpcKeywordMonitorRetrieved.GrpcEnableTLS = true
-		err := client.UpdateMonitor(ctx, grpcKeywordMonitorRetrieved)
-		require.NoError(t, err)
-
-		// Verify update
-		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
-		require.NoError(t, err)
-		require.Equal(t, "Updated gRPC Keyword Monitor", updatedMonitor.Name)
-
-		var updatedGrpcKeyword monitor.GrpcKeyword
-		err = client.GetMonitorAs(ctx, monitorID, &updatedGrpcKeyword)
-		require.NoError(t, err)
-		require.Equal(t, "example.com:443", updatedGrpcKeyword.GrpcURL)
-		require.Equal(t, "NOT_SERVING", updatedGrpcKeyword.Keyword)
-		require.Equal(t, true, updatedGrpcKeyword.InvertKeyword)
-		require.Equal(t, true, updatedGrpcKeyword.GrpcEnableTLS)
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		// Test DeleteMonitor
-		err := client.DeleteMonitor(ctx, monitorID)
-		require.NoError(t, err)
-
-		// Verify deletion
-		monitors, err := client.GetMonitors(ctx)
-		require.NoError(t, err)
-		require.Equal(t, initialCount, len(monitors))
-	})
 }
