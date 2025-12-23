@@ -1296,6 +1296,120 @@ func TestClient_MonitorRedisCRUD(t *testing.T) {
 	})
 }
 
+func TestClient_MonitorSMTPCRUD(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+
+	// Create a test SMTP monitor
+	// Note: Using a dummy SMTP server that won't actually connect
+	// Integration test focuses on CRUD operations, not actual SMTP connectivity
+	smtpMonitor := monitor.SMTP{
+		Base: monitor.Base{
+			Name:           "Test SMTP Monitor",
+			Interval:       60,
+			RetryInterval:  60,
+			ResendInterval: 0,
+			MaxRetries:     3,
+			UpsideDown:     false,
+			IsActive:       false, // Keep inactive to avoid connection attempts
+		},
+		SMTPDetails: monitor.SMTPDetails{
+			Hostname:     "mail.example.com",
+			Port:         nil,
+			SMTPSecurity: nil,
+		},
+	}
+
+	var initialCount int
+	t.Run("initial_state", func(t *testing.T) {
+		// Test GetMonitors (should work even if empty)
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		initialCount = len(monitors)
+	})
+
+	var monitorID int64
+	var smtpMonitorRetrieved monitor.SMTP
+	t.Run("create", func(t *testing.T) {
+		// Test CreateMonitor
+		monitorID, err = client.CreateMonitor(ctx, smtpMonitor)
+		require.NoError(t, err)
+		require.Greater(t, monitorID, int64(0))
+
+		// Test GetMonitors after creation
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount+1, len(monitors))
+
+		// Test GetMonitor
+		retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, monitorID, retrievedMonitor.ID)
+		require.Equal(t, "Test SMTP Monitor", retrievedMonitor.Name)
+
+		// Test GetMonitorAs
+		err = client.GetMonitorAs(ctx, monitorID, &smtpMonitorRetrieved)
+		require.NoError(t, err)
+		smtpMonitor.ID = monitorID
+		// Issue: https://github.com/louislam/uptime-kuma/issues/6342
+		// smtpMonitor.PathName = smtpMonitor.Name
+		require.EqualExportedValues(t, smtpMonitor, smtpMonitorRetrieved)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		// Test UpdateMonitor
+		port465 := int64(465)
+		securitySecure := "secure"
+		smtpMonitorRetrieved.Name = "Updated SMTP Monitor"
+		smtpMonitorRetrieved.Hostname = "smtp.newserver.com"
+		smtpMonitorRetrieved.Port = &port465
+		smtpMonitorRetrieved.SMTPSecurity = &securitySecure
+		err := client.UpdateMonitor(ctx, smtpMonitorRetrieved)
+		require.NoError(t, err)
+
+		// Verify update
+		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
+		require.NoError(t, err)
+		require.Equal(t, "Updated SMTP Monitor", updatedMonitor.Name)
+
+		var updatedSMTP monitor.SMTP
+		err = client.GetMonitorAs(ctx, monitorID, &updatedSMTP)
+		require.NoError(t, err)
+		require.Equal(t, "smtp.newserver.com", updatedSMTP.Hostname)
+		require.Equal(t, int64(465), *updatedSMTP.Port)
+		require.Equal(t, "secure", *updatedSMTP.SMTPSecurity)
+	})
+
+	t.Run("pause", func(t *testing.T) {
+		// Test PauseMonitor
+		err := client.PauseMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("resume", func(t *testing.T) {
+		// Test ResumeMonitor
+		err := client.ResumeMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		// Test DeleteMonitor
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+
+		// Verify deletion
+		monitors, err := client.GetMonitors(ctx)
+		require.NoError(t, err)
+		require.Equal(t, initialCount, len(monitors))
+	})
+}
+
 func TestClient_MonitorGrpcKeywordCRUD(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
