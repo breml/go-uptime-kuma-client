@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -59,7 +60,7 @@ func TestMonitorGrpcKeyword_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              3,
 					Name:            "grpc-inverted",
-					Description:     strPtr("Test inverted keyword"),
+					Description:     ptr.To("Test inverted keyword"),
 					PathName:        "grpc-inverted",
 					Parent:          nil,
 					Interval:        120,
@@ -102,6 +103,4 @@ func TestMonitorGrpcKeyword_Unmarshal(t *testing.T) {
 	}
 }
 
-func strPtr(s string) *string {
-	return &s
-}
+
