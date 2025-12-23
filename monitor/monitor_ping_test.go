@@ -64,5 +64,3 @@ func TestMonitorPing_Unmarshal(t *testing.T) {
 		})
 	}
 }
-
-

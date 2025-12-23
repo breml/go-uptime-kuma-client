@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -693,6 +694,58 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, true, grpc.GrpcEnableTLS)
 			},
 			testPauseResume: false,
+		},
+		{
+			name: "SNMP",
+			create: monitor.SNMP{
+				Base: monitor.Base{
+					Name:           "Test SNMP Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				SNMPDetails: monitor.SNMPDetails{
+					Hostname:       "192.168.1.1",
+					Port:           ptr.To(int64(161)),
+					SNMPVersion:    "2c",
+					SNMPOID:        "1.3.6.1.2.1.1.3.0",
+					SNMPCommunity: "public",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				snmp := m.(*monitor.SNMP)
+				snmp.Name = "Updated SNMP Monitor"
+				snmp.Hostname = "10.0.0.1"
+				snmp.SNMPOID = "1.3.6.1.2.1.2.2.1.5.1"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var snmp monitor.SNMP
+				err := actual.As(&snmp)
+				require.NoError(t, err)
+				require.Equal(t, id, snmp.ID)
+				require.Equal(t, "Test SNMP Monitor", snmp.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var snmp monitor.SNMP
+				err := base.As(&snmp)
+				require.NoError(t, err)
+				return &snmp
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var snmp monitor.SNMP
+				err := actual.As(&snmp)
+				require.NoError(t, err)
+				require.Equal(t, "Updated SNMP Monitor", snmp.Name)
+				require.Equal(t, "10.0.0.1", snmp.Hostname)
+				require.Equal(t, "1.3.6.1.2.1.2.2.1.5.1", snmp.SNMPOID)
+			},
+			testPauseResume: true,
 		},
 	}
 
