@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -27,7 +28,7 @@ func TestMonitorPing_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              3,
 					Name:            "ping-monitor",
-					Description:     stringPtr("Test ping monitor"),
+					Description:     ptr.To("Test ping monitor"),
 					PathName:        "group / ping-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -64,6 +65,4 @@ func TestMonitorPing_Unmarshal(t *testing.T) {
 	}
 }
 
-func stringPtr(s string) *string {
-	return &s
-}
+

@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -27,7 +28,7 @@ func TestMonitorHTTPJSONQuery_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              3,
 					Name:            "api.example.com",
-					Description:     stringPtr("API health check"),
+					Description:     ptr.To("API health check"),
 					PathName:        "group / api.example.com",
 					Parent:          &parent1,
 					ProxyID:         nil,

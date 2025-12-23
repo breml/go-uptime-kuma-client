@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -27,7 +28,7 @@ func TestMonitorTCPPort_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              4,
 					Name:            "tcp-port-monitor",
-					Description:     stringPtr("Test TCP Port monitor"),
+					Description:     ptr.To("Test TCP Port monitor"),
 					PathName:        "group / tcp-port-monitor",
 					Parent:          &parent1,
 					Interval:        60,

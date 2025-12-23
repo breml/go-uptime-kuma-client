@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -27,7 +28,7 @@ func TestMonitorPostgres_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              6,
 					Name:            "postgres-monitor",
-					Description:     stringPtr("Test PostgreSQL monitor"),
+					Description:     ptr.To("Test PostgreSQL monitor"),
 					PathName:        "group / postgres-monitor",
 					Parent:          &parent1,
 					Interval:        60,

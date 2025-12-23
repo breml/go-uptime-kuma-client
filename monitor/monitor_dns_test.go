@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -27,7 +28,7 @@ func TestMonitorDNS_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              5,
 					Name:            "dns-monitor",
-					Description:     stringPtr("Test DNS monitor"),
+					Description:     ptr.To("Test DNS monitor"),
 					PathName:        "group / dns-monitor",
 					Parent:          &parent1,
 					Interval:        60,
