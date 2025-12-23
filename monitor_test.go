@@ -708,10 +708,10 @@ func TestMonitorCRUD(t *testing.T) {
 					IsActive:       true,
 				},
 				SNMPDetails: monitor.SNMPDetails{
-					Hostname:       "192.168.1.1",
-					Port:           ptr.To(int64(161)),
-					SNMPVersion:    "2c",
-					SNMPOID:        "1.3.6.1.2.1.1.3.0",
+					Hostname:      "192.168.1.1",
+					Port:          ptr.To(int64(161)),
+					SNMPVersion:   "2c",
+					SNMPOID:       "1.3.6.1.2.1.1.3.0",
 					SNMPCommunity: "public",
 				},
 			},
@@ -744,6 +744,53 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated SNMP Monitor", snmp.Name)
 				require.Equal(t, "10.0.0.1", snmp.Hostname)
 				require.Equal(t, "1.3.6.1.2.1.2.2.1.5.1", snmp.SNMPOID)
+			},
+			testPauseResume: true,
+		},
+		{
+			name: "Docker",
+			create: monitor.Docker{
+				Base: monitor.Base{
+					Name:           "Test Docker Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				DockerDetails: monitor.DockerDetails{
+					DockerHost:      1,
+					DockerContainer: "my-container",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				docker := m.(*monitor.Docker)
+				docker.Name = "Updated Docker Monitor"
+				docker.DockerContainer = "updated-container"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var docker monitor.Docker
+				err := actual.As(&docker)
+				require.NoError(t, err)
+				require.Equal(t, id, docker.ID)
+				require.Equal(t, "Test Docker Monitor", docker.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var docker monitor.Docker
+				err := base.As(&docker)
+				require.NoError(t, err)
+				return &docker
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var docker monitor.Docker
+				err := actual.As(&docker)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Docker Monitor", docker.Name)
+				require.Equal(t, "updated-container", docker.DockerContainer)
 			},
 			testPauseResume: true,
 		},
