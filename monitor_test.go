@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/dockerhost"
 	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
@@ -708,10 +709,10 @@ func TestMonitorCRUD(t *testing.T) {
 					IsActive:       true,
 				},
 				SNMPDetails: monitor.SNMPDetails{
-					Hostname:       "192.168.1.1",
-					Port:           ptr.To(int64(161)),
-					SNMPVersion:    "2c",
-					SNMPOID:        "1.3.6.1.2.1.1.3.0",
+					Hostname:      "192.168.1.1",
+					Port:          ptr.To(int64(161)),
+					SNMPVersion:   "2c",
+					SNMPOID:       "1.3.6.1.2.1.1.3.0",
 					SNMPCommunity: "public",
 				},
 			},
@@ -747,12 +748,76 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "Docker",
+			create: monitor.Docker{
+				Base: monitor.Base{
+					Name:           "Test Docker Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				DockerDetails: monitor.DockerDetails{
+					DockerHost:      1,
+					DockerContainer: "my-container",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				docker := m.(*monitor.Docker)
+				docker.Name = "Updated Docker Monitor"
+				docker.DockerContainer = "updated-container"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var docker monitor.Docker
+				err := actual.As(&docker)
+				require.NoError(t, err)
+				require.Equal(t, id, docker.ID)
+				require.Equal(t, "Test Docker Monitor", docker.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var docker monitor.Docker
+				err := base.As(&docker)
+				require.NoError(t, err)
+				return &docker
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var docker monitor.Docker
+				err := actual.As(&docker)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Docker Monitor", docker.Name)
+				require.Equal(t, "updated-container", docker.DockerContainer)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
+
+			var dockerHostID int64
+			// For Docker monitors, we need to create a Docker host first
+			if tc.name == "Docker" {
+				hostID, err := client.CreateDockerHost(ctx, dockerhost.Config{
+					Name:         "Test Docker Host",
+					DockerDaemon: "unix:///var/run/docker.sock",
+					DockerType:   "socket",
+				})
+				require.NoError(t, err)
+				dockerHostID = hostID
+
+				// Update the monitor's docker_host to use the created host
+				dockerMonitor := tc.create.(monitor.Docker)
+				dockerMonitor.DockerHost = dockerHostID
+				tc.create = dockerMonitor
+			}
 
 			var initialCount int
 			monitors, err := client.GetMonitors(ctx)
@@ -807,6 +872,12 @@ func TestMonitorCRUD(t *testing.T) {
 			monitors, err = client.GetMonitors(ctx)
 			require.NoError(t, err)
 			require.Equal(t, initialCount, len(monitors))
+
+			// Clean up Docker host if created
+			if dockerHostID > 0 {
+				err = client.DeleteDockerHost(ctx, dockerHostID)
+				require.NoError(t, err)
+			}
 		})
 	}
 }
