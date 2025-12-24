@@ -795,6 +795,56 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "Steam",
+			create: monitor.Steam{
+				Base: monitor.Base{
+					Name:           "Test Steam Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				SteamDetails: monitor.SteamDetails{
+					Hostname: "192.168.1.100",
+					Port:     27015,
+					Timeout:  ptr.To(int64(48)),
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				steam := m.(*monitor.Steam)
+				steam.Name = "Updated Steam Monitor"
+				steam.Hostname = "10.0.0.1"
+				steam.Port = 27016
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var steam monitor.Steam
+				err := actual.As(&steam)
+				require.NoError(t, err)
+				require.Equal(t, id, steam.ID)
+				require.Equal(t, "Test Steam Monitor", steam.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var steam monitor.Steam
+				err := base.As(&steam)
+				require.NoError(t, err)
+				return &steam
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var steam monitor.Steam
+				err := actual.As(&steam)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Steam Monitor", steam.Name)
+				require.Equal(t, "10.0.0.1", steam.Hostname)
+				require.Equal(t, 27016, steam.Port)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {
