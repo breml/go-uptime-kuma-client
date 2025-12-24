@@ -900,6 +900,70 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "MQTT",
+			create: monitor.MQTT{
+				Base: monitor.Base{
+					Name:           "Test MQTT Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				MQTTDetails: monitor.MQTTDetails{
+					Hostname:           "mqtt.example.com",
+					Port:               ptr.To(int64(1883)),
+					MQTTTopic:          "home/temperature",
+					MQTTUsername:       ptr.To("user"),
+					MQTTPassword:       ptr.To("pass"),
+					MQTTWebsocketPath:  nil,
+					MQTTCheckType:      monitor.MQTTCheckTypeKeyword,
+					MQTTSuccessMessage: ptr.To("OK"),
+					JSONPath:           nil,
+					ExpectedValue:      nil,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				mqtt := m.(*monitor.MQTT)
+				mqtt.Name = "Updated MQTT Monitor"
+				mqtt.Hostname = "mqtt-new.example.com"
+				mqtt.Port = ptr.To(int64(8883))
+				mqtt.MQTTCheckType = monitor.MQTTCheckTypeJSONQuery
+				mqtt.MQTTSuccessMessage = nil
+				mqtt.JSONPath = ptr.To("status")
+				mqtt.ExpectedValue = ptr.To("online")
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var mqtt monitor.MQTT
+				err := actual.As(&mqtt)
+				require.NoError(t, err)
+				require.Equal(t, id, mqtt.ID)
+				require.Equal(t, "Test MQTT Monitor", mqtt.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var mqtt monitor.MQTT
+				err := base.As(&mqtt)
+				require.NoError(t, err)
+				return &mqtt
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var mqtt monitor.MQTT
+				err := actual.As(&mqtt)
+				require.NoError(t, err)
+				require.Equal(t, "Updated MQTT Monitor", mqtt.Name)
+				require.Equal(t, "mqtt-new.example.com", mqtt.Hostname)
+				require.Equal(t, int64(8883), *mqtt.Port)
+				require.Equal(t, monitor.MQTTCheckTypeJSONQuery, mqtt.MQTTCheckType)
+				require.Equal(t, "status", *mqtt.JSONPath)
+				require.Equal(t, "online", *mqtt.ExpectedValue)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {
