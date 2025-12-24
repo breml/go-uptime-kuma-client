@@ -964,6 +964,61 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "RabbitMQ",
+			create: monitor.RabbitMQ{
+				Base: monitor.Base{
+					Name:           "Test RabbitMQ Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				RabbitMQDetails: monitor.RabbitMQDetails{
+					Nodes:    "[\"http://rabbitmq.example.com:15672/\"]",
+					Username: ptr.To("guest"),
+					Password: ptr.To("guest"),
+					Timeout:  ptr.To(int64(48)),
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				rmq := m.(*monitor.RabbitMQ)
+				rmq.Name = "Updated RabbitMQ Monitor"
+				rmq.Nodes = "[\"http://rabbitmq-new.example.com:15672/\"]"
+				rmq.Username = ptr.To("admin")
+				rmq.Password = ptr.To("newpassword")
+				rmq.Timeout = ptr.To(int64(60))
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var rmq monitor.RabbitMQ
+				err := actual.As(&rmq)
+				require.NoError(t, err)
+				require.Equal(t, id, rmq.ID)
+				require.Equal(t, "Test RabbitMQ Monitor", rmq.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var rmq monitor.RabbitMQ
+				err := base.As(&rmq)
+				require.NoError(t, err)
+				return &rmq
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var rmq monitor.RabbitMQ
+				err := actual.As(&rmq)
+				require.NoError(t, err)
+				require.Equal(t, "Updated RabbitMQ Monitor", rmq.Name)
+				require.Equal(t, "[\"http://rabbitmq-new.example.com:15672/\"]", rmq.Nodes)
+				require.Equal(t, "admin", *rmq.Username)
+				require.Equal(t, "newpassword", *rmq.Password)
+				require.Equal(t, int64(60), *rmq.Timeout)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {
