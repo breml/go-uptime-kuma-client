@@ -845,6 +845,57 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "GameDig",
+			create: monitor.GameDig{
+				Base: monitor.Base{
+					Name:           "Test GameDig Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				GameDigDetails: monitor.GameDigDetails{
+					Hostname:             "mc.example.com",
+					Port:                 25565,
+					Game:                 "minecraft",
+					GameDigGivenPortOnly: true,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				gamedig := m.(*monitor.GameDig)
+				gamedig.Name = "Updated GameDig Monitor"
+				gamedig.Game = "csgo"
+				gamedig.GameDigGivenPortOnly = false
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var gamedig monitor.GameDig
+				err := actual.As(&gamedig)
+				require.NoError(t, err)
+				require.Equal(t, id, gamedig.ID)
+				require.Equal(t, "Test GameDig Monitor", gamedig.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var gamedig monitor.GameDig
+				err := base.As(&gamedig)
+				require.NoError(t, err)
+				return &gamedig
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var gamedig monitor.GameDig
+				err := actual.As(&gamedig)
+				require.NoError(t, err)
+				require.Equal(t, "Updated GameDig Monitor", gamedig.Name)
+				require.Equal(t, "csgo", gamedig.Game)
+				require.Equal(t, false, gamedig.GameDigGivenPortOnly)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {
