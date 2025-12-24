@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-// GameDig represents a GameDig monitor that checks game server status using the GameDig protocol.
+// GameDig represents a GameDig monitor that checks the status of game servers using the GameDig protocol.
 type GameDig struct {
 	Base
 	GameDigDetails
@@ -85,13 +85,13 @@ func (g GameDig) MarshalJSON() ([]byte, error) {
 
 // GameDigDetails contains GameDig monitor specific fields.
 type GameDigDetails struct {
-	// Hostname is the game server address.
+	// Hostname is the game server address (IP address or hostname).
 	Hostname string `json:"hostname"`
 	// Port is the game server port.
 	Port int `json:"port"`
 	// Game is the game type identifier (e.g., minecraft, csgo, etc.).
 	Game string `json:"game"`
-	// GameDigGivenPortOnly determines if only the given port should be used without auto-detection.
+	// GameDigGivenPortOnly indicates whether to use only the given port without auto-detection.
 	GameDigGivenPortOnly bool `json:"gamedigGivenPortOnly"`
 }
 

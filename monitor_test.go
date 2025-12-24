@@ -858,7 +858,7 @@ func TestMonitorCRUD(t *testing.T) {
 					IsActive:       true,
 				},
 				GameDigDetails: monitor.GameDigDetails{
-					Hostname:             "mc.example.com",
+					Hostname:             "127.0.0.1",
 					Port:                 25565,
 					Game:                 "minecraft",
 					GameDigGivenPortOnly: true,
@@ -867,6 +867,8 @@ func TestMonitorCRUD(t *testing.T) {
 			updateFunc: func(m monitor.Monitor) {
 				gamedig := m.(*monitor.GameDig)
 				gamedig.Name = "Updated GameDig Monitor"
+				gamedig.Hostname = "192.168.1.100"
+				gamedig.Port = 27015
 				gamedig.Game = "csgo"
 				gamedig.GameDigGivenPortOnly = false
 			},
@@ -891,6 +893,8 @@ func TestMonitorCRUD(t *testing.T) {
 				err := actual.As(&gamedig)
 				require.NoError(t, err)
 				require.Equal(t, "Updated GameDig Monitor", gamedig.Name)
+				require.Equal(t, "192.168.1.100", gamedig.Hostname)
+				require.Equal(t, 27015, gamedig.Port)
 				require.Equal(t, "csgo", gamedig.Game)
 				require.Equal(t, false, gamedig.GameDigGivenPortOnly)
 			},
