@@ -1078,6 +1078,55 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "SQL Server",
+			create: monitor.SQLServer{
+				Base: monitor.Base{
+					Name:           "Test SQL Server Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       false,
+				},
+				SQLServerDetails: monitor.SQLServerDetails{
+					DatabaseConnectionString: "Server=localhost;User Id=sa;Password=password123;",
+					DatabaseQuery:            nil,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				sqlserver := m.(*monitor.SQLServer)
+				sqlserver.Name = "Updated SQL Server Monitor"
+				sqlserver.DatabaseConnectionString = "Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;"
+				sqlserver.DatabaseQuery = ptr.To("SELECT COUNT(*) FROM sys.tables;")
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var sqlserver monitor.SQLServer
+				err := actual.As(&sqlserver)
+				require.NoError(t, err)
+				require.Equal(t, id, sqlserver.ID)
+				require.Equal(t, "Test SQL Server Monitor", sqlserver.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var sqlserver monitor.SQLServer
+				err := base.As(&sqlserver)
+				require.NoError(t, err)
+				return &sqlserver
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var sqlserver monitor.SQLServer
+				err := actual.As(&sqlserver)
+				require.NoError(t, err)
+				require.Equal(t, "Updated SQL Server Monitor", sqlserver.Name)
+				require.Equal(t, "Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;", sqlserver.DatabaseConnectionString)
+				require.Equal(t, "SELECT COUNT(*) FROM sys.tables;", *sqlserver.DatabaseQuery)
+			},
+			testPauseResume: false,
+		},
 	}
 
 	for _, tc := range testCases {
