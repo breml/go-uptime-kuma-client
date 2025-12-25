@@ -1176,6 +1176,61 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: false,
 		},
+		{
+			name: "MongoDB",
+			create: monitor.MongoDB{
+				Base: monitor.Base{
+					Name:           "Test MongoDB Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       false,
+				},
+				MongoDBDetails: monitor.MongoDBDetails{
+					DatabaseConnectionString: "mongodb://localhost:27017",
+					DatabaseQuery:            nil,
+					JSONPath:                 nil,
+					ExpectedValue:            nil,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				mongodb := m.(*monitor.MongoDB)
+				mongodb.Name = "Updated MongoDB Monitor"
+				mongodb.DatabaseConnectionString = "mongodb://user:pass@mongodb.example.com:27017/admin"
+				mongodb.DatabaseQuery = ptr.To("{\"dbStats\": 1}")
+				mongodb.JSONPath = ptr.To("$.ok")
+				mongodb.ExpectedValue = ptr.To("1")
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var mongodb monitor.MongoDB
+				err := actual.As(&mongodb)
+				require.NoError(t, err)
+				require.Equal(t, id, mongodb.ID)
+				require.Equal(t, "Test MongoDB Monitor", mongodb.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var mongodb monitor.MongoDB
+				err := base.As(&mongodb)
+				require.NoError(t, err)
+				return &mongodb
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var mongodb monitor.MongoDB
+				err := actual.As(&mongodb)
+				require.NoError(t, err)
+				require.Equal(t, "Updated MongoDB Monitor", mongodb.Name)
+				require.Equal(t, "mongodb://user:pass@mongodb.example.com:27017/admin", mongodb.DatabaseConnectionString)
+				require.Equal(t, "{\"dbStats\": 1}", *mongodb.DatabaseQuery)
+				require.Equal(t, "$.ok", *mongodb.JSONPath)
+				require.Equal(t, "1", *mongodb.ExpectedValue)
+			},
+			testPauseResume: false,
+		},
 	}
 
 	for _, tc := range testCases {
