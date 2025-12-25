@@ -1127,6 +1127,55 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: false,
 		},
+		{
+			name: "MySQL",
+			create: monitor.MySQL{
+				Base: monitor.Base{
+					Name:           "Test MySQL Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       false,
+				},
+				MySQLDetails: monitor.MySQLDetails{
+					DatabaseConnectionString: "mysql://user:password@localhost:3306/database",
+					DatabaseQuery:            nil,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				mysql := m.(*monitor.MySQL)
+				mysql.Name = "Updated MySQL Monitor"
+				mysql.DatabaseConnectionString = "mysql://admin:secret@mysql.example.com:3306/mydb"
+				mysql.DatabaseQuery = ptr.To("SELECT COUNT(*) FROM information_schema.tables;")
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var mysql monitor.MySQL
+				err := actual.As(&mysql)
+				require.NoError(t, err)
+				require.Equal(t, id, mysql.ID)
+				require.Equal(t, "Test MySQL Monitor", mysql.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var mysql monitor.MySQL
+				err := base.As(&mysql)
+				require.NoError(t, err)
+				return &mysql
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var mysql monitor.MySQL
+				err := actual.As(&mysql)
+				require.NoError(t, err)
+				require.Equal(t, "Updated MySQL Monitor", mysql.Name)
+				require.Equal(t, "mysql://admin:secret@mysql.example.com:3306/mydb", mysql.DatabaseConnectionString)
+				require.Equal(t, "SELECT COUNT(*) FROM information_schema.tables;", *mysql.DatabaseQuery)
+			},
+			testPauseResume: false,
+		},
 	}
 
 	for _, tc := range testCases {
