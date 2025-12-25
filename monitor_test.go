@@ -1019,6 +1019,65 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "Kafka Producer",
+			create: monitor.KafkaProducer{
+				Base: monitor.Base{
+					Name:           "Test Kafka Producer Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				KafkaProducerDetails: monitor.KafkaProducerDetails{
+					Brokers:                []string{"localhost:9092"},
+					Topic:                  "test-topic",
+					Message:                "test message",
+					SSL:                    false,
+					AllowAutoTopicCreation: false,
+					SASLOptions:            nil,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				kafka := m.(*monitor.KafkaProducer)
+				kafka.Name = "Updated Kafka Producer Monitor"
+				kafka.Brokers = []string{"kafka1:9092", "kafka2:9092"}
+				kafka.Topic = "updated-topic"
+				kafka.Message = "updated message"
+				kafka.SSL = true
+				kafka.AllowAutoTopicCreation = true
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var kafka monitor.KafkaProducer
+				err := actual.As(&kafka)
+				require.NoError(t, err)
+				require.Equal(t, id, kafka.ID)
+				require.Equal(t, "Test Kafka Producer Monitor", kafka.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var kafka monitor.KafkaProducer
+				err := base.As(&kafka)
+				require.NoError(t, err)
+				return &kafka
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var kafka monitor.KafkaProducer
+				err := actual.As(&kafka)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Kafka Producer Monitor", kafka.Name)
+				require.Equal(t, []string{"kafka1:9092", "kafka2:9092"}, kafka.Brokers)
+				require.Equal(t, "updated-topic", kafka.Topic)
+				require.Equal(t, "updated message", kafka.Message)
+				require.Equal(t, true, kafka.SSL)
+				require.Equal(t, true, kafka.AllowAutoTopicCreation)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {
