@@ -124,6 +124,47 @@ func TestMonitorCRUD(t *testing.T) {
 			testPauseResume: true,
 		},
 		{
+			name: "Manual",
+			create: monitor.Manual{
+				Base: monitor.Base{
+					Name:           "Test Manual Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     0,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				manual := m.(*monitor.Manual)
+				manual.Name = "Updated Manual Monitor"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var manual monitor.Manual
+				err := actual.As(&manual)
+				require.NoError(t, err)
+				require.Equal(t, id, manual.ID)
+				require.Equal(t, "Test Manual Monitor", manual.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var manual monitor.Manual
+				err := base.As(&manual)
+				require.NoError(t, err)
+				return &manual
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var manual monitor.Manual
+				err := actual.As(&manual)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Manual Monitor", manual.Name)
+			},
+			testPauseResume: false,
+		},
+		{
 			name: "Ping",
 			create: monitor.Ping{
 				Base: monitor.Base{
