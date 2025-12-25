@@ -85,10 +85,14 @@ func (r RabbitMQ) MarshalJSON() ([]byte, error) {
 
 // RabbitMQDetails contains RabbitMQ-specific monitor configuration.
 type RabbitMQDetails struct {
-	Nodes    string  `json:"rabbitmqNodes"`
+	// Nodes is a JSON-encoded array of RabbitMQ node URLs to check.
+	Nodes string `json:"rabbitmqNodes"`
+	// Username is an optional username for HTTP Basic authentication.
 	Username *string `json:"rabbitmqUsername"`
+	// Password is an optional password for HTTP Basic authentication.
 	Password *string `json:"rabbitmqPassword"`
-	Timeout  *int64  `json:"timeout"`
+	// Timeout is an optional request timeout in seconds.
+	Timeout *int64 `json:"timeout"`
 }
 
 // Type returns the monitor type.
