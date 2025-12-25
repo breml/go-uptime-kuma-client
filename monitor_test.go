@@ -1231,6 +1231,116 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: false,
 		},
+		{
+			name: "Radius",
+			create: monitor.Radius{
+				Base: monitor.Base{
+					Name:           "Test Radius Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				RadiusDetails: monitor.RadiusDetails{
+					Hostname:         "radius.example.com",
+					Port:             ptr.To(int64(1812)),
+					Username:         "testuser",
+					Password:         "testpass",
+					Secret:           "sharedsecret",
+					CalledStationID:  nil,
+					CallingStationID: nil,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				radius := m.(*monitor.Radius)
+				radius.Name = "Updated Radius Monitor"
+				radius.Hostname = "auth.example.com"
+				radius.Port = ptr.To(int64(1813))
+				radius.Username = "admin"
+				radius.Password = "adminpass"
+				radius.Secret = "newsecret"
+				radius.CalledStationID = ptr.To("555-1234")
+				radius.CallingStationID = ptr.To("555-9999")
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var radius monitor.Radius
+				err := actual.As(&radius)
+				require.NoError(t, err)
+				require.Equal(t, id, radius.ID)
+				require.Equal(t, "Test Radius Monitor", radius.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var radius monitor.Radius
+				err := base.As(&radius)
+				require.NoError(t, err)
+				return &radius
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var radius monitor.Radius
+				err := actual.As(&radius)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Radius Monitor", radius.Name)
+				require.Equal(t, "auth.example.com", radius.Hostname)
+				require.Equal(t, int64(1813), *radius.Port)
+				require.Equal(t, "admin", radius.Username)
+				require.Equal(t, "adminpass", radius.Password)
+				require.Equal(t, "newsecret", radius.Secret)
+				require.Equal(t, "555-1234", *radius.CalledStationID)
+				require.Equal(t, "555-9999", *radius.CallingStationID)
+			},
+			testPauseResume: true,
+		},
+		{
+			name: "Tailscale Ping",
+			create: monitor.TailscalePing{
+				Base: monitor.Base{
+					Name:           "Test Tailscale Ping Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				TailscalePingDetails: monitor.TailscalePingDetails{
+					Hostname: "100.100.100.100",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				tailscale := m.(*monitor.TailscalePing)
+				tailscale.Name = "Updated Tailscale Ping Monitor"
+				tailscale.Hostname = "mydevice.mydomain.ts.net"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var tailscale monitor.TailscalePing
+				err := actual.As(&tailscale)
+				require.NoError(t, err)
+				require.Equal(t, id, tailscale.ID)
+				require.Equal(t, "Test Tailscale Ping Monitor", tailscale.Name)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var tailscale monitor.TailscalePing
+				err := base.As(&tailscale)
+				require.NoError(t, err)
+				return &tailscale
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var tailscale monitor.TailscalePing
+				err := actual.As(&tailscale)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Tailscale Ping Monitor", tailscale.Name)
+				require.Equal(t, "mydevice.mydomain.ts.net", tailscale.Hostname)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {
