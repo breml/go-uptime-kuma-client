@@ -65,7 +65,7 @@ func TestMonitorHTTP_Unmarshal(t *testing.T) {
 					OAuthScopes:         "",
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"","authWorkstation":"","basic_auth_pass":"","basic_auth_user":"","body":"","conditions":[],"description":null,"expiryNotification":false,"headers":"","httpBodyEncoding":"json","id":2,"ignoreTls":false,"interval":60,"maxredirects":10,"maxretries":2,"method":"GET","name":"foobar.com","notificationIDList":{"1":true},"oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":1,"proxyId":null,"resendInterval":0,"retryInterval":60,"timeout":48,"tlsCa":"","tlsCert":"","tlsKey":"","type":"http","upsideDown":false,"url":"https://www.foobar.com"}`,
+			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"","authWorkstation":"","basic_auth_pass":"","basic_auth_user":"","body":"","cacheBust":false,"conditions":[],"description":null,"expiryNotification":false,"headers":"","httpBodyEncoding":"json","id":2,"ignoreTls":false,"interval":60,"maxredirects":10,"maxretries":2,"method":"GET","name":"foobar.com","notificationIDList":{"1":true},"oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":1,"proxyId":null,"resendInterval":0,"retryInterval":60,"timeout":48,"tlsCa":"","tlsCert":"","tlsKey":"","type":"http","upsideDown":false,"url":"https://www.foobar.com"}`,
 		},
 	}
 

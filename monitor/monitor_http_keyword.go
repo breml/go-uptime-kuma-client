@@ -96,6 +96,7 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	raw["oauth_client_id"] = h.OAuthClientID
 	raw["oauth_client_secret"] = h.OAuthClientSecret
 	raw["oauth_scopes"] = h.OAuthScopes
+	raw["cacheBust"] = h.CacheBust
 
 	// Always override with current keyword-specific field values.
 	raw["keyword"] = h.Keyword

@@ -96,6 +96,7 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	raw["oauth_client_id"] = h.OAuthClientID
 	raw["oauth_client_secret"] = h.OAuthClientSecret
 	raw["oauth_scopes"] = h.OAuthScopes
+	raw["cacheBust"] = h.CacheBust
 
 	// Always override with current JSON Query-specific field values.
 	raw["jsonPath"] = h.JSONPath

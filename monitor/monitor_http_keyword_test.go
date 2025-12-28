@@ -70,7 +70,7 @@ func TestMonitorHTTPKeyword_Unmarshal(t *testing.T) {
 					InvertKeyword: false,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"","authWorkstation":"","basic_auth_pass":"","basic_auth_user":"","body":"","conditions":[],"description":null,"expiryNotification":false,"headers":"","httpBodyEncoding":"json","id":3,"ignoreTls":false,"interval":60,"invertKeyword":false,"keyword":"success","maxredirects":10,"maxretries":2,"method":"GET","name":"keyword-test","notificationIDList":{"1":true},"oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":1,"proxyId":null,"resendInterval":0,"retryInterval":60,"timeout":48,"tlsCa":"","tlsCert":"","tlsKey":"","type":"keyword","upsideDown":false,"url":"https://www.example.com"}`,
+			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"","authWorkstation":"","basic_auth_pass":"","basic_auth_user":"","body":"","cacheBust":false,"conditions":[],"description":null,"expiryNotification":false,"headers":"","httpBodyEncoding":"json","id":3,"ignoreTls":false,"interval":60,"invertKeyword":false,"keyword":"success","maxredirects":10,"maxretries":2,"method":"GET","name":"keyword-test","notificationIDList":{"1":true},"oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":1,"proxyId":null,"resendInterval":0,"retryInterval":60,"timeout":48,"tlsCa":"","tlsCert":"","tlsKey":"","type":"keyword","upsideDown":false,"url":"https://www.example.com"}`,
 		},
 		{
 			name: "success_inverted",
@@ -122,7 +122,7 @@ func TestMonitorHTTPKeyword_Unmarshal(t *testing.T) {
 					InvertKeyword: true,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":["200-299","300-399"],"active":true,"authDomain":"","authMethod":"basic","authWorkstation":"","basic_auth_pass":"testpass","basic_auth_user":"testuser","body":"test data","conditions":[],"description":"Testing inverted keyword","expiryNotification":true,"headers":"X-Custom: test","httpBodyEncoding":"xml","id":4,"ignoreTls":true,"interval":120,"invertKeyword":true,"keyword":"error","maxredirects":5,"maxretries":3,"method":"POST","name":"keyword-inverted","notificationIDList":{},"oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":null,"proxyId":null,"resendInterval":0,"retryInterval":120,"timeout":60,"tlsCa":"","tlsCert":"","tlsKey":"","type":"keyword","upsideDown":false,"url":"https://www.example.com"}`,
+			wantJSON: `{"accepted_statuscodes":["200-299","300-399"],"active":true,"authDomain":"","authMethod":"basic","authWorkstation":"","basic_auth_pass":"testpass","basic_auth_user":"testuser","body":"test data","cacheBust":false,"conditions":[],"description":"Testing inverted keyword","expiryNotification":true,"headers":"X-Custom: test","httpBodyEncoding":"xml","id":4,"ignoreTls":true,"interval":120,"invertKeyword":true,"keyword":"error","maxredirects":5,"maxretries":3,"method":"POST","name":"keyword-inverted","notificationIDList":{},"oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":null,"proxyId":null,"resendInterval":0,"retryInterval":120,"timeout":60,"tlsCa":"","tlsCert":"","tlsKey":"","type":"keyword","upsideDown":false,"url":"https://www.example.com"}`,
 		},
 	}
 

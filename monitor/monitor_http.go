@@ -88,6 +88,7 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw["oauth_client_id"] = h.OAuthClientID
 	raw["oauth_client_secret"] = h.OAuthClientSecret
 	raw["oauth_scopes"] = h.OAuthScopes
+	raw["cacheBust"] = h.CacheBust
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
@@ -119,6 +120,7 @@ type HTTPDetails struct {
 	OAuthClientID       string     `json:"oauth_client_id"`
 	OAuthClientSecret   string     `json:"oauth_client_secret"`
 	OAuthScopes         string     `json:"oauth_scopes"`
+	CacheBust           bool       `json:"cacheBust"`
 }
 
 func (h HTTPDetails) Type() string {
