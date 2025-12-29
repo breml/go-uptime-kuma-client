@@ -166,7 +166,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 		gatewayIP = gw
 	}
 
-	dockerAccessibleURL := fmt.Sprintf("http://%s:%d", gatewayIP, serverPort)
+	dockerAccessibleURL := "http://" + net.JoinHostPort(gatewayIP, strconv.Itoa(serverPort))
 	t.Logf("Docker-accessible URL: %s", dockerAccessibleURL)
 
 	// Create webhook notification.
