@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with code in this
+repository.
 
 ## Build & Commands
 
@@ -14,7 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Core Architecture
 
-This is a Go client library for the Uptime Kuma API using Socket.IO for real-time communication.
+This is a Go client library for the Uptime Kuma API using Socket.IO for
+real-time communication.
 
 **Client Design (client.go:52-60)**:
 
