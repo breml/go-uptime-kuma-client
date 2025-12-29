@@ -26,7 +26,6 @@
 //	}
 //	defer client.Disconnect()
 //
-//	// Create a monitor
 //	monitor := &monitor.HTTP{
 //	    Base: monitor.Base{Name: "Example", Interval: 60},
 //	    HTTPDetails: monitor.HTTPDetails{
