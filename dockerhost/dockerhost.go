@@ -44,8 +44,9 @@ func (t *TestResult) UnmarshalJSON(data []byte) error {
 	// First try to unmarshal directly
 	type Alias TestResult
 	aux := &struct {
-		Version any `json:"version"`
 		*Alias
+
+		Version any `json:"version"`
 	}{
 		Alias: (*Alias)(t),
 	}
