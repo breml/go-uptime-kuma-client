@@ -236,27 +236,27 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 		case <-ticker.C:
 			// Use a short timeout for each poll attempt
 			pollCtx, pollCancel := context.WithTimeout(context.Background(), 2*time.Second)
-			req, err := http.NewRequestWithContext(pollCtx, "GET", entryPageURL, http.NoBody)
+			pollReq, err := http.NewRequestWithContext(pollCtx, "GET", entryPageURL, http.NoBody)
 			if err != nil {
 				pollCancel()
 				continue
 			}
 
-			resp, err := http.DefaultClient.Do(req)
+			pollResp, err := http.DefaultClient.Do(pollReq)
 			if err != nil {
 				pollCancel()
 				continue
 			}
 
-			body, err := io.ReadAll(resp.Body)
-			_ = resp.Body.Close()
+			pollBody, err := io.ReadAll(pollResp.Body)
+			_ = pollResp.Body.Close()
 			pollCancel()
 			if err != nil {
 				continue
 			}
 
 			var checkEntryPage entryPageResponse
-			if err := json.Unmarshal(body, &checkEntryPage); err != nil {
+			if err := json.Unmarshal(pollBody, &checkEntryPage); err != nil {
 				continue
 			}
 
