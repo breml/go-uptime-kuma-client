@@ -19,7 +19,9 @@ func TestNotificationServerChan_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with send key",
-			data: []byte(`{"id":1,"name":"My ServerChan Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My ServerChan Alert\",\"serverChanSendKey\":\"SCT123456789abcdefghijklmnopqrst\",\"type\":\"ServerChan\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My ServerChan Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My ServerChan Alert\",\"serverChanSendKey\":\"SCT123456789abcdefghijklmnopqrst\",\"type\":\"ServerChan\"}"}`,
+			),
 
 			want: notification.ServerChan{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationServerChan_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple ServerChan","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple ServerChan\",\"serverChanSendKey\":\"SCT000000000000000000000000000000\",\"type\":\"ServerChan\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple ServerChan","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple ServerChan\",\"serverChanSendKey\":\"SCT000000000000000000000000000000\",\"type\":\"ServerChan\"}"}`,
+			),
 
 			want: notification.ServerChan{
 				Base: notification.Base{
@@ -57,7 +61,9 @@ func TestNotificationServerChan_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with serverchan3 format",
-			data: []byte(`{"id":3,"name":"ServerChan v3","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"ServerChan v3\",\"serverChanSendKey\":\"sctp123456t789abcdefghijklmnopqrst\",\"type\":\"ServerChan\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"ServerChan v3","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"ServerChan v3\",\"serverChanSendKey\":\"sctp123456t789abcdefghijklmnopqrst\",\"type\":\"ServerChan\"}"}`,
+			),
 
 			want: notification.ServerChan{
 				Base: notification.Base{

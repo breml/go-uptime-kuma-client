@@ -19,7 +19,9 @@ func TestNotificationRocketChat_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Rocket.Chat Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Rocket.Chat Alert\",\"rocketwebhookURL\":\"https://rocket.example.com/hooks/xxx\",\"rocketchannel\":\"#alerts\",\"rocketusername\":\"Monitor Bot\",\"rocketiconemo\":\":smiley:\",\"rocketbutton\":\"\",\"type\":\"rocket.chat\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Rocket.Chat Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Rocket.Chat Alert\",\"rocketwebhookURL\":\"https://rocket.example.com/hooks/xxx\",\"rocketchannel\":\"#alerts\",\"rocketusername\":\"Monitor Bot\",\"rocketiconemo\":\":smiley:\",\"rocketbutton\":\"\",\"type\":\"rocket.chat\"}"}`,
+			),
 
 			want: notification.RocketChat{
 				Base: notification.Base{
@@ -42,7 +44,9 @@ func TestNotificationRocketChat_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Rocket.Chat","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Rocket.Chat\",\"rocketwebhookURL\":\"https://rocket.org/hooks/xxx\",\"type\":\"rocket.chat\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Rocket.Chat","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Rocket.Chat\",\"rocketwebhookURL\":\"https://rocket.org/hooks/xxx\",\"type\":\"rocket.chat\"}"}`,
+			),
 
 			want: notification.RocketChat{
 				Base: notification.Base{

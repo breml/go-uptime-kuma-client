@@ -19,7 +19,9 @@ func TestNotificationSIGNL4_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with webhook URL",
-			data: []byte(`{"id":1,"name":"My SIGNL4 Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SIGNL4 Alert\",\"webhookURL\":\"https://connect.signl4.com/webhook/webhook-uuid-here\",\"type\":\"SIGNL4\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My SIGNL4 Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SIGNL4 Alert\",\"webhookURL\":\"https://connect.signl4.com/webhook/webhook-uuid-here\",\"type\":\"SIGNL4\"}"}`,
+			),
 
 			want: notification.SIGNL4{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationSIGNL4_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple SIGNL4","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SIGNL4\",\"webhookURL\":\"https://connect.signl4.com/webhook/simple-webhook\",\"type\":\"SIGNL4\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple SIGNL4","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SIGNL4\",\"webhookURL\":\"https://connect.signl4.com/webhook/simple-webhook\",\"type\":\"SIGNL4\"}"}`,
+			),
 
 			want: notification.SIGNL4{
 				Base: notification.Base{
@@ -57,7 +61,9 @@ func TestNotificationSIGNL4_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different webhook endpoint",
-			data: []byte(`{"id":3,"name":"SIGNL4 Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SIGNL4 Custom\",\"webhookURL\":\"https://custom.signl4.endpoint.com/webhook/custom-id\",\"type\":\"SIGNL4\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"SIGNL4 Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SIGNL4 Custom\",\"webhookURL\":\"https://custom.signl4.endpoint.com/webhook/custom-id\",\"type\":\"SIGNL4\"}"}`,
+			),
 
 			want: notification.SIGNL4{
 				Base: notification.Base{

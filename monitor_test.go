@@ -1122,7 +1122,11 @@ func TestMonitorCRUD(t *testing.T) {
 				err := actual.As(&sqlserver)
 				require.NoError(t, err)
 				require.Equal(t, "Updated SQL Server Monitor", sqlserver.Name)
-				require.Equal(t, "Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;", sqlserver.DatabaseConnectionString)
+				require.Equal(
+					t,
+					"Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;",
+					sqlserver.DatabaseConnectionString,
+				)
 				require.Equal(t, "SELECT COUNT(*) FROM sys.tables;", *sqlserver.DatabaseQuery)
 			},
 			testPauseResume: false,
@@ -1224,7 +1228,11 @@ func TestMonitorCRUD(t *testing.T) {
 				err := actual.As(&mongodb)
 				require.NoError(t, err)
 				require.Equal(t, "Updated MongoDB Monitor", mongodb.Name)
-				require.Equal(t, "mongodb://user:pass@mongodb.example.com:27017/admin", mongodb.DatabaseConnectionString)
+				require.Equal(
+					t,
+					"mongodb://user:pass@mongodb.example.com:27017/admin",
+					mongodb.DatabaseConnectionString,
+				)
 				require.Equal(t, "{\"dbStats\": 1}", *mongodb.DatabaseQuery)
 				require.Equal(t, "$.ok", *mongodb.JSONPath)
 				require.Equal(t, "1", *mongodb.ExpectedValue)

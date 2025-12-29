@@ -19,7 +19,9 @@ func TestNotificationTelegram_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Telegram Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Telegram Alert\",\"telegramBotToken\":\"123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11\",\"telegramChatID\":\"@mychannel\",\"telegramServerUrl\":\"https://api.telegram.org\",\"telegramSendSilently\":true,\"telegramProtectContent\":false,\"telegramMessageThreadID\":\"42\",\"telegramUseTemplate\":true,\"telegramTemplate\":\"Monitor: {monitor.name}\\nStatus: {monitor.status}\",\"telegramTemplateParseMode\":\"Markdown\",\"type\":\"telegram\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Telegram Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Telegram Alert\",\"telegramBotToken\":\"123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11\",\"telegramChatID\":\"@mychannel\",\"telegramServerUrl\":\"https://api.telegram.org\",\"telegramSendSilently\":true,\"telegramProtectContent\":false,\"telegramMessageThreadID\":\"42\",\"telegramUseTemplate\":true,\"telegramTemplate\":\"Monitor: {monitor.name}\\nStatus: {monitor.status}\",\"telegramTemplateParseMode\":\"Markdown\",\"type\":\"telegram\"}"}`,
+			),
 
 			want: notification.Telegram{
 				Base: notification.Base{
@@ -46,7 +48,9 @@ func TestNotificationTelegram_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Telegram","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Telegram\",\"telegramBotToken\":\"123456:ABC\",\"telegramChatID\":\"123456789\",\"type\":\"telegram\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Telegram","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Telegram\",\"telegramBotToken\":\"123456:ABC\",\"telegramChatID\":\"123456789\",\"type\":\"telegram\"}"}`,
+			),
 
 			want: notification.Telegram{
 				Base: notification.Base{

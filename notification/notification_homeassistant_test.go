@@ -19,7 +19,9 @@ func TestNotificationHomeAssistant_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Home Assistant Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Home Assistant Alert\",\"homeAssistantUrl\":\"http://192.168.1.100:8123\",\"longLivedAccessToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\",\"notificationService\":\"notify.mobile_app_iphone\",\"type\":\"HomeAssistant\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Home Assistant Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Home Assistant Alert\",\"homeAssistantUrl\":\"http://192.168.1.100:8123\",\"longLivedAccessToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\",\"notificationService\":\"notify.mobile_app_iphone\",\"type\":\"HomeAssistant\"}"}`,
+			),
 
 			want: notification.HomeAssistant{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationHomeAssistant_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Home Assistant","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Home Assistant\",\"homeAssistantUrl\":\"http://localhost:8123\",\"longLivedAccessToken\":\"token123\",\"type\":\"HomeAssistant\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Home Assistant","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Home Assistant\",\"homeAssistantUrl\":\"http://localhost:8123\",\"longLivedAccessToken\":\"token123\",\"type\":\"HomeAssistant\"}"}`,
+			),
 
 			want: notification.HomeAssistant{
 				Base: notification.Base{
@@ -60,7 +64,9 @@ func TestNotificationHomeAssistant_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with custom notification service",
-			data: []byte(`{"id":3,"name":"HA with Custom Service","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"HA with Custom Service\",\"homeAssistantUrl\":\"http://ha.example.com:8123\",\"longLivedAccessToken\":\"custom-token-456\",\"notificationService\":\"notify.persistent_notification\",\"type\":\"HomeAssistant\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"HA with Custom Service","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"HA with Custom Service\",\"homeAssistantUrl\":\"http://ha.example.com:8123\",\"longLivedAccessToken\":\"custom-token-456\",\"notificationService\":\"notify.persistent_notification\",\"type\":\"HomeAssistant\"}"}`,
+			),
 
 			want: notification.HomeAssistant{
 				Base: notification.Base{

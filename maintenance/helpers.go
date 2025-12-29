@@ -15,7 +15,12 @@ func NewSingleMaintenance(title, description string, startDate, endDate time.Tim
 }
 
 // NewRecurringIntervalMaintenance creates a maintenance window that repeats every N days.
-func NewRecurringIntervalMaintenance(title, description string, intervalDay int, timeRange []TimeOfDay, timezone string) *Maintenance {
+func NewRecurringIntervalMaintenance(
+	title, description string,
+	intervalDay int,
+	timeRange []TimeOfDay,
+	timezone string,
+) *Maintenance {
 	return &Maintenance{
 		Title:          title,
 		Description:    description,
@@ -30,7 +35,12 @@ func NewRecurringIntervalMaintenance(title, description string, intervalDay int,
 
 // NewRecurringWeekdayMaintenance creates a maintenance window that repeats on specific days of the week.
 // Weekdays: 1=Monday, 2=Tuesday, ..., 7=Sunday.
-func NewRecurringWeekdayMaintenance(title, description string, weekdays []int, timeRange []TimeOfDay, timezone string) *Maintenance {
+func NewRecurringWeekdayMaintenance(
+	title, description string,
+	weekdays []int,
+	timeRange []TimeOfDay,
+	timezone string,
+) *Maintenance {
 	return &Maintenance{
 		Title:          title,
 		Description:    description,
@@ -45,7 +55,12 @@ func NewRecurringWeekdayMaintenance(title, description string, weekdays []int, t
 
 // NewRecurringDayOfMonthMaintenance creates a maintenance window that repeats on specific days of the month.
 // daysOfMonth can contain integers 1-31 or special strings "lastDay1"-"lastDay4".
-func NewRecurringDayOfMonthMaintenance(title, description string, daysOfMonth []interface{}, timeRange []TimeOfDay, timezone string) *Maintenance {
+func NewRecurringDayOfMonthMaintenance(
+	title, description string,
+	daysOfMonth []interface{},
+	timeRange []TimeOfDay,
+	timezone string,
+) *Maintenance {
 	return &Maintenance{
 		Title:          title,
 		Description:    description,

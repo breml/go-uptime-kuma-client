@@ -19,7 +19,9 @@ func TestNotificationPushy_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Pushy Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Pushy Alert\",\"pushyAPIKey\":\"api_key_xxxxx\",\"pushyToken\":\"device_token_xxxxx\",\"type\":\"pushy\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Pushy Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Pushy Alert\",\"pushyAPIKey\":\"api_key_xxxxx\",\"pushyToken\":\"device_token_xxxxx\",\"type\":\"pushy\"}"}`,
+			),
 
 			want: notification.Pushy{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationPushy_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Pushy","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Pushy\",\"pushyAPIKey\":\"api_key_yyyyy\",\"pushyToken\":\"device_token_yyyyy\",\"type\":\"pushy\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Pushy","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Pushy\",\"pushyAPIKey\":\"api_key_yyyyy\",\"pushyToken\":\"device_token_yyyyy\",\"type\":\"pushy\"}"}`,
+			),
 
 			want: notification.Pushy{
 				Base: notification.Base{

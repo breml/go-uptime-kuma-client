@@ -131,7 +131,12 @@ func (c *Client) refreshMonitorInCache(ctx context.Context, monitorID int64) err
 }
 
 // AddMonitorTag adds a tag to a monitor with an optional value.
-func (c *Client) AddMonitorTag(ctx context.Context, tagID int64, monitorID int64, value string) (*tag.MonitorTag, error) {
+func (c *Client) AddMonitorTag(
+	ctx context.Context,
+	tagID int64,
+	monitorID int64,
+	value string,
+) (*tag.MonitorTag, error) {
 	response, err := c.syncEmit(ctx, "addMonitorTag", tagID, monitorID, value)
 	if err != nil {
 		return nil, fmt.Errorf("add monitor tag (tag %d, monitor %d): %v", tagID, monitorID, err)
@@ -143,7 +148,12 @@ func (c *Client) AddMonitorTag(ctx context.Context, tagID int64, monitorID int64
 
 	// Refresh the monitor in cache to get the updated tags
 	if err := c.refreshMonitorInCache(ctx, monitorID); err != nil {
-		return nil, fmt.Errorf("add monitor tag (tag %d, monitor %d): failed to refresh cache: %v", tagID, monitorID, err)
+		return nil, fmt.Errorf(
+			"add monitor tag (tag %d, monitor %d): failed to refresh cache: %v",
+			tagID,
+			monitorID,
+			err,
+		)
 	}
 
 	// Find the tag we just added from the cache
@@ -162,7 +172,11 @@ func (c *Client) AddMonitorTag(ctx context.Context, tagID int64, monitorID int64
 		}
 	}
 
-	return nil, fmt.Errorf("add monitor tag (tag %d, monitor %d): tag added but not found in monitor tags", tagID, monitorID)
+	return nil, fmt.Errorf(
+		"add monitor tag (tag %d, monitor %d): tag added but not found in monitor tags",
+		tagID,
+		monitorID,
+	)
 }
 
 // UpdateMonitorTag updates the value of a monitor-tag association.
@@ -188,16 +202,34 @@ func (c *Client) UpdateMonitorTag(ctx context.Context, tagID int64, monitorID in
 func (c *Client) DeleteMonitorTagWithValue(ctx context.Context, tagID int64, monitorID int64, value string) error {
 	response, err := c.syncEmit(ctx, "deleteMonitorTag", tagID, monitorID, value)
 	if err != nil {
-		return fmt.Errorf("delete monitor tag with value (tag %d, monitor %d, value %q): %v", tagID, monitorID, value, err)
+		return fmt.Errorf(
+			"delete monitor tag with value (tag %d, monitor %d, value %q): %v",
+			tagID,
+			monitorID,
+			value,
+			err,
+		)
 	}
 
 	if !response.OK {
-		return fmt.Errorf("delete monitor tag with value (tag %d, monitor %d, value %q): %s", tagID, monitorID, value, response.Msg)
+		return fmt.Errorf(
+			"delete monitor tag with value (tag %d, monitor %d, value %q): %s",
+			tagID,
+			monitorID,
+			value,
+			response.Msg,
+		)
 	}
 
 	// Refresh the monitor in cache to get the updated tags
 	if err := c.refreshMonitorInCache(ctx, monitorID); err != nil {
-		return fmt.Errorf("delete monitor tag with value (tag %d, monitor %d, value %q): failed to refresh cache: %v", tagID, monitorID, value, err)
+		return fmt.Errorf(
+			"delete monitor tag with value (tag %d, monitor %d, value %q): failed to refresh cache: %v",
+			tagID,
+			monitorID,
+			value,
+			err,
+		)
 	}
 
 	return nil

@@ -18,7 +18,9 @@ func TestNotificationWPush_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My WPush Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My WPush Alert\",\"wpushAPIkey\":\"test-api-key-123\",\"wpushChannel\":\"channel-alerts\",\"type\":\"WPush\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My WPush Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My WPush Alert\",\"wpushAPIkey\":\"test-api-key-123\",\"wpushChannel\":\"channel-alerts\",\"type\":\"WPush\"}"}`,
+			),
 
 			want: notification.WPush{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationWPush_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple WPush","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple WPush\",\"wpushAPIkey\":\"minimal-key\",\"wpushChannel\":\"default\",\"type\":\"WPush\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple WPush","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple WPush\",\"wpushAPIkey\":\"minimal-key\",\"wpushChannel\":\"default\",\"type\":\"WPush\"}"}`,
+			),
 
 			want: notification.WPush{
 				Base: notification.Base{
@@ -58,7 +62,9 @@ func TestNotificationWPush_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different channel",
-			data: []byte(`{"id":3,"name":"WPush Multi Channel","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"WPush Multi Channel\",\"wpushAPIkey\":\"production-api-key\",\"wpushChannel\":\"monitoring-channel\",\"type\":\"WPush\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"WPush Multi Channel","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"WPush Multi Channel\",\"wpushAPIkey\":\"production-api-key\",\"wpushChannel\":\"monitoring-channel\",\"type\":\"WPush\"}"}`,
+			),
 
 			want: notification.WPush{
 				Base: notification.Base{

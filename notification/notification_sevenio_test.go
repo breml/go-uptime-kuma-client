@@ -19,7 +19,9 @@ func TestNotificationSevenIO_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Seven.io Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Seven.io Alert\",\"sevenioApiKey\":\"test-api-key\",\"sevenioSender\":\"UptimeKuma\",\"sevenioTo\":\"49123456789\",\"type\":\"sevenio\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Seven.io Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Seven.io Alert\",\"sevenioApiKey\":\"test-api-key\",\"sevenioSender\":\"UptimeKuma\",\"sevenioTo\":\"49123456789\",\"type\":\"sevenio\"}"}`,
+			),
 
 			want: notification.SevenIO{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationSevenIO_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Seven.io","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Seven.io\",\"sevenioApiKey\":\"minimal-key\",\"sevenioSender\":\"\",\"sevenioTo\":\"49999999999\",\"type\":\"sevenio\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Seven.io","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Seven.io\",\"sevenioApiKey\":\"minimal-key\",\"sevenioSender\":\"\",\"sevenioTo\":\"49999999999\",\"type\":\"sevenio\"}"}`,
+			),
 
 			want: notification.SevenIO{
 				Base: notification.Base{
@@ -61,7 +65,9 @@ func TestNotificationSevenIO_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with custom sender",
-			data: []byte(`{"id":3,"name":"Seven.io Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Seven.io Custom\",\"sevenioApiKey\":\"custom-key\",\"sevenioSender\":\"CustomAlert\",\"sevenioTo\":\"358501234567\",\"type\":\"sevenio\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Seven.io Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Seven.io Custom\",\"sevenioApiKey\":\"custom-key\",\"sevenioSender\":\"CustomAlert\",\"sevenioTo\":\"358501234567\",\"type\":\"sevenio\"}"}`,
+			),
 
 			want: notification.SevenIO{
 				Base: notification.Base{

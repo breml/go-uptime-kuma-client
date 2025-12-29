@@ -19,7 +19,9 @@ func TestNotificationClickSendSMS_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My ClickSend Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My ClickSend Alert\",\"clicksendsmsLogin\":\"testuser\",\"clicksendsmsPassword\":\"apikey123\",\"clicksendsmsToNumber\":\"61412345678\",\"clicksendsmsSenderName\":\"Uptime\",\"type\":\"clicksendsms\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My ClickSend Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My ClickSend Alert\",\"clicksendsmsLogin\":\"testuser\",\"clicksendsmsPassword\":\"apikey123\",\"clicksendsmsToNumber\":\"61412345678\",\"clicksendsmsSenderName\":\"Uptime\",\"type\":\"clicksendsms\"}"}`,
+			),
 
 			want: notification.ClickSendSMS{
 				Base: notification.Base{
@@ -41,7 +43,9 @@ func TestNotificationClickSendSMS_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple ClickSend","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple ClickSend\",\"clicksendsmsLogin\":\"user\",\"clicksendsmsPassword\":\"key\",\"clicksendsmsToNumber\":\"61400000000\",\"clicksendsmsSenderName\":\"Alert\",\"type\":\"clicksendsms\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple ClickSend","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple ClickSend\",\"clicksendsmsLogin\":\"user\",\"clicksendsmsPassword\":\"key\",\"clicksendsmsToNumber\":\"61400000000\",\"clicksendsmsSenderName\":\"Alert\",\"type\":\"clicksendsms\"}"}`,
+			),
 
 			want: notification.ClickSendSMS{
 				Base: notification.Base{
@@ -63,7 +67,9 @@ func TestNotificationClickSendSMS_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different recipient",
-			data: []byte(`{"id":3,"name":"ClickSend US","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"ClickSend US\",\"clicksendsmsLogin\":\"ususer\",\"clicksendsmsPassword\":\"usakey\",\"clicksendsmsToNumber\":\"12125551234\",\"clicksendsmsSenderName\":\"Monitor\",\"type\":\"clicksendsms\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"ClickSend US","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"ClickSend US\",\"clicksendsmsLogin\":\"ususer\",\"clicksendsmsPassword\":\"usakey\",\"clicksendsmsToNumber\":\"12125551234\",\"clicksendsmsSenderName\":\"Monitor\",\"type\":\"clicksendsms\"}"}`,
+			),
 
 			want: notification.ClickSendSMS{
 				Base: notification.Base{

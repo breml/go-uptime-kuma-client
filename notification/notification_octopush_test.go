@@ -19,7 +19,9 @@ func TestNotificationOctopush_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success V2",
-			data: []byte(`{"id":1,"name":"Test Octopush V2","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"octopush\",\"octopushVersion\":\"2\",\"octopushAPIKey\":\"test-api-key\",\"octopushLogin\":\"testuser\",\"octopushPhoneNumber\":\"+33612345678\",\"octopushSMSType\":\"sms_premium\",\"octopushSenderName\":\"AlertBot\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"Test Octopush V2","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"octopush\",\"octopushVersion\":\"2\",\"octopushAPIKey\":\"test-api-key\",\"octopushLogin\":\"testuser\",\"octopushPhoneNumber\":\"+33612345678\",\"octopushSMSType\":\"sms_premium\",\"octopushSenderName\":\"AlertBot\"}"}`,
+			),
 
 			want: notification.Octopush{
 				Base: notification.Base{
@@ -42,7 +44,9 @@ func TestNotificationOctopush_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "success V1",
-			data: []byte(`{"id":2,"name":"Test Octopush V1","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"octopush\",\"octopushVersion\":\"1\",\"octopushDMLogin\":\"dmuser\",\"octopushDMAPIKey\":\"dm-api-key\",\"octopushDMPhoneNumber\":\"+33698765432\",\"octopushDMSMSType\":\"sms_premium\",\"octopushDMSenderName\":\"SMSBot\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Test Octopush V1","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"octopush\",\"octopushVersion\":\"1\",\"octopushDMLogin\":\"dmuser\",\"octopushDMAPIKey\":\"dm-api-key\",\"octopushDMPhoneNumber\":\"+33698765432\",\"octopushDMSMSType\":\"sms_premium\",\"octopushDMSenderName\":\"SMSBot\"}"}`,
+			),
 
 			want: notification.Octopush{
 				Base: notification.Base{
@@ -65,7 +69,9 @@ func TestNotificationOctopush_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":3,"name":"Test Octopush Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"octopush\",\"octopushVersion\":\"\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Test Octopush Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"octopush\",\"octopushVersion\":\"\"}"}`,
+			),
 
 			want: notification.Octopush{
 				Base: notification.Base{

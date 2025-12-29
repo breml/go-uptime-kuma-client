@@ -19,7 +19,9 @@ func TestNotificationGoAlert_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My GoAlert Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My GoAlert Alert\",\"goAlertBaseURL\":\"https://goalert.example.com\",\"goAlertToken\":\"token123\",\"type\":\"GoAlert\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My GoAlert Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My GoAlert Alert\",\"goAlertBaseURL\":\"https://goalert.example.com\",\"goAlertToken\":\"token123\",\"type\":\"GoAlert\"}"}`,
+			),
 
 			want: notification.GoAlert{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationGoAlert_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple GoAlert","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple GoAlert\",\"goAlertBaseURL\":\"https://alerts.example.com\",\"goAlertToken\":\"abc123\",\"type\":\"GoAlert\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple GoAlert","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple GoAlert\",\"goAlertBaseURL\":\"https://alerts.example.com\",\"goAlertToken\":\"abc123\",\"type\":\"GoAlert\"}"}`,
+			),
 
 			want: notification.GoAlert{
 				Base: notification.Base{
@@ -59,7 +63,9 @@ func TestNotificationGoAlert_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different base URL",
-			data: []byte(`{"id":3,"name":"GoAlert Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"GoAlert Custom\",\"goAlertBaseURL\":\"https://custom.domain.com/goalert\",\"goAlertToken\":\"customtoken789\",\"type\":\"GoAlert\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"GoAlert Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"GoAlert Custom\",\"goAlertBaseURL\":\"https://custom.domain.com/goalert\",\"goAlertToken\":\"customtoken789\",\"type\":\"GoAlert\"}"}`,
+			),
 
 			want: notification.GoAlert{
 				Base: notification.Base{

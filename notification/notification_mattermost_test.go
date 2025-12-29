@@ -19,7 +19,9 @@ func TestNotificationMattermost_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Mattermost Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Mattermost Alert\",\"mattermostWebhookUrl\":\"https://mattermost.example.com/hooks/xxx\",\"mattermostusername\":\"Monitor Bot\",\"mattermostchannel\":\"#alerts\",\"mattermosticonemo\":\":smiley: :frowning:\",\"mattermosticonurl\":\"https://example.com/icon.png\",\"type\":\"mattermost\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Mattermost Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Mattermost Alert\",\"mattermostWebhookUrl\":\"https://mattermost.example.com/hooks/xxx\",\"mattermostusername\":\"Monitor Bot\",\"mattermostchannel\":\"#alerts\",\"mattermosticonemo\":\":smiley: :frowning:\",\"mattermosticonurl\":\"https://example.com/icon.png\",\"type\":\"mattermost\"}"}`,
+			),
 
 			want: notification.Mattermost{
 				Base: notification.Base{
@@ -42,7 +44,9 @@ func TestNotificationMattermost_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Mattermost","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Mattermost\",\"mattermostWebhookUrl\":\"https://mattermost.org/hooks/xxx\",\"type\":\"mattermost\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Mattermost","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Mattermost\",\"mattermostWebhookUrl\":\"https://mattermost.org/hooks/xxx\",\"type\":\"mattermost\"}"}`,
+			),
 
 			want: notification.Mattermost{
 				Base: notification.Base{

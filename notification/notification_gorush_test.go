@@ -19,7 +19,9 @@ func TestNotificationGorush_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Gorush Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Gorush Alert\",\"gorushServerURL\":\"https://gorush.example.com\",\"gorushDeviceToken\":\"device-token-123\",\"gorushPlatform\":\"ios\",\"gorushTitle\":\"Alert\",\"gorushPriority\":\"high\",\"gorushRetry\":3,\"gorushTopic\":\"com.example.app\",\"type\":\"gorush\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Gorush Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Gorush Alert\",\"gorushServerURL\":\"https://gorush.example.com\",\"gorushDeviceToken\":\"device-token-123\",\"gorushPlatform\":\"ios\",\"gorushTitle\":\"Alert\",\"gorushPriority\":\"high\",\"gorushRetry\":3,\"gorushTopic\":\"com.example.app\",\"type\":\"gorush\"}"}`,
+			),
 
 			want: notification.Gorush{
 				Base: notification.Base{
@@ -44,7 +46,9 @@ func TestNotificationGorush_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Gorush","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Gorush\",\"gorushServerURL\":\"https://push.example.com\",\"gorushDeviceToken\":\"token-abc\",\"gorushPlatform\":\"android\",\"gorushTitle\":\"\",\"gorushPriority\":\"\",\"gorushRetry\":0,\"gorushTopic\":\"\",\"type\":\"gorush\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Gorush","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Gorush\",\"gorushServerURL\":\"https://push.example.com\",\"gorushDeviceToken\":\"token-abc\",\"gorushPlatform\":\"android\",\"gorushTitle\":\"\",\"gorushPriority\":\"\",\"gorushRetry\":0,\"gorushTopic\":\"\",\"type\":\"gorush\"}"}`,
+			),
 
 			want: notification.Gorush{
 				Base: notification.Base{
@@ -69,7 +73,9 @@ func TestNotificationGorush_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with huawei platform",
-			data: []byte(`{"id":3,"name":"Gorush Huawei","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Gorush Huawei\",\"gorushServerURL\":\"https://notification.example.com\",\"gorushDeviceToken\":\"huawei-token-xyz\",\"gorushPlatform\":\"huawei\",\"gorushTitle\":\"System Alert\",\"gorushPriority\":\"critical\",\"gorushRetry\":5,\"gorushTopic\":\"\",\"type\":\"gorush\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Gorush Huawei","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Gorush Huawei\",\"gorushServerURL\":\"https://notification.example.com\",\"gorushDeviceToken\":\"huawei-token-xyz\",\"gorushPlatform\":\"huawei\",\"gorushTitle\":\"System Alert\",\"gorushPriority\":\"critical\",\"gorushRetry\":5,\"gorushTopic\":\"\",\"type\":\"gorush\"}"}`,
+			),
 
 			want: notification.Gorush{
 				Base: notification.Base{

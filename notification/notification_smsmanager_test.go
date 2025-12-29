@@ -18,7 +18,9 @@ func TestNotificationSMSManager_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My SMSManager Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMSManager Alert\",\"smsmanagerApiKey\":\"test-api-key\",\"numbers\":\"420777123456\",\"messageType\":\"1\",\"type\":\"SMSManager\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My SMSManager Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMSManager Alert\",\"smsmanagerApiKey\":\"test-api-key\",\"numbers\":\"420777123456\",\"messageType\":\"1\",\"type\":\"SMSManager\"}"}`,
+			),
 
 			want: notification.SMSManager{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationSMSManager_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple SMSManager","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SMSManager\",\"smsmanagerApiKey\":\"minimal-key\",\"numbers\":\"420123456789\",\"messageType\":\"0\",\"type\":\"SMSManager\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple SMSManager","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SMSManager\",\"smsmanagerApiKey\":\"minimal-key\",\"numbers\":\"420123456789\",\"messageType\":\"0\",\"type\":\"SMSManager\"}"}`,
+			),
 
 			want: notification.SMSManager{
 				Base: notification.Base{
@@ -60,7 +64,9 @@ func TestNotificationSMSManager_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different gateway type",
-			data: []byte(`{"id":3,"name":"SMSManager Gateway 2","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMSManager Gateway 2\",\"smsmanagerApiKey\":\"api-key-2\",\"numbers\":\"420987654321\",\"messageType\":\"2\",\"type\":\"SMSManager\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"SMSManager Gateway 2","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMSManager Gateway 2\",\"smsmanagerApiKey\":\"api-key-2\",\"numbers\":\"420987654321\",\"messageType\":\"2\",\"type\":\"SMSManager\"}"}`,
+			),
 
 			want: notification.SMSManager{
 				Base: notification.Base{

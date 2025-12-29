@@ -19,7 +19,9 @@ func TestNotificationGTXMessaging_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My GTX Messaging Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My GTX Messaging Alert\",\"gtxMessagingApiKey\":\"api-key-123\",\"gtxMessagingFrom\":\"Uptime\",\"gtxMessagingTo\":\"+46701234567\",\"type\":\"gtxmessaging\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My GTX Messaging Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My GTX Messaging Alert\",\"gtxMessagingApiKey\":\"api-key-123\",\"gtxMessagingFrom\":\"Uptime\",\"gtxMessagingTo\":\"+46701234567\",\"type\":\"gtxmessaging\"}"}`,
+			),
 
 			want: notification.GTXMessaging{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationGTXMessaging_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple GTX","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple GTX\",\"gtxMessagingApiKey\":\"key-abc\",\"gtxMessagingFrom\":\"Alert\",\"gtxMessagingTo\":\"+46700000000\",\"type\":\"gtxmessaging\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple GTX","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple GTX\",\"gtxMessagingApiKey\":\"key-abc\",\"gtxMessagingFrom\":\"Alert\",\"gtxMessagingTo\":\"+46700000000\",\"type\":\"gtxmessaging\"}"}`,
+			),
 
 			want: notification.GTXMessaging{
 				Base: notification.Base{
@@ -61,7 +65,9 @@ func TestNotificationGTXMessaging_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with international number",
-			data: []byte(`{"id":3,"name":"GTX International","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"GTX International\",\"gtxMessagingApiKey\":\"intl-key-xyz\",\"gtxMessagingFrom\":\"Monitor\",\"gtxMessagingTo\":\"+14155551234\",\"type\":\"gtxmessaging\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"GTX International","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"GTX International\",\"gtxMessagingApiKey\":\"intl-key-xyz\",\"gtxMessagingFrom\":\"Monitor\",\"gtxMessagingTo\":\"+14155551234\",\"type\":\"gtxmessaging\"}"}`,
+			),
 
 			want: notification.GTXMessaging{
 				Base: notification.Base{

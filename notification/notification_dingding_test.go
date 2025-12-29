@@ -19,7 +19,9 @@ func TestNotificationDingDing_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My DingDing Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My DingDing Alert\",\"webHookUrl\":\"https://oapi.dingtalk.com/robot/send?access_token=xxx\",\"secretKey\":\"secret123\",\"mentioning\":\"everyone\",\"type\":\"DingDing\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My DingDing Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My DingDing Alert\",\"webHookUrl\":\"https://oapi.dingtalk.com/robot/send?access_token=xxx\",\"secretKey\":\"secret123\",\"mentioning\":\"everyone\",\"type\":\"DingDing\"}"}`,
+			),
 
 			want: notification.DingDing{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationDingDing_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple DingDing","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple DingDing\",\"webHookUrl\":\"https://oapi.dingtalk.com/robot/send?access_token=yyy\",\"secretKey\":\"\",\"mentioning\":\"\",\"type\":\"DingDing\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple DingDing","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple DingDing\",\"webHookUrl\":\"https://oapi.dingtalk.com/robot/send?access_token=yyy\",\"secretKey\":\"\",\"mentioning\":\"\",\"type\":\"DingDing\"}"}`,
+			),
 
 			want: notification.DingDing{
 				Base: notification.Base{

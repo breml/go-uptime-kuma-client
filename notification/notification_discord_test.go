@@ -19,7 +19,9 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Discord Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Discord Alert\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/123456789/abcdefghijklmnopqrstuvwxyz\",\"discordUsername\":\"Uptime Monitor\",\"discordChannelType\":\"postToThread\",\"threadId\":\"987654321\",\"discordPrefixMessage\":\"Alert:\",\"disableUrl\":true,\"type\":\"discord\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Discord Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Discord Alert\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/123456789/abcdefghijklmnopqrstuvwxyz\",\"discordUsername\":\"Uptime Monitor\",\"discordChannelType\":\"postToThread\",\"threadId\":\"987654321\",\"discordPrefixMessage\":\"Alert:\",\"disableUrl\":true,\"type\":\"discord\"}"}`,
+			),
 
 			want: notification.Discord{
 				Base: notification.Base{
@@ -43,7 +45,9 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Discord","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Discord\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/xyz/abc\",\"type\":\"discord\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Discord","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Discord\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/xyz/abc\",\"type\":\"discord\"}"}`,
+			),
 
 			want: notification.Discord{
 				Base: notification.Base{
@@ -62,7 +66,9 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with forum post",
-			data: []byte(`{"id":3,"name":"Discord Forum","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Discord Forum\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/forum/webhook\",\"discordUsername\":\"Monitor Bot\",\"discordChannelType\":\"createNewForumPost\",\"postName\":\"System Alert\",\"disableUrl\":false,\"type\":\"discord\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Discord Forum","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Discord Forum\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/forum/webhook\",\"discordUsername\":\"Monitor Bot\",\"discordChannelType\":\"createNewForumPost\",\"postName\":\"System Alert\",\"disableUrl\":false,\"type\":\"discord\"}"}`,
+			),
 
 			want: notification.Discord{
 				Base: notification.Base{

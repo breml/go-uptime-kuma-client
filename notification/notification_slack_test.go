@@ -19,7 +19,9 @@ func TestNotificationSlack_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Slack Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Slack Alert\",\"slackwebhookURL\":\"https://hooks.slack.com/services/xxx/yyy/zzz\",\"slackusername\":\"uptime-kuma\",\"slackiconemo\":\":ghost:\",\"slackchannel\":\"#alerts\",\"slackrichmessage\":true,\"slackchannelnotify\":false,\"type\":\"slack\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Slack Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Slack Alert\",\"slackwebhookURL\":\"https://hooks.slack.com/services/xxx/yyy/zzz\",\"slackusername\":\"uptime-kuma\",\"slackiconemo\":\":ghost:\",\"slackchannel\":\"#alerts\",\"slackrichmessage\":true,\"slackchannelnotify\":false,\"type\":\"slack\"}"}`,
+			),
 
 			want: notification.Slack{
 				Base: notification.Base{

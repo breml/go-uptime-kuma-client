@@ -19,7 +19,9 @@ func TestNotificationFortySixElks_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My 46elks Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My 46elks Alert\",\"elksUsername\":\"username@example.com\",\"elksAuthToken\":\"auth_token_secret\",\"elksFromNumber\":\"1234\",\"elksToNumber\":\"0701234567\",\"type\":\"46elks\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My 46elks Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My 46elks Alert\",\"elksUsername\":\"username@example.com\",\"elksAuthToken\":\"auth_token_secret\",\"elksFromNumber\":\"1234\",\"elksToNumber\":\"0701234567\",\"type\":\"46elks\"}"}`,
+			),
 
 			want: notification.FortySixElks{
 				Base: notification.Base{
@@ -41,7 +43,9 @@ func TestNotificationFortySixElks_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple 46elks","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple 46elks\",\"elksUsername\":\"user\",\"elksAuthToken\":\"token\",\"elksFromNumber\":\"1234\",\"elksToNumber\":\"0701234567\",\"type\":\"46elks\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple 46elks","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple 46elks\",\"elksUsername\":\"user\",\"elksAuthToken\":\"token\",\"elksFromNumber\":\"1234\",\"elksToNumber\":\"0701234567\",\"type\":\"46elks\"}"}`,
+			),
 
 			want: notification.FortySixElks{
 				Base: notification.Base{

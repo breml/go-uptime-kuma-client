@@ -19,7 +19,9 @@ func TestNotificationSMSC_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My SMSC Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMSC Alert\",\"smscLogin\":\"testuser\",\"smscPassword\":\"testpass\",\"smscToNumber\":\"77123456789\",\"smscSenderName\":\"Uptime\",\"smscTranslit\":\"1\",\"type\":\"smsc\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My SMSC Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMSC Alert\",\"smscLogin\":\"testuser\",\"smscPassword\":\"testpass\",\"smscToNumber\":\"77123456789\",\"smscSenderName\":\"Uptime\",\"smscTranslit\":\"1\",\"type\":\"smsc\"}"}`,
+			),
 
 			want: notification.SMSC{
 				Base: notification.Base{
@@ -42,7 +44,9 @@ func TestNotificationSMSC_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple SMSC","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SMSC\",\"smscLogin\":\"user2\",\"smscPassword\":\"pass2\",\"smscToNumber\":\"77987654321\",\"smscSenderName\":\"\",\"smscTranslit\":\"0\",\"type\":\"smsc\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple SMSC","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SMSC\",\"smscLogin\":\"user2\",\"smscPassword\":\"pass2\",\"smscToNumber\":\"77987654321\",\"smscSenderName\":\"\",\"smscTranslit\":\"0\",\"type\":\"smsc\"}"}`,
+			),
 
 			want: notification.SMSC{
 				Base: notification.Base{
@@ -65,7 +69,9 @@ func TestNotificationSMSC_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with translit enabled",
-			data: []byte(`{"id":3,"name":"SMSC Translit","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMSC Translit\",\"smscLogin\":\"user3\",\"smscPassword\":\"pass3\",\"smscToNumber\":\"77111222333\",\"smscSenderName\":\"Alert\",\"smscTranslit\":\"1\",\"type\":\"smsc\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"SMSC Translit","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMSC Translit\",\"smscLogin\":\"user3\",\"smscPassword\":\"pass3\",\"smscToNumber\":\"77111222333\",\"smscSenderName\":\"Alert\",\"smscTranslit\":\"1\",\"type\":\"smsc\"}"}`,
+			),
 
 			want: notification.SMSC{
 				Base: notification.Base{

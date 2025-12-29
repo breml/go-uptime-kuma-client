@@ -18,7 +18,9 @@ func TestNotificationThreema_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Threema Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Threema Alert\",\"threemaSenderIdentity\":\"GATEWAY1\",\"threemaSecret\":\"test-secret-key\",\"threemaRecipient\":\"USERID123\",\"threemaRecipientType\":\"identity\",\"type\":\"threema\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Threema Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Threema Alert\",\"threemaSenderIdentity\":\"GATEWAY1\",\"threemaSecret\":\"test-secret-key\",\"threemaRecipient\":\"USERID123\",\"threemaRecipientType\":\"identity\",\"type\":\"threema\"}"}`,
+			),
 
 			want: notification.Threema{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationThreema_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration with phone recipient",
-			data: []byte(`{"id":2,"name":"Simple Threema","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Threema\",\"threemaSenderIdentity\":\"GATEWAY2\",\"threemaSecret\":\"secret\",\"threemaRecipient\":\"+41791234567\",\"threemaRecipientType\":\"phone\",\"type\":\"threema\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Threema","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Threema\",\"threemaSenderIdentity\":\"GATEWAY2\",\"threemaSecret\":\"secret\",\"threemaRecipient\":\"+41791234567\",\"threemaRecipientType\":\"phone\",\"type\":\"threema\"}"}`,
+			),
 
 			want: notification.Threema{
 				Base: notification.Base{
@@ -62,7 +66,9 @@ func TestNotificationThreema_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with email recipient",
-			data: []byte(`{"id":3,"name":"Threema Email Alert","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Threema Email Alert\",\"threemaSenderIdentity\":\"GATEWAY3\",\"threemaSecret\":\"api-key\",\"threemaRecipient\":\"user@example.com\",\"threemaRecipientType\":\"email\",\"type\":\"threema\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Threema Email Alert","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Threema Email Alert\",\"threemaSenderIdentity\":\"GATEWAY3\",\"threemaSecret\":\"api-key\",\"threemaRecipient\":\"user@example.com\",\"threemaRecipientType\":\"email\",\"type\":\"threema\"}"}`,
+			),
 
 			want: notification.Threema{
 				Base: notification.Base{

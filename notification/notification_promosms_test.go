@@ -19,7 +19,9 @@ func TestNotificationPromoSMS_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with long SMS",
-			data: []byte(`{"id":1,"name":"Test PromoSMS","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"promosms\",\"promosmsLogin\":\"user@example.com\",\"promosmsPassword\":\"password123\",\"promosmsPhoneNumber\":\"+48123456789\",\"promosmsSenderName\":\"UptimeKuma\",\"promosmsSMSType\":\"1\",\"promosmsAllowLongSMS\":true}"}`),
+			data: []byte(
+				`{"id":1,"name":"Test PromoSMS","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"promosms\",\"promosmsLogin\":\"user@example.com\",\"promosmsPassword\":\"password123\",\"promosmsPhoneNumber\":\"+48123456789\",\"promosmsSenderName\":\"UptimeKuma\",\"promosmsSMSType\":\"1\",\"promosmsAllowLongSMS\":true}"}`,
+			),
 
 			want: notification.PromoSMS{
 				Base: notification.Base{
@@ -42,7 +44,9 @@ func TestNotificationPromoSMS_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "success without long SMS",
-			data: []byte(`{"id":2,"name":"Test PromoSMS Short","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"promosms\",\"promosmsLogin\":\"admin@example.com\",\"promosmsPassword\":\"secret\",\"promosmsPhoneNumber\":\"+48987654321\",\"promosmsSenderName\":\"Monitoring\",\"promosmsSMSType\":\"0\",\"promosmsAllowLongSMS\":false}"}`),
+			data: []byte(
+				`{"id":2,"name":"Test PromoSMS Short","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"promosms\",\"promosmsLogin\":\"admin@example.com\",\"promosmsPassword\":\"secret\",\"promosmsPhoneNumber\":\"+48987654321\",\"promosmsSenderName\":\"Monitoring\",\"promosmsSMSType\":\"0\",\"promosmsAllowLongSMS\":false}"}`,
+			),
 
 			want: notification.PromoSMS{
 				Base: notification.Base{
@@ -66,7 +70,9 @@ func TestNotificationPromoSMS_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":3,"name":"Test PromoSMS Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"promosms\",\"promosmsLogin\":\"\",\"promosmsPassword\":\"\",\"promosmsPhoneNumber\":\"\",\"promosmsSenderName\":\"\",\"promosmsSMSType\":\"\",\"promosmsAllowLongSMS\":false}"}`),
+			data: []byte(
+				`{"id":3,"name":"Test PromoSMS Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"promosms\",\"promosmsLogin\":\"\",\"promosmsPassword\":\"\",\"promosmsPhoneNumber\":\"\",\"promosmsSenderName\":\"\",\"promosmsSMSType\":\"\",\"promosmsAllowLongSMS\":false}"}`,
+			),
 
 			want: notification.PromoSMS{
 				Base: notification.Base{

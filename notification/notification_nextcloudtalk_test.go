@@ -18,7 +18,9 @@ func TestNotificationNextcloudTalk_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Nextcloud Talk Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Nextcloud Talk Alert\",\"host\":\"https://nextcloud.example.com\",\"conversationToken\":\"token123\",\"botSecret\":\"secret-key-123\",\"sendSilentUp\":true,\"sendSilentDown\":false,\"type\":\"NextcloudTalk\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Nextcloud Talk Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Nextcloud Talk Alert\",\"host\":\"https://nextcloud.example.com\",\"conversationToken\":\"token123\",\"botSecret\":\"secret-key-123\",\"sendSilentUp\":true,\"sendSilentDown\":false,\"type\":\"NextcloudTalk\"}"}`,
+			),
 
 			want: notification.NextcloudTalk{
 				Base: notification.Base{
@@ -41,7 +43,9 @@ func TestNotificationNextcloudTalk_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Nextcloud Talk","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Nextcloud Talk\",\"host\":\"https://nc.example.com\",\"conversationToken\":\"abc123\",\"botSecret\":\"secret-abc\",\"sendSilentUp\":false,\"sendSilentDown\":false,\"type\":\"NextcloudTalk\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Nextcloud Talk","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Nextcloud Talk\",\"host\":\"https://nc.example.com\",\"conversationToken\":\"abc123\",\"botSecret\":\"secret-abc\",\"sendSilentUp\":false,\"sendSilentDown\":false,\"type\":\"NextcloudTalk\"}"}`,
+			),
 
 			want: notification.NextcloudTalk{
 				Base: notification.Base{
@@ -64,7 +68,9 @@ func TestNotificationNextcloudTalk_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with silent down enabled",
-			data: []byte(`{"id":3,"name":"Nextcloud Talk Silent","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Nextcloud Talk Silent\",\"host\":\"https://cloud.example.com\",\"conversationToken\":\"xyz789\",\"botSecret\":\"prod-secret\",\"sendSilentUp\":false,\"sendSilentDown\":true,\"type\":\"NextcloudTalk\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Nextcloud Talk Silent","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Nextcloud Talk Silent\",\"host\":\"https://cloud.example.com\",\"conversationToken\":\"xyz789\",\"botSecret\":\"prod-secret\",\"sendSilentUp\":false,\"sendSilentDown\":true,\"type\":\"NextcloudTalk\"}"}`,
+			),
 
 			want: notification.NextcloudTalk{
 				Base: notification.Base{

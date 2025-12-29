@@ -19,7 +19,9 @@ func TestNotificationKook_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My KOOK Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My KOOK Alert\",\"kookBotToken\":\"bot-token-123\",\"kookGuildID\":\"guild-456\",\"type\":\"Kook\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My KOOK Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My KOOK Alert\",\"kookBotToken\":\"bot-token-123\",\"kookGuildID\":\"guild-456\",\"type\":\"Kook\"}"}`,
+			),
 
 			want: notification.Kook{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationKook_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple KOOK","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple KOOK\",\"kookBotToken\":\"token-abc\",\"kookGuildID\":\"guild-xyz\",\"type\":\"Kook\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple KOOK","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple KOOK\",\"kookBotToken\":\"token-abc\",\"kookGuildID\":\"guild-xyz\",\"type\":\"Kook\"}"}`,
+			),
 
 			want: notification.Kook{
 				Base: notification.Base{
@@ -59,7 +63,9 @@ func TestNotificationKook_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different guild",
-			data: []byte(`{"id":3,"name":"KOOK Production","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"KOOK Production\",\"kookBotToken\":\"prod-token-xyz\",\"kookGuildID\":\"prod-guild-789\",\"type\":\"Kook\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"KOOK Production","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"KOOK Production\",\"kookBotToken\":\"prod-token-xyz\",\"kookGuildID\":\"prod-guild-789\",\"type\":\"Kook\"}"}`,
+			),
 
 			want: notification.Kook{
 				Base: notification.Base{

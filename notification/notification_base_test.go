@@ -19,7 +19,9 @@ func TestBase_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"Created","active":true,"userId":1,"isDefault":true,"config":"{\"name\":\"Created\",\"active\":true,\"isDefault\":true,\"ntfyaccesstoken\":\"\",\"ntfyAuthenticationMethod\":\"none\",\"ntfyIcon\":\"\",\"ntfypassword\":\"\",\"ntfyPriority\":5,\"ntfyserverurl\":\"https://ntfy.sh\",\"ntfytopic\":\"topic\",\"ntfyusername\":\"\",\"type\":\"ntfy\",\"applyExisting\":true}"}`),
+			data: []byte(
+				`{"id":1,"name":"Created","active":true,"userId":1,"isDefault":true,"config":"{\"name\":\"Created\",\"active\":true,\"isDefault\":true,\"ntfyaccesstoken\":\"\",\"ntfyAuthenticationMethod\":\"none\",\"ntfyIcon\":\"\",\"ntfypassword\":\"\",\"ntfyPriority\":5,\"ntfyserverurl\":\"https://ntfy.sh\",\"ntfytopic\":\"topic\",\"ntfyusername\":\"\",\"type\":\"ntfy\",\"applyExisting\":true}"}`,
+			),
 
 			want: notification.Base{
 				ID:            1,

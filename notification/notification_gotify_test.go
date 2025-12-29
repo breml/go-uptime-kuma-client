@@ -19,7 +19,9 @@ func TestNotificationGotify_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Gotify Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Gotify Alert\",\"gotifyserverurl\":\"https://gotify.example.com\",\"gotifyapplicationToken\":\"app-token-123\",\"gotifyPriority\":8,\"type\":\"gotify\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Gotify Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Gotify Alert\",\"gotifyserverurl\":\"https://gotify.example.com\",\"gotifyapplicationToken\":\"app-token-123\",\"gotifyPriority\":8,\"type\":\"gotify\"}"}`,
+			),
 
 			want: notification.Gotify{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationGotify_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Gotify","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Gotify\",\"gotifyserverurl\":\"https://gotify.org\",\"gotifyapplicationToken\":\"token\",\"type\":\"gotify\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Gotify","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Gotify\",\"gotifyserverurl\":\"https://gotify.org\",\"gotifyapplicationToken\":\"token\",\"type\":\"gotify\"}"}`,
+			),
 
 			want: notification.Gotify{
 				Base: notification.Base{

@@ -9,6 +9,7 @@ import (
 type Generic struct {
 	Base
 	GenericDetails
+
 	TypeName string
 }
 

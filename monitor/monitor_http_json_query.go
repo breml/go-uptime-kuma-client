@@ -17,7 +17,12 @@ func (h HTTPJSONQuery) Type() string {
 }
 
 func (h HTTPJSONQuery) String() string {
-	return fmt.Sprintf("%s, %s, %s", formatMonitor(h.Base, false), formatMonitor(h.HTTPDetails, true), formatMonitor(h.HTTPJSONQueryDetails, true))
+	return fmt.Sprintf(
+		"%s, %s, %s",
+		formatMonitor(h.Base, false),
+		formatMonitor(h.HTTPDetails, true),
+		formatMonitor(h.HTTPJSONQueryDetails, true),
+	)
 }
 
 func (h *HTTPJSONQuery) UnmarshalJSON(data []byte) error {

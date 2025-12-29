@@ -18,7 +18,9 @@ func TestNotificationNostr_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Nostr Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Nostr Alert\",\"sender\":\"nsec1sender\",\"recipients\":\"npub1recipient1\\nnpub1recipient2\",\"relays\":\"wss://relay1.example.com\\nwss://relay2.example.com\",\"type\":\"nostr\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Nostr Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Nostr Alert\",\"sender\":\"nsec1sender\",\"recipients\":\"npub1recipient1\\nnpub1recipient2\",\"relays\":\"wss://relay1.example.com\\nwss://relay2.example.com\",\"type\":\"nostr\"}"}`,
+			),
 
 			want: notification.Nostr{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationNostr_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Nostr","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Nostr\",\"sender\":\"nsec1test\",\"recipients\":\"npub1single\",\"relays\":\"wss://relay.example.com\",\"type\":\"nostr\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Nostr","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Nostr\",\"sender\":\"nsec1test\",\"recipients\":\"npub1single\",\"relays\":\"wss://relay.example.com\",\"type\":\"nostr\"}"}`,
+			),
 
 			want: notification.Nostr{
 				Base: notification.Base{
@@ -60,7 +64,9 @@ func TestNotificationNostr_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with multiple relays",
-			data: []byte(`{"id":3,"name":"Nostr Multi-Relay","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Nostr Multi-Relay\",\"sender\":\"nsec1prod\",\"recipients\":\"npub1user1\\nnpub1user2\\nnpub1user3\",\"relays\":\"wss://relay1.example.com\\nwss://relay2.example.com\\nwss://relay3.example.com\",\"type\":\"nostr\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Nostr Multi-Relay","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Nostr Multi-Relay\",\"sender\":\"nsec1prod\",\"recipients\":\"npub1user1\\nnpub1user2\\nnpub1user3\",\"relays\":\"wss://relay1.example.com\\nwss://relay2.example.com\\nwss://relay3.example.com\",\"type\":\"nostr\"}"}`,
+			),
 
 			want: notification.Nostr{
 				Base: notification.Base{

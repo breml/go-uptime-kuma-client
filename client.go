@@ -461,7 +461,9 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	client.OnAny(func(s string, i []any) {
-		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" && s != "proxyList" && s != "dockerHostList" {
+		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" &&
+			s != "proxyList" &&
+			s != "dockerHostList" {
 			c.updates.Emit(context.Background(), s)
 		}
 	})
@@ -478,7 +480,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	if username != "" && password != "" {
-		_, err = c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": ""})
+		_, err = c.syncEmit(
+			ctxWithConnectTimeout,
+			"login",
+			map[string]any{"username": username, "password": password, "token": ""},
+		)
 		if err != nil {
 			// Ensure we had the time to receive a potential setup event.
 			time.Sleep(10 * time.Millisecond)
@@ -491,7 +497,8 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			default:
 			}
 
-			if (!strings.Contains(err.Error(), "Incorrect username or password") && !strings.Contains(err.Error(), "authIncorrectCreds")) || !wantSetup {
+			if (!strings.Contains(err.Error(), "Incorrect username or password") && !strings.Contains(err.Error(), "authIncorrectCreds")) ||
+				!wantSetup {
 				return nil, fmt.Errorf("login: %v", err)
 			}
 		}
@@ -514,7 +521,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 				return nil, fmt.Errorf("setup: %v", err)
 			}
 
-			_, err = c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": ""})
+			_, err = c.syncEmit(
+				ctxWithConnectTimeout,
+				"login",
+				map[string]any{"username": username, "password": password, "token": ""},
+			)
 			if err != nil {
 				return nil, fmt.Errorf("login: %v", err)
 			}
@@ -573,7 +584,12 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 	}
 }
 
-func (c *Client) syncEmitWithUpdateEvent(ctx context.Context, command string, updateEvent string, args ...any) (ackResponse, error) {
+func (c *Client) syncEmitWithUpdateEvent(
+	ctx context.Context,
+	command string,
+	updateEvent string,
+	args ...any,
+) (ackResponse, error) {
 	done := make(chan struct{})
 	closeDone := sync.OnceFunc(func() {
 		close(done)

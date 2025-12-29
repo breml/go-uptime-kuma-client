@@ -18,7 +18,9 @@ func TestNotificationWAHA_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My WAHA Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My WAHA Alert\",\"wahaApiUrl\":\"https://waha.example.com\",\"wahaSession\":\"default\",\"wahaChatId\":\"5511999999999\",\"wahaApiKey\":\"test-api-key\",\"type\":\"waha\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My WAHA Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My WAHA Alert\",\"wahaApiUrl\":\"https://waha.example.com\",\"wahaSession\":\"default\",\"wahaChatId\":\"5511999999999\",\"wahaApiKey\":\"test-api-key\",\"type\":\"waha\"}"}`,
+			),
 
 			want: notification.WAHA{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationWAHA_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration without API key",
-			data: []byte(`{"id":2,"name":"Simple WAHA","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple WAHA\",\"wahaApiUrl\":\"https://api.waha.cloud\",\"wahaSession\":\"main\",\"wahaChatId\":\"+5511987654321\",\"type\":\"waha\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple WAHA","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple WAHA\",\"wahaApiUrl\":\"https://api.waha.cloud\",\"wahaSession\":\"main\",\"wahaChatId\":\"+5511987654321\",\"type\":\"waha\"}"}`,
+			),
 
 			want: notification.WAHA{
 				Base: notification.Base{
@@ -62,7 +66,9 @@ func TestNotificationWAHA_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different session and chat ID",
-			data: []byte(`{"id":3,"name":"WAHA Multi Session","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"WAHA Multi Session\",\"wahaApiUrl\":\"https://custom.waha.io/\",\"wahaSession\":\"alerts\",\"wahaChatId\":\"120201234567@c.us\",\"wahaApiKey\":\"secure-key-123\",\"type\":\"waha\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"WAHA Multi Session","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"WAHA Multi Session\",\"wahaApiUrl\":\"https://custom.waha.io/\",\"wahaSession\":\"alerts\",\"wahaChatId\":\"120201234567@c.us\",\"wahaApiKey\":\"secure-key-123\",\"type\":\"waha\"}"}`,
+			),
 
 			want: notification.WAHA{
 				Base: notification.Base{

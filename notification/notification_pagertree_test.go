@@ -19,7 +19,9 @@ func TestNotificationPagerTree_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with auto-resolve",
-			data: []byte(`{"id":1,"name":"Test PagerTree","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"PagerTree\",\"pagertreeIntegrationUrl\":\"https://api.pagertree.com/api/v2/events\",\"pagertreeUrgency\":\"high\",\"pagertreeAutoResolve\":\"resolve\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"Test PagerTree","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"PagerTree\",\"pagertreeIntegrationUrl\":\"https://api.pagertree.com/api/v2/events\",\"pagertreeUrgency\":\"high\",\"pagertreeAutoResolve\":\"resolve\"}"}`,
+			),
 
 			want: notification.PagerTree{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationPagerTree_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "success without auto-resolve",
-			data: []byte(`{"id":2,"name":"Test PagerTree No Resolve","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"PagerTree\",\"pagertreeIntegrationUrl\":\"https://events.pagertree.com/api/v2/events\",\"pagertreeUrgency\":\"medium\",\"pagertreeAutoResolve\":\"\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Test PagerTree No Resolve","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"PagerTree\",\"pagertreeIntegrationUrl\":\"https://events.pagertree.com/api/v2/events\",\"pagertreeUrgency\":\"medium\",\"pagertreeAutoResolve\":\"\"}"}`,
+			),
 
 			want: notification.PagerTree{
 				Base: notification.Base{
@@ -60,7 +64,9 @@ func TestNotificationPagerTree_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":3,"name":"Test PagerTree Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"PagerTree\",\"pagertreeIntegrationUrl\":\"\",\"pagertreeUrgency\":\"\",\"pagertreeAutoResolve\":\"\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Test PagerTree Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"PagerTree\",\"pagertreeIntegrationUrl\":\"\",\"pagertreeUrgency\":\"\",\"pagertreeAutoResolve\":\"\"}"}`,
+			),
 
 			want: notification.PagerTree{
 				Base: notification.Base{

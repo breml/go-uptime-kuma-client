@@ -17,7 +17,12 @@ func (h HTTPKeyword) Type() string {
 }
 
 func (h HTTPKeyword) String() string {
-	return fmt.Sprintf("%s, %s, %s", formatMonitor(h.Base, false), formatMonitor(h.HTTPDetails, true), formatMonitor(h.HTTPKeywordDetails, true))
+	return fmt.Sprintf(
+		"%s, %s, %s",
+		formatMonitor(h.Base, false),
+		formatMonitor(h.HTTPDetails, true),
+		formatMonitor(h.HTTPKeywordDetails, true),
+	)
 }
 
 func (h *HTTPKeyword) UnmarshalJSON(data []byte) error {

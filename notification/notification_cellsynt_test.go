@@ -19,7 +19,9 @@ func TestNotificationCellsynt_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Cellsynt Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Cellsynt Alert\",\"cellsyntLogin\":\"testuser\",\"cellsyntPassword\":\"testpass\",\"cellsyntDestination\":\"46701234567\",\"cellsyntOriginator\":\"Uptime\",\"cellsyntOriginatortype\":\"Numeric\",\"cellsyntAllowLongSMS\":true,\"type\":\"Cellsynt\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Cellsynt Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Cellsynt Alert\",\"cellsyntLogin\":\"testuser\",\"cellsyntPassword\":\"testpass\",\"cellsyntDestination\":\"46701234567\",\"cellsyntOriginator\":\"Uptime\",\"cellsyntOriginatortype\":\"Numeric\",\"cellsyntAllowLongSMS\":true,\"type\":\"Cellsynt\"}"}`,
+			),
 
 			want: notification.Cellsynt{
 				Base: notification.Base{
@@ -43,7 +45,9 @@ func TestNotificationCellsynt_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Cellsynt","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Cellsynt\",\"cellsyntLogin\":\"user\",\"cellsyntPassword\":\"pass\",\"cellsyntDestination\":\"46700000000\",\"cellsyntOriginator\":\"Alert\",\"cellsyntOriginatortype\":\"Alphanumeric\",\"cellsyntAllowLongSMS\":false,\"type\":\"Cellsynt\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Cellsynt","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Cellsynt\",\"cellsyntLogin\":\"user\",\"cellsyntPassword\":\"pass\",\"cellsyntDestination\":\"46700000000\",\"cellsyntOriginator\":\"Alert\",\"cellsyntOriginatortype\":\"Alphanumeric\",\"cellsyntAllowLongSMS\":false,\"type\":\"Cellsynt\"}"}`,
+			),
 
 			want: notification.Cellsynt{
 				Base: notification.Base{
@@ -67,7 +71,9 @@ func TestNotificationCellsynt_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with long SMS allowed",
-			data: []byte(`{"id":3,"name":"Cellsynt Long SMS","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Cellsynt Long SMS\",\"cellsyntLogin\":\"longuser\",\"cellsyntPassword\":\"longpass\",\"cellsyntDestination\":\"46799999999\",\"cellsyntOriginator\":\"LongMsg\",\"cellsyntOriginatortype\":\"Alphanumeric\",\"cellsyntAllowLongSMS\":true,\"type\":\"Cellsynt\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Cellsynt Long SMS","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Cellsynt Long SMS\",\"cellsyntLogin\":\"longuser\",\"cellsyntPassword\":\"longpass\",\"cellsyntDestination\":\"46799999999\",\"cellsyntOriginator\":\"LongMsg\",\"cellsyntOriginatortype\":\"Alphanumeric\",\"cellsyntAllowLongSMS\":true,\"type\":\"Cellsynt\"}"}`,
+			),
 
 			want: notification.Cellsynt{
 				Base: notification.Base{

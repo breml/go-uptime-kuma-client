@@ -19,7 +19,9 @@ func TestNotificationTwilio_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Twilio Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Twilio Alert\",\"twilioAccountSID\":\"ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"twilioApiKey\":\"SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"twilioAuthToken\":\"your_auth_token\",\"twilioToNumber\":\"+15551234567\",\"twilioFromNumber\":\"+15559876543\",\"type\":\"twilio\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Twilio Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Twilio Alert\",\"twilioAccountSID\":\"ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"twilioApiKey\":\"SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"twilioAuthToken\":\"your_auth_token\",\"twilioToNumber\":\"+15551234567\",\"twilioFromNumber\":\"+15559876543\",\"type\":\"twilio\"}"}`,
+			),
 
 			want: notification.Twilio{
 				Base: notification.Base{
@@ -42,7 +44,9 @@ func TestNotificationTwilio_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Twilio","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Twilio\",\"twilioAccountSID\":\"ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"twilioAuthToken\":\"auth_token\",\"twilioToNumber\":\"+15551234567\",\"twilioFromNumber\":\"+15559876543\",\"type\":\"twilio\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Twilio","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Twilio\",\"twilioAccountSID\":\"ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"twilioAuthToken\":\"auth_token\",\"twilioToNumber\":\"+15551234567\",\"twilioFromNumber\":\"+15559876543\",\"type\":\"twilio\"}"}`,
+			),
 
 			want: notification.Twilio{
 				Base: notification.Base{

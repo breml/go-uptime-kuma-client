@@ -18,7 +18,9 @@ func TestNotificationLine_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My LINE Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My LINE Alert\",\"lineChannelAccessToken\":\"channel-access-token-123\",\"lineUserID\":\"U1234567890abcdef1234567890abcdef\",\"type\":\"line\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My LINE Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My LINE Alert\",\"lineChannelAccessToken\":\"channel-access-token-123\",\"lineUserID\":\"U1234567890abcdef1234567890abcdef\",\"type\":\"line\"}"}`,
+			),
 
 			want: notification.Line{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationLine_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple LINE","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple LINE\",\"lineChannelAccessToken\":\"token-abc\",\"lineUserID\":\"U9876543210fedcba9876543210fedcba\",\"type\":\"line\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple LINE","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple LINE\",\"lineChannelAccessToken\":\"token-abc\",\"lineUserID\":\"U9876543210fedcba9876543210fedcba\",\"type\":\"line\"}"}`,
+			),
 
 			want: notification.Line{
 				Base: notification.Base{
@@ -58,7 +62,9 @@ func TestNotificationLine_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different credentials",
-			data: []byte(`{"id":3,"name":"LINE Production","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"LINE Production\",\"lineChannelAccessToken\":\"prod-token-xyz\",\"lineUserID\":\"U5555555555555555555555555555555555\",\"type\":\"line\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"LINE Production","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"LINE Production\",\"lineChannelAccessToken\":\"prod-token-xyz\",\"lineUserID\":\"U5555555555555555555555555555555555\",\"type\":\"line\"}"}`,
+			),
 
 			want: notification.Line{
 				Base: notification.Base{

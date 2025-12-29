@@ -19,7 +19,9 @@ func TestNotificationSignal_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Signal Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Signal Alert\",\"signalURL\":\"http://localhost:9998\",\"signalNumber\":\"+1234567890\",\"signalRecipients\":\"+9876543210,+1112223333\",\"type\":\"signal\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Signal Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Signal Alert\",\"signalURL\":\"http://localhost:9998\",\"signalNumber\":\"+1234567890\",\"signalRecipients\":\"+9876543210,+1112223333\",\"type\":\"signal\"}"}`,
+			),
 
 			want: notification.Signal{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationSignal_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Signal","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Signal\",\"signalNumber\":\"+1234567890\",\"signalRecipients\":\"+9999999999\",\"type\":\"signal\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Signal","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Signal\",\"signalNumber\":\"+1234567890\",\"signalRecipients\":\"+9999999999\",\"type\":\"signal\"}"}`,
+			),
 
 			want: notification.Signal{
 				Base: notification.Base{
@@ -60,7 +64,9 @@ func TestNotificationSignal_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "multiple recipients",
-			data: []byte(`{"id":3,"name":"Signal Multi","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Signal Multi\",\"signalURL\":\"http://signal-api:9998\",\"signalNumber\":\"+5555555555\",\"signalRecipients\":\"+1111111111,+2222222222,+3333333333\",\"type\":\"signal\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Signal Multi","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Signal Multi\",\"signalURL\":\"http://signal-api:9998\",\"signalNumber\":\"+5555555555\",\"signalRecipients\":\"+1111111111,+2222222222,+3333333333\",\"type\":\"signal\"}"}`,
+			),
 
 			want: notification.Signal{
 				Base: notification.Base{

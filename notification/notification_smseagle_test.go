@@ -19,7 +19,9 @@ func TestNotificationSMSEagle_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "API v1 SMS to phone number with priority",
-			data: []byte(`{"id":1,"name":"My SMSEagle Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMSEagle Alert\",\"smseagleUrl\":\"https://192.168.1.100\",\"smseagleToken\":\"access-token-abc123\",\"smseagleRecipientType\":\"smseagle-to\",\"smseagleRecipient\":\"441234567890\",\"smseagleMsgType\":\"smseagle-sms\",\"smseaglePriority\":5,\"smseagleEncoding\":false,\"smseagleDuration\":0,\"smseagleTtsModel\":0,\"smseagleApiType\":\"smseagle-apiv1\",\"type\":\"SMSEagle\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My SMSEagle Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMSEagle Alert\",\"smseagleUrl\":\"https://192.168.1.100\",\"smseagleToken\":\"access-token-abc123\",\"smseagleRecipientType\":\"smseagle-to\",\"smseagleRecipient\":\"441234567890\",\"smseagleMsgType\":\"smseagle-sms\",\"smseaglePriority\":5,\"smseagleEncoding\":false,\"smseagleDuration\":0,\"smseagleTtsModel\":0,\"smseagleApiType\":\"smseagle-apiv1\",\"type\":\"SMSEagle\"}"}`,
+			),
 
 			want: notification.SMSEagle{
 				Base: notification.Base{
@@ -47,7 +49,9 @@ func TestNotificationSMSEagle_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "API v2 SMS with contacts and unicode encoding",
-			data: []byte(`{"id":2,"name":"SMSEagle Contact Alert","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMSEagle Contact Alert\",\"smseagleUrl\":\"https://smseagle.example.com/device\",\"smseagleToken\":\"api-token-xyz789\",\"smseagleRecipientType\":\"smseagle-contact\",\"smseagleRecipient\":\"\",\"smseagleRecipientContact\":\"123,456,789\",\"smseagleMsgType\":\"smseagle-sms\",\"smseaglePriority\":3,\"smseagleEncoding\":true,\"smseagleDuration\":0,\"smseagleTtsModel\":0,\"smseagleApiType\":\"smseagle-apiv2\",\"type\":\"SMSEagle\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"SMSEagle Contact Alert","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMSEagle Contact Alert\",\"smseagleUrl\":\"https://smseagle.example.com/device\",\"smseagleToken\":\"api-token-xyz789\",\"smseagleRecipientType\":\"smseagle-contact\",\"smseagleRecipient\":\"\",\"smseagleRecipientContact\":\"123,456,789\",\"smseagleMsgType\":\"smseagle-sms\",\"smseaglePriority\":3,\"smseagleEncoding\":true,\"smseagleDuration\":0,\"smseagleTtsModel\":0,\"smseagleApiType\":\"smseagle-apiv2\",\"type\":\"SMSEagle\"}"}`,
+			),
 
 			want: notification.SMSEagle{
 				Base: notification.Base{
@@ -76,7 +80,9 @@ func TestNotificationSMSEagle_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "API v2 TTS advanced call to group",
-			data: []byte(`{"id":3,"name":"SMSEagle Voice Alert","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMSEagle Voice Alert\",\"smseagleUrl\":\"https://smseagle.local\",\"smseagleToken\":\"voice-token-def456\",\"smseagleRecipientType\":\"smseagle-group\",\"smseagleRecipient\":\"\",\"smseagleRecipientGroup\":\"10,20,30\",\"smseagleMsgType\":\"smseagle-tts-advanced\",\"smseaglePriority\":1,\"smseagleEncoding\":false,\"smseagleDuration\":20,\"smseagleTtsModel\":2,\"smseagleApiType\":\"smseagle-apiv2\",\"type\":\"SMSEagle\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"SMSEagle Voice Alert","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMSEagle Voice Alert\",\"smseagleUrl\":\"https://smseagle.local\",\"smseagleToken\":\"voice-token-def456\",\"smseagleRecipientType\":\"smseagle-group\",\"smseagleRecipient\":\"\",\"smseagleRecipientGroup\":\"10,20,30\",\"smseagleMsgType\":\"smseagle-tts-advanced\",\"smseaglePriority\":1,\"smseagleEncoding\":false,\"smseagleDuration\":20,\"smseagleTtsModel\":2,\"smseagleApiType\":\"smseagle-apiv2\",\"type\":\"SMSEagle\"}"}`,
+			),
 
 			want: notification.SMSEagle{
 				Base: notification.Base{

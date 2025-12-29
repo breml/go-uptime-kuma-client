@@ -34,6 +34,7 @@ func (mt MonitorTag) String() string {
 // TagWithMonitors extends Tag with monitor associations.
 type TagWithMonitors struct {
 	Tag
+
 	Monitors []int64 `json:"monitors"` // List of associated monitor IDs
 }
 

@@ -19,7 +19,9 @@ func TestNotificationAlertNow_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My AlertNow Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My AlertNow Alert\",\"alertNowWebhookURL\":\"https://alertnow.example.com/api/webhook\",\"type\":\"AlertNow\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My AlertNow Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My AlertNow Alert\",\"alertNowWebhookURL\":\"https://alertnow.example.com/api/webhook\",\"type\":\"AlertNow\"}"}`,
+			),
 
 			want: notification.AlertNow{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationAlertNow_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple AlertNow","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple AlertNow\",\"alertNowWebhookURL\":\"https://api.alertnow.io/webhook\",\"type\":\"AlertNow\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple AlertNow","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple AlertNow\",\"alertNowWebhookURL\":\"https://api.alertnow.io/webhook\",\"type\":\"AlertNow\"}"}`,
+			),
 
 			want: notification.AlertNow{
 				Base: notification.Base{

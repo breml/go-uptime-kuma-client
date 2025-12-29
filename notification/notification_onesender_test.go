@@ -19,7 +19,9 @@ func TestNotificationOneSender_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success private",
-			data: []byte(`{"id":1,"name":"Test OneSender Private","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"onesender\",\"onesenderURL\":\"https://api.onesender.com/send\",\"onesenderToken\":\"test-token\",\"onesenderReceiver\":\"5511999999999\",\"onesenderTypeReceiver\":\"private\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"Test OneSender Private","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"onesender\",\"onesenderURL\":\"https://api.onesender.com/send\",\"onesenderToken\":\"test-token\",\"onesenderReceiver\":\"5511999999999\",\"onesenderTypeReceiver\":\"private\"}"}`,
+			),
 
 			want: notification.OneSender{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationOneSender_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "success group",
-			data: []byte(`{"id":2,"name":"Test OneSender Group","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"onesender\",\"onesenderURL\":\"https://api.onesender.com/send\",\"onesenderToken\":\"secret-token\",\"onesenderReceiver\":\"120363123456789-1234567890\",\"onesenderTypeReceiver\":\"group\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Test OneSender Group","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"onesender\",\"onesenderURL\":\"https://api.onesender.com/send\",\"onesenderToken\":\"secret-token\",\"onesenderReceiver\":\"120363123456789-1234567890\",\"onesenderTypeReceiver\":\"group\"}"}`,
+			),
 
 			want: notification.OneSender{
 				Base: notification.Base{
@@ -62,7 +66,9 @@ func TestNotificationOneSender_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":3,"name":"Test OneSender Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"onesender\",\"onesenderURL\":\"\",\"onesenderToken\":\"\",\"onesenderReceiver\":\"\",\"onesenderTypeReceiver\":\"\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Test OneSender Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"onesender\",\"onesenderURL\":\"\",\"onesenderToken\":\"\",\"onesenderReceiver\":\"\",\"onesenderTypeReceiver\":\"\"}"}`,
+			),
 
 			want: notification.OneSender{
 				Base: notification.Base{

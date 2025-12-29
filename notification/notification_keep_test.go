@@ -19,7 +19,9 @@ func TestNotificationKeep_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Keep Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Keep Alert\",\"webhookURL\":\"https://keep.example.com/webhook\",\"webhookAPIKey\":\"api-key-123\",\"type\":\"Keep\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Keep Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Keep Alert\",\"webhookURL\":\"https://keep.example.com/webhook\",\"webhookAPIKey\":\"api-key-123\",\"type\":\"Keep\"}"}`,
+			),
 
 			want: notification.Keep{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationKeep_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Keep","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Keep\",\"webhookURL\":\"https://api.example.com\",\"webhookAPIKey\":\"key-abc\",\"type\":\"Keep\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Keep","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Keep\",\"webhookURL\":\"https://api.example.com\",\"webhookAPIKey\":\"key-abc\",\"type\":\"Keep\"}"}`,
+			),
 
 			want: notification.Keep{
 				Base: notification.Base{
@@ -59,7 +63,9 @@ func TestNotificationKeep_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with trailing slash in URL",
-			data: []byte(`{"id":3,"name":"Keep Trailing","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Keep Trailing\",\"webhookURL\":\"https://alerts.example.com/keep/\",\"webhookAPIKey\":\"key-xyz\",\"type\":\"Keep\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Keep Trailing","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Keep Trailing\",\"webhookURL\":\"https://alerts.example.com/keep/\",\"webhookAPIKey\":\"key-xyz\",\"type\":\"Keep\"}"}`,
+			),
 
 			want: notification.Keep{
 				Base: notification.Base{

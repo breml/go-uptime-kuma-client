@@ -19,7 +19,9 @@ func TestNotificationApprise_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Apprise Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Apprise Alert\",\"appriseURL\":\"json://localhost:8080\",\"title\":\"Uptime Kuma Alert\",\"type\":\"apprise\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Apprise Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Apprise Alert\",\"appriseURL\":\"json://localhost:8080\",\"title\":\"Uptime Kuma Alert\",\"type\":\"apprise\"}"}`,
+			),
 
 			want: notification.Apprise{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationApprise_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Apprise","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Apprise\",\"appriseURL\":\"json://localhost:8080\",\"type\":\"apprise\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Apprise","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Apprise\",\"appriseURL\":\"json://localhost:8080\",\"type\":\"apprise\"}"}`,
+			),
 
 			want: notification.Apprise{
 				Base: notification.Base{

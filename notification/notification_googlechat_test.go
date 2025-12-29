@@ -19,7 +19,9 @@ func TestNotificationGoogleChat_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Google Chat Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Google Chat Alert\",\"googleChatWebhookURL\":\"https://chat.googleapis.com/v1/spaces/AAAAAA/messages?key=test\",\"googleChatUseTemplate\":true,\"googleChatTemplate\":\"Test Template\",\"type\":\"GoogleChat\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Google Chat Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Google Chat Alert\",\"googleChatWebhookURL\":\"https://chat.googleapis.com/v1/spaces/AAAAAA/messages?key=test\",\"googleChatUseTemplate\":true,\"googleChatTemplate\":\"Test Template\",\"type\":\"GoogleChat\"}"}`,
+			),
 
 			want: notification.GoogleChat{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationGoogleChat_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Google Chat","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Google Chat\",\"googleChatWebhookURL\":\"https://chat.googleapis.com/v1/spaces/AAAAAA/messages?key=test\",\"googleChatUseTemplate\":false,\"googleChatTemplate\":\"\",\"type\":\"GoogleChat\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Google Chat","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Google Chat\",\"googleChatWebhookURL\":\"https://chat.googleapis.com/v1/spaces/AAAAAA/messages?key=test\",\"googleChatUseTemplate\":false,\"googleChatTemplate\":\"\",\"type\":\"GoogleChat\"}"}`,
+			),
 
 			want: notification.GoogleChat{
 				Base: notification.Base{
