@@ -132,7 +132,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	// Check if parent context is already cancelled
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("context cancelled: %w", ctx.Err())
 
 	default:
 	}
@@ -150,7 +150,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		// Return connection errors as-is so caller can retry
-		return err
+		return fmt.Errorf("entry-page request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -543,7 +543,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 }
 
 func (c *Client) Disconnect() error {
-	return c.socketioClient.Close()
+	err := c.socketioClient.Close()
+	if err != nil {
+		return fmt.Errorf("close socket.io client: %w", err)
+	}
+	return nil
 }
 
 type ackResponse struct {

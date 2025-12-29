@@ -2,6 +2,7 @@ package dockerhost
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 // DockerHost represents a Docker host configuration in Uptime Kuma.
@@ -53,7 +54,7 @@ func (t *TestResult) UnmarshalJSON(data []byte) error {
 
 	err := json.Unmarshal(data, &aux)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal test result: %w", err)
 	}
 
 	// Handle version field which might be a string or an object

@@ -65,12 +65,12 @@ func unmarshalTo(data []byte, detail any) (Base, error) {
 
 	err := json.Unmarshal(data, &notificationBase)
 	if err != nil {
-		return notificationBase, err
+		return notificationBase, fmt.Errorf("unmarshal notification: %w", err)
 	}
 
 	err = json.Unmarshal([]byte(notificationBase.configStr), detail)
 	if err != nil {
-		return notificationBase, err
+		return notificationBase, fmt.Errorf("unmarshal notification config: %w", err)
 	}
 
 	return notificationBase, nil
@@ -79,7 +79,7 @@ func unmarshalTo(data []byte, detail any) (Base, error) {
 func marshalJSON(base Base, details interface{ Type() string }) ([]byte, error) {
 	detailData, err := json.Marshal(details)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal notification details: %w", err)
 	}
 
 	rawMap := make(map[string]any, 20)
@@ -93,12 +93,16 @@ func marshalJSON(base Base, details interface{ Type() string }) ([]byte, error) 
 
 	err = json.Unmarshal(detailData, &rawMap)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal notification details: %w", err)
 	}
 
 	rawMap["type"] = details.Type()
 
-	return json.Marshal(rawMap)
+	data, err := json.Marshal(rawMap)
+	if err != nil {
+		return nil, fmt.Errorf("marshal notification: %w", err)
+	}
+	return data, nil
 }
 
 func orderedByKey[K cmp.Ordered, E any](m map[K]E) iter.Seq2[K, E] {

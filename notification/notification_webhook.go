@@ -70,11 +70,15 @@ func (h WebhookAdditionalHeaders) MarshalJSON() ([]byte, error) {
 	// First marshal the map to JSON bytes
 	mapJSON, err := json.Marshal(map[string]string(h))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal webhook headers map: %w", err)
 	}
 
 	// Then marshal the JSON bytes as a string
-	return json.Marshal(string(mapJSON))
+	data, err := json.Marshal(string(mapJSON))
+	if err != nil {
+		return nil, fmt.Errorf("marshal webhook headers: %w", err)
+	}
+	return data, nil
 }
 
 // UnmarshalJSON deserializes a JSON string into the headers map.
@@ -90,7 +94,7 @@ func (h *WebhookAdditionalHeaders) UnmarshalJSON(data []byte) error {
 	var jsonStr string
 	err := json.Unmarshal(data, &jsonStr)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal webhook headers outer json: %w", err)
 	}
 
 	// If the string is empty after unmarshaling, treat as nil
@@ -103,7 +107,7 @@ func (h *WebhookAdditionalHeaders) UnmarshalJSON(data []byte) error {
 	var headers map[string]string
 	err = json.Unmarshal([]byte(jsonStr), &headers)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal webhook headers inner json: %w", err)
 	}
 
 	*h = WebhookAdditionalHeaders(headers)

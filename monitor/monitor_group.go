@@ -23,13 +23,13 @@ func (g *Group) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := GroupDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*g = Group{
@@ -70,7 +70,11 @@ func (g Group) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+	return data, nil
 }
 
 type GroupDetails struct {

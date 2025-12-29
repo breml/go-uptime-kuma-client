@@ -41,14 +41,14 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 
 	err := json.Unmarshal(data, &raw)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal notification base: %w", err)
 	}
 
 	config := map[string]any{}
 
 	err = json.Unmarshal([]byte(raw.ConfigStr), &config)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal notification config: %w", err)
 	}
 
 	notificationTypeAny, ok := config["type"]

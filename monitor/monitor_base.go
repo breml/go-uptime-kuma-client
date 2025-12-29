@@ -61,7 +61,7 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 
 	err := json.Unmarshal(data, &raw)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal monitor base: %w", err)
 	}
 
 	*b = Base{
@@ -134,7 +134,11 @@ func (b Base) MarshalJSON() ([]byte, error) {
 
 	raw["notificationIDList"] = ids
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal monitor base: %w", err)
+	}
+	return data, nil
 }
 
 func (b Base) GetID() int64 {

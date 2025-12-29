@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -46,7 +47,7 @@ func (p *Proxy) UnmarshalJSON(data []byte) error {
 
 	err := json.Unmarshal(data, &aux)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal proxy: %w", err)
 	}
 
 	p.ID = aux.ID
@@ -106,7 +107,7 @@ func (p Proxy) MarshalJSON() ([]byte, error) {
 		createdDate = p.CreatedDate.Format(time.RFC3339)
 	}
 
-	return json.Marshal(&struct {
+	data, err := json.Marshal(&struct {
 		ID          int64  `json:"id"`
 		UserID      int64  `json:"userId"`
 		Protocol    string `json:"protocol"`
@@ -131,6 +132,10 @@ func (p Proxy) MarshalJSON() ([]byte, error) {
 		Default:     defaultVal,
 		CreatedDate: createdDate,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("marshal proxy: %w", err)
+	}
+	return data, nil
 }
 
 // Config represents the configuration for creating or updating a proxy.
