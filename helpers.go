@@ -8,13 +8,13 @@ import (
 func structToMap(v any) (map[string]any, error) {
 	data, err := json.Marshal(v)
 	if err != nil {
-		return nil, fmt.Errorf("marshal struct: %v", err)
+		return nil, fmt.Errorf("marshal struct: %w", err)
 	}
 
 	var result map[string]any
 	err = json.Unmarshal(data, &result)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal to map: %v", err)
+		return nil, fmt.Errorf("unmarshal to map: %w", err)
 	}
 
 	return result, nil
@@ -23,12 +23,12 @@ func structToMap(v any) (map[string]any, error) {
 func convertToStruct(src any, dst any) error {
 	data, err := json.Marshal(src)
 	if err != nil {
-		return fmt.Errorf("marshal source: %v", err)
+		return fmt.Errorf("marshal source: %w", err)
 	}
 
 	err = json.Unmarshal(data, dst)
 	if err != nil {
-		return fmt.Errorf("unmarshal to struct: %v", err)
+		return fmt.Errorf("unmarshal to struct: %w", err)
 	}
 
 	return nil

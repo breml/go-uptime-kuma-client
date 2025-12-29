@@ -27,7 +27,7 @@ func (c *Client) GetMaintenances(ctx context.Context) ([]maintenance.Maintenance
 func (c *Client) GetMaintenance(ctx context.Context, id int64) (*maintenance.Maintenance, error) {
 	response, err := c.syncEmit(ctx, "getMaintenance", id)
 	if err != nil {
-		return nil, fmt.Errorf("get maintenance %d: %v", id, err)
+		return nil, fmt.Errorf("get maintenance %d: %w", id, err)
 	}
 
 	if response.Maintenance == nil {
@@ -37,7 +37,7 @@ func (c *Client) GetMaintenance(ctx context.Context, id int64) (*maintenance.Mai
 	var m maintenance.Maintenance
 	err = convertToStruct(response.Maintenance, &m)
 	if err != nil {
-		return nil, fmt.Errorf("get maintenance %d: %v", id, err)
+		return nil, fmt.Errorf("get maintenance %d: %w", id, err)
 	}
 
 	return &m, nil
@@ -47,12 +47,12 @@ func (c *Client) GetMaintenance(ctx context.Context, id int64) (*maintenance.Mai
 func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenance) (*maintenance.Maintenance, error) {
 	maintenanceData, err := structToMap(m)
 	if err != nil {
-		return nil, fmt.Errorf("create maintenance: %v", err)
+		return nil, fmt.Errorf("create maintenance: %w", err)
 	}
 
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addMaintenance", "maintenanceList", maintenanceData)
 	if err != nil {
-		return nil, fmt.Errorf("create maintenance: %v", err)
+		return nil, fmt.Errorf("create maintenance: %w", err)
 	}
 
 	// The server returns the maintenance ID in the response
@@ -66,12 +66,12 @@ func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenan
 func (c *Client) UpdateMaintenance(ctx context.Context, m *maintenance.Maintenance) error {
 	maintenanceData, err := structToMap(m)
 	if err != nil {
-		return fmt.Errorf("update maintenance: %v", err)
+		return fmt.Errorf("update maintenance: %w", err)
 	}
 
 	_, err = c.syncEmitWithUpdateEvent(ctx, "editMaintenance", "maintenanceList", maintenanceData)
 	if err != nil {
-		return fmt.Errorf("update maintenance: %v", err)
+		return fmt.Errorf("update maintenance: %w", err)
 	}
 
 	return nil
@@ -81,7 +81,7 @@ func (c *Client) UpdateMaintenance(ctx context.Context, m *maintenance.Maintenan
 func (c *Client) DeleteMaintenance(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteMaintenance", "maintenanceList", id)
 	if err != nil {
-		return fmt.Errorf("delete maintenance: %v", err)
+		return fmt.Errorf("delete maintenance: %w", err)
 	}
 
 	return nil
@@ -91,7 +91,7 @@ func (c *Client) DeleteMaintenance(ctx context.Context, id int64) error {
 func (c *Client) PauseMaintenance(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "pauseMaintenance", "maintenanceList", id)
 	if err != nil {
-		return fmt.Errorf("pause maintenance: %v", err)
+		return fmt.Errorf("pause maintenance: %w", err)
 	}
 
 	return nil
@@ -101,7 +101,7 @@ func (c *Client) PauseMaintenance(ctx context.Context, id int64) error {
 func (c *Client) ResumeMaintenance(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "resumeMaintenance", "maintenanceList", id)
 	if err != nil {
-		return fmt.Errorf("resume maintenance: %v", err)
+		return fmt.Errorf("resume maintenance: %w", err)
 	}
 
 	return nil
@@ -118,7 +118,7 @@ func (c *Client) SetMonitorMaintenance(ctx context.Context, maintenanceID int64,
 
 	_, err := c.syncEmit(ctx, "addMonitorMaintenance", maintenanceID, monitors)
 	if err != nil {
-		return fmt.Errorf("set monitor maintenance: %v", err)
+		return fmt.Errorf("set monitor maintenance: %w", err)
 	}
 
 	return nil
@@ -128,7 +128,7 @@ func (c *Client) SetMonitorMaintenance(ctx context.Context, maintenanceID int64,
 func (c *Client) GetMonitorMaintenance(ctx context.Context, maintenanceID int64) ([]int64, error) {
 	response, err := c.syncEmit(ctx, "getMonitorMaintenance", maintenanceID)
 	if err != nil {
-		return nil, fmt.Errorf("get monitor maintenance: %v", err)
+		return nil, fmt.Errorf("get monitor maintenance: %w", err)
 	}
 
 	if response.Monitors == nil {
@@ -161,7 +161,7 @@ func (c *Client) SetMaintenanceStatusPage(ctx context.Context, maintenanceID int
 
 	_, err := c.syncEmit(ctx, "addMaintenanceStatusPage", maintenanceID, statusPages)
 	if err != nil {
-		return fmt.Errorf("set maintenance status page: %v", err)
+		return fmt.Errorf("set maintenance status page: %w", err)
 	}
 
 	return nil
@@ -171,7 +171,7 @@ func (c *Client) SetMaintenanceStatusPage(ctx context.Context, maintenanceID int
 func (c *Client) GetMaintenanceStatusPage(ctx context.Context, maintenanceID int64) ([]int64, error) {
 	response, err := c.syncEmit(ctx, "getMaintenanceStatusPage", maintenanceID)
 	if err != nil {
-		return nil, fmt.Errorf("get maintenance status page: %v", err)
+		return nil, fmt.Errorf("get maintenance status page: %w", err)
 	}
 
 	if response.StatusPages == nil {

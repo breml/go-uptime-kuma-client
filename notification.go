@@ -41,7 +41,7 @@ func (c *Client) GetNotificationAs(ctx context.Context, id int64, target any) er
 
 	err = notification.As(target)
 	if err != nil {
-		return fmt.Errorf("get monitor %d as %t: %v", id, target, err)
+		return fmt.Errorf("get monitor %d as %t: %w", id, target, err)
 	}
 
 	return nil

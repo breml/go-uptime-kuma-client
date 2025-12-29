@@ -298,7 +298,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		socketio.WithLogger(c.socketioLogger),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("create socketio client: %v", err)
+		return nil, fmt.Errorf("create socketio client: %w", err)
 	}
 
 	c.socketioClient = client
@@ -470,13 +470,13 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	err = client.Connect(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("connect to server: %v", err)
+		return nil, fmt.Errorf("connect to server: %w", err)
 	}
 
 	select {
 	case <-connect:
 	case <-ctx.Done():
-		return nil, fmt.Errorf("connect to server: %v", ctx.Err())
+		return nil, fmt.Errorf("connect to server: %w", ctx.Err())
 	}
 
 	if username != "" && password != "" {
@@ -499,7 +499,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 			if (!strings.Contains(err.Error(), "Incorrect username or password") && !strings.Contains(err.Error(), "authIncorrectCreds")) ||
 				!wantSetup {
-				return nil, fmt.Errorf("login: %v", err)
+				return nil, fmt.Errorf("login: %w", err)
 			}
 		}
 	}
@@ -518,7 +518,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 			_, err := c.syncEmit(ctxWithConnectTimeout, "setup", username, password)
 			if err != nil {
-				return nil, fmt.Errorf("setup: %v", err)
+				return nil, fmt.Errorf("setup: %w", err)
 			}
 
 			_, err = c.syncEmit(
@@ -527,11 +527,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 				map[string]any{"username": username, "password": password, "token": ""},
 			)
 			if err != nil {
-				return nil, fmt.Errorf("login: %v", err)
+				return nil, fmt.Errorf("login: %w", err)
 			}
 
 		case <-ctx.Done():
-			return nil, fmt.Errorf("wait for ready: %v", ctx.Err())
+			return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
 		}
 	}
 }
@@ -568,7 +568,7 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 
 	err := c.socketioClient.Emit(command, args...)
 	if err != nil {
-		return ackResponse{}, fmt.Errorf("%s: %v", command, err)
+		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
 
 	select {
@@ -580,7 +580,7 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 		return response, nil
 
 	case <-ctx.Done():
-		return ackResponse{}, fmt.Errorf("%s: %v", command, ctx.Err())
+		return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
 	}
 }
 
@@ -614,7 +614,7 @@ func (c *Client) syncEmitWithUpdateEvent(
 	}))
 	err := c.socketioClient.Emit(command, args...)
 	if err != nil {
-		return ackResponse{}, fmt.Errorf("%s: %v", command, err)
+		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
 
 	var response ackResponse
@@ -634,7 +634,7 @@ func (c *Client) syncEmitWithUpdateEvent(
 			res = nil
 
 		case <-ctx.Done():
-			return ackResponse{}, fmt.Errorf("%s: %v", command, ctx.Err())
+			return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
 		}
 	}
 
