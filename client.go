@@ -141,7 +141,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	httpCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(httpCtx, "GET", entryPageURL, nil)
+	req, err := http.NewRequestWithContext(httpCtx, "GET", entryPageURL, http.NoBody)
 	if err != nil {
 		return fmt.Errorf("create entry-page request: %w", err)
 	}
@@ -236,7 +236,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 		case <-ticker.C:
 			// Use a short timeout for each poll attempt
 			pollCtx, pollCancel := context.WithTimeout(context.Background(), 2*time.Second)
-			req, err := http.NewRequestWithContext(pollCtx, "GET", entryPageURL, nil)
+			req, err := http.NewRequestWithContext(pollCtx, "GET", entryPageURL, http.NoBody)
 			if err != nil {
 				pollCancel()
 				continue

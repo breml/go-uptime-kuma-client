@@ -24,11 +24,12 @@ func formatProxy(p Proxy) string {
 		name := strings.Split(field.Tag.Get("json"), ",")[0]
 
 		var valueStr string
-		if field.Name == "Password" && value.Kind() == reflect.String && value.String() != "" {
+		switch {
+		case field.Name == "Password" && value.Kind() == reflect.String && value.String() != "":
 			valueStr = "\"***\""
-		} else if value.Kind() == reflect.String {
+		case value.Kind() == reflect.String:
 			valueStr = fmt.Sprintf("%q", value.String())
-		} else {
+		default:
 			valueStr = fmt.Sprintf("%v", value.Interface())
 		}
 

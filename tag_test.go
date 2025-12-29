@@ -330,13 +330,14 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 		// Verify tag details
 		found := false
 		for _, mt := range mon.Tags {
-			if mt.TagID == tag1ID {
-				require.Equal(t, "development", mt.Value)
-				require.Equal(t, "Environment", mt.Name)
-				require.Equal(t, "#FF0000", mt.Color)
-				found = true
-				break
+			if mt.TagID != tag1ID {
+				continue
 			}
+			require.Equal(t, "development", mt.Value)
+			require.Equal(t, "Environment", mt.Name)
+			require.Equal(t, "#FF0000", mt.Color)
+			found = true
+			break
 		}
 
 		require.True(t, found, "tag1 should be present in monitor2 tags")
