@@ -13,7 +13,7 @@ func formatProxy(p Proxy) string {
 	typ := reflect.TypeOf(p)
 
 	first := true
-	for i := 0; i < val.NumField(); i++ {
+	for i := range val.NumField() {
 		field := typ.Field(i)
 		value := val.Field(i)
 

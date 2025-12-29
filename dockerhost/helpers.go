@@ -13,7 +13,7 @@ func formatDockerHost(d DockerHost) string {
 	typ := reflect.TypeOf(d)
 
 	first := true
-	for i := 0; i < val.NumField(); i++ {
+	for i := range val.NumField() {
 		field := typ.Field(i)
 		value := val.Field(i)
 
