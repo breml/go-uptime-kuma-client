@@ -136,10 +136,6 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	return json.Marshal(raw)
 }
 
-func (b Base) getType() string {
-	return b.internalType
-}
-
 func (b Base) GetID() int64 {
 	return b.ID
 }
@@ -163,4 +159,8 @@ func (b Base) As(target any) error {
 	}
 
 	return nil
+}
+
+func (b Base) getType() string {
+	return b.internalType
 }
