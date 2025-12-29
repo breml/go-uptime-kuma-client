@@ -34,7 +34,7 @@ func TestNotificationTwilio_Unmarshal(t *testing.T) {
 				},
 				TwilioDetails: notification.TwilioDetails{
 					AccountSID: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-					ApiKey:     "SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+					APIKey:     "SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 					AuthToken:  "your_auth_token",
 					ToNumber:   "+15551234567",
 					FromNumber: "+15559876543",

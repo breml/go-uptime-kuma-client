@@ -33,7 +33,7 @@ func TestNotificationOpsgenie_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				OpsgenieDetails: notification.OpsgenieDetails{
-					ApiKey:   "test-api-key-123",
+					APIKey:   "test-api-key-123",
 					Region:   "us",
 					Priority: 3,
 				},
@@ -56,7 +56,7 @@ func TestNotificationOpsgenie_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				OpsgenieDetails: notification.OpsgenieDetails{
-					ApiKey: "abc-123",
+					APIKey: "abc-123",
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Opsgenie","opsgenieApiKey":"abc-123","opsgenieRegion":"","opsgeniePriority":0,"type":"Opsgenie","userId":1}`,
@@ -77,7 +77,7 @@ func TestNotificationOpsgenie_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				OpsgenieDetails: notification.OpsgenieDetails{
-					ApiKey:   "eu-api-key",
+					APIKey:   "eu-api-key",
 					Region:   "eu",
 					Priority: 5,
 				},

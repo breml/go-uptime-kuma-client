@@ -10,7 +10,7 @@ type Opsgenie struct {
 }
 
 type OpsgenieDetails struct {
-	ApiKey   string `json:"opsgenieApiKey"`
+	APIKey   string `json:"opsgenieApiKey"`
 	Region   string `json:"opsgenieRegion"`
 	Priority int    `json:"opsgeniePriority"`
 }

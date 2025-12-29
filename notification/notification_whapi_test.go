@@ -32,7 +32,7 @@ func TestNotificationWhapi_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				WhapiDetails: notification.WhapiDetails{
-					ApiURL:    "https://gate.whapi.cloud",
+					APIURL:    "https://gate.whapi.cloud",
 					AuthToken: "test-auth-token",
 					Recipient: "5511999999999",
 				},
@@ -55,7 +55,7 @@ func TestNotificationWhapi_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				WhapiDetails: notification.WhapiDetails{
-					ApiURL:    "",
+					APIURL:    "",
 					AuthToken: "simple-token",
 					Recipient: "+5511987654321",
 				},
@@ -78,7 +78,7 @@ func TestNotificationWhapi_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				WhapiDetails: notification.WhapiDetails{
-					ApiURL:    "https://custom.whapi.io/",
+					APIURL:    "https://custom.whapi.io/",
 					AuthToken: "custom-token-123",
 					Recipient: "12025551234",
 				},

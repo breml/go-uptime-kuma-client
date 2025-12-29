@@ -10,8 +10,8 @@ type Alerta struct {
 }
 
 type AlertaDetails struct {
-	ApiEndpoint  string `json:"alertaApiEndpoint"`
-	ApiKey       string `json:"alertaApiKey"`
+	APIEndpoint  string `json:"alertaApiEndpoint"`
+	APIKey       string `json:"alertaApiKey"`
 	Environment  string `json:"alertaEnvironment"`
 	AlertState   string `json:"alertaAlertState"`
 	RecoverState string `json:"alertaRecoverState"`

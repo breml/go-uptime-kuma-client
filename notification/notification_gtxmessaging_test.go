@@ -33,7 +33,7 @@ func TestNotificationGTXMessaging_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				GTXMessagingDetails: notification.GTXMessagingDetails{
-					ApiKey: "api-key-123",
+					APIKey: "api-key-123",
 					From:   "Uptime",
 					To:     "+46701234567",
 				},
@@ -56,7 +56,7 @@ func TestNotificationGTXMessaging_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				GTXMessagingDetails: notification.GTXMessagingDetails{
-					ApiKey: "key-abc",
+					APIKey: "key-abc",
 					From:   "Alert",
 					To:     "+46700000000",
 				},
@@ -79,7 +79,7 @@ func TestNotificationGTXMessaging_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				GTXMessagingDetails: notification.GTXMessagingDetails{
-					ApiKey: "intl-key-xyz",
+					APIKey: "intl-key-xyz",
 					From:   "Monitor",
 					To:     "+14155551234",
 				},

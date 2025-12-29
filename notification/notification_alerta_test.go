@@ -33,8 +33,8 @@ func TestNotificationAlerta_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				AlertaDetails: notification.AlertaDetails{
-					ApiEndpoint:  "https://alerta.example.com/api/alerts",
-					ApiKey:       "api_key_secret",
+					APIEndpoint:  "https://alerta.example.com/api/alerts",
+					APIKey:       "api_key_secret",
 					Environment:  "Production",
 					AlertState:   "critical",
 					RecoverState: "cleared",
@@ -58,8 +58,8 @@ func TestNotificationAlerta_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				AlertaDetails: notification.AlertaDetails{
-					ApiEndpoint:  "https://alerta.io/api/alerts",
-					ApiKey:       "key123",
+					APIEndpoint:  "https://alerta.io/api/alerts",
+					APIKey:       "key123",
 					Environment:  "Dev",
 					AlertState:   "critical",
 					RecoverState: "cleared",

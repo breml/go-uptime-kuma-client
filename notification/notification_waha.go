@@ -13,14 +13,14 @@ type WAHA struct {
 
 // WAHADetails contains the configuration fields for WAHA notifications.
 type WAHADetails struct {
-	// ApiURL is the WAHA API endpoint URL.
-	ApiURL string `json:"wahaApiUrl"`
+	// APIURL is the WAHA API endpoint URL.
+	APIURL string `json:"wahaApiUrl"`
 	// Session is the WAHA session name.
 	Session string `json:"wahaSession"`
 	// ChatID is the recipient chat ID (typically a phone number).
 	ChatID string `json:"wahaChatId"`
-	// ApiKey is the WAHA API key for authentication (optional).
-	ApiKey string `json:"wahaApiKey"`
+	// APIKey is the WAHA API key for authentication (optional).
+	APIKey string `json:"wahaApiKey"`
 }
 
 // Type returns the notification type identifier for WAHA.

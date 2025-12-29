@@ -457,7 +457,7 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test Opsgenie Created",
 				},
 				OpsgenieDetails: notification.OpsgenieDetails{
-					ApiKey:   "test-api-key-123",
+					APIKey:   "test-api-key-123",
 					Region:   "us",
 					Priority: 3,
 				},
@@ -812,7 +812,7 @@ func TestNotificationCRUD(t *testing.T) {
 				},
 				TwilioDetails: notification.TwilioDetails{
 					AccountSID: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-					ApiKey:     "",
+					APIKey:     "",
 					AuthToken:  "test_auth_token",
 					ToNumber:   "+15551234567",
 					FromNumber: "+15559876543",
@@ -1210,8 +1210,8 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test Alerta Created",
 				},
 				AlertaDetails: notification.AlertaDetails{
-					ApiEndpoint:  "https://alerta.example.com/api/alerts",
-					ApiKey:       "test_api_key",
+					APIEndpoint:  "https://alerta.example.com/api/alerts",
+					APIKey:       "test_api_key",
 					Environment:  "Production",
 					AlertState:   "critical",
 					RecoverState: "cleared",
@@ -1764,7 +1764,7 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test Evolution Created",
 				},
 				EvolutionDetails: notification.EvolutionDetails{
-					ApiUrl:       "https://evolapicloud.com",
+					APIURL:       "https://evolapicloud.com",
 					InstanceName: "myinstance",
 					AuthToken:    "token123",
 					Recipient:    "5511999999999",
@@ -1773,7 +1773,7 @@ func TestNotificationCRUD(t *testing.T) {
 			updateFunc: func(n notification.Notification) {
 				evolution := n.(*notification.Evolution)
 				evolution.Name = "Test Evolution Updated"
-				evolution.ApiUrl = "https://custom.api.com"
+				evolution.APIURL = "https://custom.api.com"
 				evolution.InstanceName = "newinstance"
 				evolution.Recipient = "5521987654321"
 			},
@@ -1967,7 +1967,7 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test GTX Messaging Created",
 				},
 				GTXMessagingDetails: notification.GTXMessagingDetails{
-					ApiKey: "test-api-key",
+					APIKey: "test-api-key",
 					From:   "Uptime",
 					To:     "+46701234567",
 				},
@@ -3324,7 +3324,7 @@ func TestNotificationCRUD(t *testing.T) {
 					MsgType:       "smseagle-sms",
 					Priority:      1,
 					Encoding:      false,
-					ApiType:       "smseagle-apiv1",
+					APIType:       "smseagle-apiv1",
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -3818,10 +3818,10 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test WAHA Created",
 				},
 				WAHADetails: notification.WAHADetails{
-					ApiURL:  "https://waha.example.com",
+					APIURL:  "https://waha.example.com",
 					Session: "default",
 					ChatID:  "5511999999999",
-					ApiKey:  "test-api-key",
+					APIKey:  "test-api-key",
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -3869,7 +3869,7 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test Whapi Created",
 				},
 				WhapiDetails: notification.WhapiDetails{
-					ApiURL:    "https://gate.whapi.cloud",
+					APIURL:    "https://gate.whapi.cloud",
 					AuthToken: "test-auth-token",
 					Recipient: "5511999999999",
 				},

@@ -11,7 +11,7 @@ type Twilio struct {
 
 type TwilioDetails struct {
 	AccountSID string `json:"twilioAccountSID"`
-	ApiKey     string `json:"twilioApiKey"`
+	APIKey     string `json:"twilioApiKey"`
 	AuthToken  string `json:"twilioAuthToken"`
 	ToNumber   string `json:"twilioToNumber"`
 	FromNumber string `json:"twilioFromNumber"`

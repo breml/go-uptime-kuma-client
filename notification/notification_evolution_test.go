@@ -33,7 +33,7 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				EvolutionDetails: notification.EvolutionDetails{
-					ApiUrl:       "https://evolapicloud.com",
+					APIURL:       "https://evolapicloud.com",
 					InstanceName: "myinstance",
 					AuthToken:    "token123",
 					Recipient:    "5511999999999",
@@ -57,7 +57,7 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				EvolutionDetails: notification.EvolutionDetails{
-					ApiUrl:       "https://api.example.com",
+					APIURL:       "https://api.example.com",
 					InstanceName: "instance1",
 					AuthToken:    "key",
 					Recipient:    "551187654321",
@@ -81,7 +81,7 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				EvolutionDetails: notification.EvolutionDetails{
-					ApiUrl:       "https://custom.api.com",
+					APIURL:       "https://custom.api.com",
 					InstanceName: "usinstance",
 					AuthToken:    "ustoken",
 					Recipient:    "12025551234",

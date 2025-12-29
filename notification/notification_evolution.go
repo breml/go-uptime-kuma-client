@@ -13,8 +13,8 @@ type Evolution struct {
 
 // EvolutionDetails contains the configuration fields for Evolution API notifications.
 type EvolutionDetails struct {
-	// ApiUrl is the Evolution API URL endpoint.
-	ApiUrl string `json:"evolutionApiUrl"`
+	// APIURL is the Evolution API URL endpoint.
+	APIURL string `json:"evolutionApiUrl"`
 	// InstanceName is the Evolution API instance name.
 	InstanceName string `json:"evolutionInstanceName"`
 	// AuthToken is the Evolution API authentication token.
