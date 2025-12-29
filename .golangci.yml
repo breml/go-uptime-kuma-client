@@ -1,3 +1,39 @@
 ---
 
+# Based on https://github.com/maratori/golangci-lint-config
+
 version: "2"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofumpt # enforces a stricter format than 'gofmt', while being backwards compatible
+    - goimports # checks if the code and import statements are formatted according to the 'goimports' command
+    - golines # checks if code is formatted, and fixes long lines
+
+
+  # All settings can be found here https://github.com/golangci/golangci-lint/blob/HEAD/.golangci.reference.yml
+  settings:
+    goimports:
+      # A list of prefixes, which, if set, checks import paths
+      # with the given prefixes are grouped after 3rd-party packages.
+      # Default: []
+      local-prefixes:
+        - github.com/breml/terraform-provider-uptimekuma
+
+    golines:
+      # Target maximum line length.
+      # Default: 100
+      max-len: 120
+
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/breml/terraform-provider-uptimekuma)
+
+  exclusions:
+    generated: strict
