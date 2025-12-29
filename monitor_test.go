@@ -53,7 +53,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				http := m.(*monitor.HTTP)
+				http, ok := m.(*monitor.HTTP)
+				if !ok {
+					panic("failed to assert HTTP monitor")
+				}
 				http.Name = "Updated HTTP Monitor"
 				http.URL = "https://httpbin.org/status/201"
 			},
@@ -96,7 +99,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				group := m.(*monitor.Group)
+				group, ok := m.(*monitor.Group)
+				if !ok {
+					panic("failed to assert Group monitor")
+				}
 				group.Name = "Updated Monitor Group"
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
@@ -141,7 +147,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				ping := m.(*monitor.Ping)
+				ping, ok := m.(*monitor.Ping)
+				if !ok {
+					panic("failed to assert Ping monitor")
+				}
 				ping.Name = "Updated Ping Monitor"
 				ping.Hostname = "1.1.1.1"
 				ping.PacketSize = 64
@@ -189,7 +198,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				push := m.(*monitor.Push)
+				push, ok := m.(*monitor.Push)
+				if !ok {
+					panic("failed to assert Push monitor")
+				}
 				push.Name = "Updated Push Monitor"
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
@@ -235,7 +247,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				tcp := m.(*monitor.TCPPort)
+				tcp, ok := m.(*monitor.TCPPort)
+				if !ok {
+					panic("failed to assert TCPPort monitor")
+				}
 				tcp.Name = "Updated TCP Port Monitor"
 				tcp.Hostname = "cloudflare.com"
 				tcp.Port = 80
@@ -294,7 +309,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				http := m.(*monitor.HTTPKeyword)
+				http, ok := m.(*monitor.HTTPKeyword)
+				if !ok {
+					panic("failed to assert HTTPKeyword monitor")
+				}
 				http.Name = "Updated HTTP Keyword Monitor"
 				http.Keyword = "Moby Dick"
 				http.InvertKeyword = true
@@ -345,7 +363,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				dns := m.(*monitor.DNS)
+				dns, ok := m.(*monitor.DNS)
+				if !ok {
+					panic("failed to assert DNS monitor")
+				}
 				dns.Name = "Updated DNS Monitor"
 				dns.Hostname = "google.com"
 				dns.ResolverServer = "8.8.8.8"
@@ -407,7 +428,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				json := m.(*monitor.HTTPJSONQuery)
+				json, ok := m.(*monitor.HTTPJSONQuery)
+				if !ok {
+					panic("failed to assert HTTPJSONQuery monitor")
+				}
 				json.Name = "Updated JSON Query Monitor"
 				json.JSONPath = "slideshow.author"
 				json.ExpectedValue = "Yours Truly"
@@ -456,7 +480,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				postgres := m.(*monitor.Postgres)
+				postgres, ok := m.(*monitor.Postgres)
+				if !ok {
+					panic("failed to assert Postgres monitor")
+				}
 				postgres.Name = "Updated Postgres Monitor"
 				postgres.DatabaseConnectionString = "postgres://newuser:newpass@localhost:5432/newdb"
 				postgres.DatabaseQuery = "SELECT version()"
@@ -508,7 +535,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				browser := m.(*monitor.RealBrowser)
+				browser, ok := m.(*monitor.RealBrowser)
+				if !ok {
+					panic("failed to assert RealBrowser monitor")
+				}
 				browser.Name = "Updated RealBrowser Monitor"
 				browser.URL = "https://httpbin.org/status/201"
 			},
@@ -554,7 +584,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				redis := m.(*monitor.Redis)
+				redis, ok := m.(*monitor.Redis)
+				if !ok {
+					panic("failed to assert Redis monitor")
+				}
 				redis.Name = "Updated Redis Monitor"
 				redis.ConnectionString = "redis://user:password@localhost:6380"
 			},
@@ -602,7 +635,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				smtp := m.(*monitor.SMTP)
+				smtp, ok := m.(*monitor.SMTP)
+				if !ok {
+					panic("failed to assert SMTP monitor")
+				}
 				smtp.Name = "Updated SMTP Monitor"
 				port465 := int64(465)
 				securitySecure := "secure"
@@ -661,7 +697,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				grpc := m.(*monitor.GrpcKeyword)
+				grpc, ok := m.(*monitor.GrpcKeyword)
+				if !ok {
+					panic("failed to assert GrpcKeyword monitor")
+				}
 				grpc.Name = "Updated gRPC Keyword Monitor"
 				grpc.GrpcURL = "example.com:443"
 				grpc.Keyword = "NOT_SERVING"
@@ -717,7 +756,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				snmp := m.(*monitor.SNMP)
+				snmp, ok := m.(*monitor.SNMP)
+				if !ok {
+					panic("failed to assert SNMP monitor")
+				}
 				snmp.Name = "Updated SNMP Monitor"
 				snmp.Hostname = "10.0.0.1"
 				snmp.SNMPOID = "1.3.6.1.2.1.2.2.1.5.1"
@@ -766,7 +808,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				docker := m.(*monitor.Docker)
+				docker, ok := m.(*monitor.Docker)
+				if !ok {
+					panic("failed to assert Docker monitor")
+				}
 				docker.Name = "Updated Docker Monitor"
 				docker.DockerContainer = "updated-container"
 			},
@@ -814,7 +859,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				steam := m.(*monitor.Steam)
+				steam, ok := m.(*monitor.Steam)
+				if !ok {
+					panic("failed to assert Steam monitor")
+				}
 				steam.Name = "Updated Steam Monitor"
 				steam.Hostname = "10.0.0.1"
 				steam.Port = 27016
@@ -865,7 +913,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				gamedig := m.(*monitor.GameDig)
+				gamedig, ok := m.(*monitor.GameDig)
+				if !ok {
+					panic("failed to assert GameDig monitor")
+				}
 				gamedig.Name = "Updated GameDig Monitor"
 				gamedig.Hostname = "192.168.1.100"
 				gamedig.Port = 27015
@@ -926,7 +977,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				mqtt := m.(*monitor.MQTT)
+				mqtt, ok := m.(*monitor.MQTT)
+				if !ok {
+					panic("failed to assert MQTT monitor")
+				}
 				mqtt.Name = "Updated MQTT Monitor"
 				mqtt.Hostname = "mqtt-new.example.com"
 				mqtt.Port = ptr.To(int64(8883))
@@ -984,7 +1038,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				rmq := m.(*monitor.RabbitMQ)
+				rmq, ok := m.(*monitor.RabbitMQ)
+				if !ok {
+					panic("failed to assert RabbitMQ monitor")
+				}
 				rmq.Name = "Updated RabbitMQ Monitor"
 				rmq.Nodes = "[\"http://rabbitmq-new.example.com:15672/\"]"
 				rmq.Username = ptr.To("admin")
@@ -1041,7 +1098,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				kafka := m.(*monitor.KafkaProducer)
+				kafka, ok := m.(*monitor.KafkaProducer)
+				if !ok {
+					panic("failed to assert KafkaProducer monitor")
+				}
 				kafka.Name = "Updated Kafka Producer Monitor"
 				kafka.Brokers = []string{"kafka1:9092", "kafka2:9092"}
 				kafka.Topic = "updated-topic"
@@ -1096,7 +1156,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				sqlserver := m.(*monitor.SQLServer)
+				sqlserver, ok := m.(*monitor.SQLServer)
+				if !ok {
+					panic("failed to assert SQLServer monitor")
+				}
 				sqlserver.Name = "Updated SQL Server Monitor"
 				sqlserver.DatabaseConnectionString = "Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;"
 				sqlserver.DatabaseQuery = ptr.To("SELECT COUNT(*) FROM sys.tables;")
@@ -1149,7 +1212,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				mysql := m.(*monitor.MySQL)
+				mysql, ok := m.(*monitor.MySQL)
+				if !ok {
+					panic("failed to assert MySQL monitor")
+				}
 				mysql.Name = "Updated MySQL Monitor"
 				mysql.DatabaseConnectionString = "mysql://admin:secret@mysql.example.com:3306/mydb"
 				mysql.DatabaseQuery = ptr.To("SELECT COUNT(*) FROM information_schema.tables;")
@@ -1200,7 +1266,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				mongodb := m.(*monitor.MongoDB)
+				mongodb, ok := m.(*monitor.MongoDB)
+				if !ok {
+					panic("failed to assert MongoDB monitor")
+				}
 				mongodb.Name = "Updated MongoDB Monitor"
 				mongodb.DatabaseConnectionString = "mongodb://user:pass@mongodb.example.com:27017/admin"
 				mongodb.DatabaseQuery = ptr.To("{\"dbStats\": 1}")
@@ -1262,7 +1331,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				radius := m.(*monitor.Radius)
+				radius, ok := m.(*monitor.Radius)
+				if !ok {
+					panic("failed to assert Radius monitor")
+				}
 				radius.Name = "Updated Radius Monitor"
 				radius.Hostname = "auth.example.com"
 				radius.Port = ptr.To(int64(1813))
@@ -1320,7 +1392,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
-				tailscale := m.(*monitor.TailscalePing)
+				tailscale, ok := m.(*monitor.TailscalePing)
+				if !ok {
+					panic("failed to assert TailscalePing monitor")
+				}
 				tailscale.Name = "Updated Tailscale Ping Monitor"
 				tailscale.Hostname = "mydevice.mydomain.ts.net"
 			},
@@ -1368,7 +1443,10 @@ func TestMonitorCRUD(t *testing.T) {
 				dockerHostID = hostID
 
 				// Update the monitor's docker_host to use the created host
-				dockerMonitor := tc.create.(*monitor.Docker)
+				dockerMonitor, ok := tc.create.(*monitor.Docker)
+				if !ok {
+					panic("failed to assert Docker monitor")
+				}
 				dockerMonitor.DockerHost = dockerHostID
 				tc.create = dockerMonitor
 			}
