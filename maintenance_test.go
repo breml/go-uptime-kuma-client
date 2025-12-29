@@ -159,7 +159,7 @@ func TestClient_MaintenanceStrategies(t *testing.T) {
 		m := maintenance.NewRecurringDayOfMonthMaintenance(
 			"Monthly Maintenance",
 			"Monthly system maintenance",
-			[]interface{}{1, 15},
+			[]any{1, 15},
 			[]maintenance.TimeOfDay{
 				{Hours: 0, Minutes: 0, Seconds: 0},
 				{Hours: 2, Minutes: 0, Seconds: 0},
@@ -488,7 +488,7 @@ func TestClient_MaintenanceEdgeCases(t *testing.T) {
 		m := maintenance.NewRecurringDayOfMonthMaintenance(
 			"End of Month Maintenance",
 			"Maintenance on last days of month",
-			[]interface{}{"lastDay1", "lastDay2"},
+			[]any{"lastDay1", "lastDay2"},
 			[]maintenance.TimeOfDay{
 				{Hours: 23, Minutes: 0, Seconds: 0},
 				{Hours: 23, Minutes: 59, Seconds: 59},

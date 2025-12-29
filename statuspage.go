@@ -3,6 +3,7 @@ package kuma
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
@@ -17,9 +18,7 @@ func (c *Client) GetStatusPages(ctx context.Context) (map[int64]statuspage.Statu
 	}
 
 	statusPages := make(map[int64]statuspage.StatusPage, len(c.state.statusPages))
-	for k, v := range c.state.statusPages {
-		statusPages[k] = v
-	}
+	maps.Copy(statusPages, c.state.statusPages)
 
 	return statusPages, nil
 }

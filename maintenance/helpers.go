@@ -57,7 +57,7 @@ func NewRecurringWeekdayMaintenance(
 // daysOfMonth can contain integers 1-31 or special strings "lastDay1"-"lastDay4".
 func NewRecurringDayOfMonthMaintenance(
 	title, description string,
-	daysOfMonth []interface{},
+	daysOfMonth []any,
 	timeRange []TimeOfDay,
 	timezone string,
 ) *Maintenance {

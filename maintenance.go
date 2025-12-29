@@ -137,7 +137,7 @@ func (c *Client) GetMonitorMaintenance(ctx context.Context, maintenanceID int64)
 
 	monitorIDs := make([]int64, 0, len(response.Monitors))
 	for _, monitorItem := range response.Monitors {
-		monitorMap, ok := monitorItem.(map[string]interface{})
+		monitorMap, ok := monitorItem.(map[string]any)
 		if !ok {
 			continue
 		}
@@ -180,7 +180,7 @@ func (c *Client) GetMaintenanceStatusPage(ctx context.Context, maintenanceID int
 
 	statusPageIDs := make([]int64, 0, len(response.StatusPages))
 	for _, statusPageItem := range response.StatusPages {
-		statusPageMap, ok := statusPageItem.(map[string]interface{})
+		statusPageMap, ok := statusPageItem.(map[string]any)
 		if !ok {
 			continue
 		}
