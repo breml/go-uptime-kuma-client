@@ -2,6 +2,7 @@ package notification
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -52,12 +53,12 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 
 	notificationTypeAny, ok := config["type"]
 	if !ok {
-		return fmt.Errorf(`invalid notification, attribute "type" missing`)
+		return errors.New(`invalid notification, attribute "type" missing`)
 	}
 
 	notificationType, ok := notificationTypeAny.(string)
 	if !ok {
-		return fmt.Errorf(`invalid notification, attribute "type" is not string`)
+		return errors.New(`invalid notification, attribute "type" is not string`)
 	}
 
 	var applyExisting bool
@@ -65,7 +66,7 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 	if ok {
 		applyExisting, ok = applyExistingAny.(bool)
 		if !ok {
-			return fmt.Errorf(`invalid notification, attribute "applyExisting" is not bool`)
+			return errors.New(`invalid notification, attribute "applyExisting" is not bool`)
 		}
 	}
 
@@ -87,7 +88,7 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 
 func (b Base) MarshalJSON() ([]byte, error) {
 	if b.configStr == "" {
-		return nil, fmt.Errorf("not unmarshaled notification, unable to marshal")
+		return nil, errors.New("not unmarshaled notification, unable to marshal")
 	}
 
 	genericDetails := GenericDetails{}

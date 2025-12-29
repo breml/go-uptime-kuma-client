@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"strings"
@@ -48,12 +49,12 @@ func (n *Generic) UnmarshalJSON(data []byte) error {
 
 	typeNameAny, ok := details["type"]
 	if !ok {
-		return fmt.Errorf("notification does not have type attribute")
+		return errors.New("notification does not have type attribute")
 	}
 
 	typeName, ok := typeNameAny.(string)
 	if !ok {
-		return fmt.Errorf("type attribute is not a string")
+		return errors.New("type attribute is not a string")
 	}
 
 	delete(details, "id")

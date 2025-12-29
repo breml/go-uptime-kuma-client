@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,7 +26,7 @@ import (
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
 
-var ErrNotFound = fmt.Errorf("not found")
+var ErrNotFound = errors.New("not found")
 
 const (
 	LogLevelDebug = utils.DEBUG
@@ -217,7 +218,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	}
 
 	if !setupResp.OK {
-		return fmt.Errorf("setup-database failed")
+		return errors.New("setup-database failed")
 	}
 
 	// Wait for server to restart by polling entry-page until it changes
@@ -233,7 +234,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 			return fmt.Errorf("wait for server restart: %w", ctx.Err())
 
 		case <-timeout:
-			return fmt.Errorf("timeout waiting for server restart")
+			return errors.New("timeout waiting for server restart")
 
 		case <-ticker.C:
 			// Use a short timeout for each poll attempt
@@ -518,7 +519,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			setupRequired = nil
 
 			if !c.autosetup {
-				return nil, fmt.Errorf("server does require setup, but autosetup is disabled")
+				return nil, errors.New("server does require setup, but autosetup is disabled")
 			}
 
 			_, err := c.syncEmit(ctxWithConnectTimeout, "setup", username, password)

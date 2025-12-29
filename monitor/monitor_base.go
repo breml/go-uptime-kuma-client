@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -100,7 +101,7 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 
 func (b Base) MarshalJSON() ([]byte, error) {
 	if b.raw == nil || b.internalType == "" {
-		return nil, fmt.Errorf("not unmarshaled notification, unable to marshal")
+		return nil, errors.New("not unmarshaled notification, unable to marshal")
 	}
 
 	raw := map[string]any{}

@@ -2,6 +2,7 @@ package kuma
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -82,7 +83,7 @@ func (c *Client) CreateMonitor(ctx context.Context, mon monitor.Monitor) (int64,
 
 	// Get monitorID from the response.
 	if response.MonitorID == 0 {
-		return 0, fmt.Errorf("create monitor: no monitor ID in response")
+		return 0, errors.New("create monitor: no monitor ID in response")
 	}
 
 	return response.MonitorID, nil
