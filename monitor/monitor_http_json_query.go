@@ -69,6 +69,7 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	for _, id := range h.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current HTTP-specific field values.

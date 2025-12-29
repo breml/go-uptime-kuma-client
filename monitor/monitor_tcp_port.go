@@ -61,6 +61,7 @@ func (t TCPPort) MarshalJSON() ([]byte, error) {
 	for _, id := range t.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current TCP Port-specific field values.

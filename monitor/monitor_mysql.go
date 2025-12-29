@@ -66,6 +66,7 @@ func (m MySQL) MarshalJSON() ([]byte, error) {
 	for _, id := range m.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current MySQL-specific field values.

@@ -220,6 +220,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 				envTags++
 			}
 		}
+
 		require.Equal(t, 2, envTags, "Should have 2 Environment tags with different values")
 	})
 
@@ -240,6 +241,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 				break
 			}
 		}
+
 		require.True(t, found, "Updated tag not found")
 	})
 
@@ -286,6 +288,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 				require.Equal(t, "production", mt.Value)
 			}
 		}
+
 		require.Equal(t, 1, envTags, "Should have only 1 Environment tag after deleting staging")
 	})
 
@@ -313,6 +316,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 				break
 			}
 		}
+
 		require.True(t, found, "tag1 should still exist on monitor2")
 	})
 
@@ -334,6 +338,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 				break
 			}
 		}
+
 		require.True(t, found, "tag1 should be present in monitor2 tags")
 	})
 
@@ -356,6 +361,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 				break
 			}
 		}
+
 		require.True(t, found, "temp tag should be on monitor")
 
 		// Delete the tag

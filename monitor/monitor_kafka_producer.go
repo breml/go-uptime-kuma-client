@@ -66,6 +66,7 @@ func (k KafkaProducer) MarshalJSON() ([]byte, error) {
 	for _, id := range k.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current KafkaProducer-specific field values.

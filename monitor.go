@@ -72,6 +72,7 @@ func (c *Client) CreateMonitor(ctx context.Context, mon monitor.Monitor) (int64,
 	for _, id := range mon.GetNotificationIDs() {
 		notificationIDList[strconv.FormatInt(id, 10)] = true
 	}
+
 	monitorData["notificationIDList"] = notificationIDList
 
 	response, err := c.syncEmitWithUpdateEvent(ctx, "add", "updateMonitorIntoList", monitorData)
@@ -99,6 +100,7 @@ func (c *Client) UpdateMonitor(ctx context.Context, mon monitor.Monitor) error {
 	for _, id := range mon.GetNotificationIDs() {
 		notificationIDList[strconv.FormatInt(id, 10)] = true
 	}
+
 	monitorData["notificationIDList"] = notificationIDList
 
 	_, err = c.syncEmitWithUpdateEvent(ctx, "editMonitor", "updateMonitorIntoList", monitorData)

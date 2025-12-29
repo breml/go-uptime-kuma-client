@@ -61,6 +61,7 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 	for _, id := range d.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current DNS-specific field values.

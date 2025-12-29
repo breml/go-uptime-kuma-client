@@ -62,6 +62,7 @@ func (d Docker) MarshalJSON() ([]byte, error) {
 	for _, id := range d.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current Docker-specific field values.

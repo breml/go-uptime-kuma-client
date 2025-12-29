@@ -61,6 +61,7 @@ func (p Push) MarshalJSON() ([]byte, error) {
 	for _, id := range p.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current Push-specific field values.

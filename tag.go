@@ -95,8 +95,10 @@ func (c *Client) DeleteTag(ctx context.Context, tagID int64) error {
 				filteredTags = append(filteredTags, t)
 			}
 		}
+
 		c.state.monitors[i].Tags = filteredTags
 	}
+
 	c.mu.Unlock()
 
 	return nil
@@ -155,6 +157,7 @@ func (c *Client) AddMonitorTag(ctx context.Context, tagID int64, monitorID int64
 					return &t, nil
 				}
 			}
+
 			break
 		}
 	}

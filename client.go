@@ -39,12 +39,16 @@ func LogLevel(level string) int {
 	switch strings.ToUpper(level) {
 	case "DEBUG":
 		return LogLevelDebug
+
 	case "INFO":
 		return LogLevelInfo
+
 	case "WARN":
 		return LogLevelWarn
+
 	case "ERROR":
 		return LogLevelError
+
 	default:
 		return LogLevelNone
 	}
@@ -127,6 +131,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
+
 	default:
 	}
 
@@ -185,6 +190,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	if err != nil {
 		return fmt.Errorf("create setup-database request: %w", err)
 	}
+
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err = http.DefaultClient.Do(req)
@@ -222,8 +228,10 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("wait for server restart: %w", ctx.Err())
+
 		case <-timeout:
 			return fmt.Errorf("timeout waiting for server restart")
+
 		case <-ticker.C:
 			// Use a short timeout for each poll attempt
 			pollCtx, pollCancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -343,6 +351,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		for _, monitor := range monitorMap {
 			monitors = append(monitors, monitor)
 		}
+
 		c.state.monitors = monitors
 
 		c.updates.Emit(context.Background(), "monitorList")
@@ -363,6 +372,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 					break
 				}
 			}
+
 			if !found {
 				c.state.monitors = append(c.state.monitors, updatedMonitor)
 			}
@@ -404,6 +414,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		for _, m := range maintenanceMap {
 			maintenances = append(maintenances, m)
 		}
+
 		c.state.maintenances = maintenances
 
 		c.updates.Emit(context.Background(), "maintenanceList")
@@ -476,6 +487,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			select {
 			case <-setupRequired:
 				wantSetup = true
+
 			default:
 			}
 
@@ -555,6 +567,7 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 		}
 
 		return response, nil
+
 	case <-ctx.Done():
 		return ackResponse{}, fmt.Errorf("%s: %v", command, ctx.Err())
 	}
@@ -596,12 +609,14 @@ func (c *Client) syncEmitWithUpdateEvent(ctx context.Context, command string, up
 		select {
 		case <-done:
 			done = nil
+
 		case response = <-res:
 			if !response.OK {
 				return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
 			}
 
 			res = nil
+
 		case <-ctx.Done():
 			return ackResponse{}, fmt.Errorf("%s: %v", command, ctx.Err())
 		}

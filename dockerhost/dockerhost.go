@@ -58,6 +58,7 @@ func (t *TestResult) UnmarshalJSON(data []byte) error {
 	switch v := aux.Version.(type) {
 	case string:
 		t.Version = v
+
 	case map[string]any:
 		// If version is an object, try to extract Version field
 		if version, ok := v["Version"].(string); ok {

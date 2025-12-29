@@ -66,6 +66,7 @@ func (s Steam) MarshalJSON() ([]byte, error) {
 	for _, id := range s.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current Steam-specific field values.

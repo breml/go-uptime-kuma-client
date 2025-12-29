@@ -141,6 +141,7 @@ func (c *Client) GetMonitorMaintenance(ctx context.Context, maintenanceID int64)
 		if !ok {
 			continue
 		}
+
 		if id, ok := monitorMap["id"].(float64); ok {
 			monitorIDs = append(monitorIDs, int64(id))
 		}
@@ -183,6 +184,7 @@ func (c *Client) GetMaintenanceStatusPage(ctx context.Context, maintenanceID int
 		if !ok {
 			continue
 		}
+
 		if id, ok := statusPageMap["id"].(float64); ok {
 			statusPageIDs = append(statusPageIDs, int64(id))
 		}

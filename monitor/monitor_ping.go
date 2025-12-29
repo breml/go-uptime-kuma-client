@@ -61,6 +61,7 @@ func (p Ping) MarshalJSON() ([]byte, error) {
 	for _, id := range p.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current Ping-specific field values.

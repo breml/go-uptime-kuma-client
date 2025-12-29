@@ -66,6 +66,7 @@ func (s SQLServer) MarshalJSON() ([]byte, error) {
 	for _, id := range s.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current SQL Server-specific field values.

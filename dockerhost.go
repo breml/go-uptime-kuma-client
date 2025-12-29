@@ -84,6 +84,7 @@ func (c *Client) TestDockerHost(ctx context.Context, config dockerhost.Config) (
 		switch v := version.(type) {
 		case string:
 			result.Version = v
+
 		case map[string]any:
 			if ver, ok := v["Version"].(string); ok {
 				result.Version = ver

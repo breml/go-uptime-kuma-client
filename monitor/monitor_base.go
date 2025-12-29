@@ -130,6 +130,7 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	for _, id := range b.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	return json.Marshal(raw)

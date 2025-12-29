@@ -74,8 +74,10 @@ func (p *Proxy) UnmarshalJSON(data []byte) error {
 				p.CreatedDate = t
 				return nil
 			}
+
 			parseErr = err
 		}
+
 		return parseErr
 	}
 
@@ -87,10 +89,12 @@ func (p Proxy) MarshalJSON() ([]byte, error) {
 	if p.Auth {
 		auth = 1
 	}
+
 	active := 0
 	if p.Active {
 		active = 1
 	}
+
 	defaultVal := 0
 	if p.Default {
 		defaultVal = 1

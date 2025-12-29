@@ -61,6 +61,7 @@ func (r Redis) MarshalJSON() ([]byte, error) {
 	for _, id := range r.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current Redis-specific field values.

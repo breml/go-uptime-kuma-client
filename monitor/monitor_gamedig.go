@@ -66,6 +66,7 @@ func (g GameDig) MarshalJSON() ([]byte, error) {
 	for _, id := range g.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current GameDig-specific field values.
