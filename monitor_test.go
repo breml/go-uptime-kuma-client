@@ -321,7 +321,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "Updated HTTP Keyword Monitor", http.Name)
 				require.Equal(t, "Moby Dick", http.Keyword)
-				require.Equal(t, true, http.InvertKeyword)
+				require.True(t, http.InvertKeyword)
 			},
 			testPauseResume: true,
 		},
@@ -691,8 +691,8 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated gRPC Keyword Monitor", grpc.Name)
 				require.Equal(t, "example.com:443", grpc.GrpcURL)
 				require.Equal(t, "NOT_SERVING", grpc.Keyword)
-				require.Equal(t, true, grpc.InvertKeyword)
-				require.Equal(t, true, grpc.GrpcEnableTLS)
+				require.True(t, grpc.InvertKeyword)
+				require.True(t, grpc.GrpcEnableTLS)
 			},
 			testPauseResume: false,
 		},
@@ -896,7 +896,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "192.168.1.100", gamedig.Hostname)
 				require.Equal(t, 27015, gamedig.Port)
 				require.Equal(t, "csgo", gamedig.Game)
-				require.Equal(t, false, gamedig.GameDigGivenPortOnly)
+				require.False(t, gamedig.GameDigGivenPortOnly)
 			},
 			testPauseResume: true,
 		},
@@ -1073,8 +1073,8 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, []string{"kafka1:9092", "kafka2:9092"}, kafka.Brokers)
 				require.Equal(t, "updated-topic", kafka.Topic)
 				require.Equal(t, "updated message", kafka.Message)
-				require.Equal(t, true, kafka.SSL)
-				require.Equal(t, true, kafka.AllowAutoTopicCreation)
+				require.True(t, kafka.SSL)
+				require.True(t, kafka.AllowAutoTopicCreation)
 			},
 			testPauseResume: true,
 		},
@@ -1382,12 +1382,12 @@ func TestMonitorCRUD(t *testing.T) {
 			created := tc.create
 			monitorID, err := client.CreateMonitor(ctx, created)
 			require.NoError(t, err)
-			require.Greater(t, monitorID, int64(0))
+			require.Positive(t, monitorID)
 
 			// Verify count increased
 			monitors, err = client.GetMonitors(ctx)
 			require.NoError(t, err)
-			require.Equal(t, initialCount+1, len(monitors))
+			require.Len(t, monitors, initialCount+1)
 
 			// Retrieve
 			retrievedMonitor, err := client.GetMonitor(ctx, monitorID)
@@ -1425,7 +1425,7 @@ func TestMonitorCRUD(t *testing.T) {
 			// Verify count restored
 			monitors, err = client.GetMonitors(ctx)
 			require.NoError(t, err)
-			require.Equal(t, initialCount, len(monitors))
+			require.Len(t, monitors, initialCount)
 
 			// Clean up Docker host if created
 			if dockerHostID > 0 {

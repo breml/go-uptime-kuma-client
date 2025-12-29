@@ -185,7 +185,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 
 	notificationID, err := client.CreateNotification(ctx, webhookNotification)
 	require.NoError(t, err)
-	require.Greater(t, notificationID, int64(0))
+	require.Positive(t, notificationID)
 	t.Logf("Created notification with ID: %d", notificationID)
 
 	// Cleanup notification
@@ -224,7 +224,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 
 	monitorID, err := client.CreateMonitor(ctx, httpMonitor)
 	require.NoError(t, err)
-	require.Greater(t, monitorID, int64(0))
+	require.Positive(t, monitorID)
 	t.Logf("Created monitor with ID: %d", monitorID)
 
 	// Verify the monitor was created with the correct configuration.

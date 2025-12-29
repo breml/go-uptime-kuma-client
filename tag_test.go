@@ -42,12 +42,12 @@ func TestClient_TagCRUD(t *testing.T) {
 		// Test CreateTag
 		tagID, err = client.CreateTag(ctx, testTag)
 		require.NoError(t, err)
-		require.Greater(t, tagID, int64(0))
+		require.Positive(t, tagID)
 
 		// Test GetTags after creation
 		tags, err := client.GetTags(ctx)
 		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(tags))
+		require.Len(t, tags, initialCount+1)
 
 		// Test GetTag
 		tagRetrieved, err = client.GetTag(ctx, tagID)
@@ -79,7 +79,7 @@ func TestClient_TagCRUD(t *testing.T) {
 		// Verify deletion
 		tags, err := client.GetTags(ctx)
 		require.NoError(t, err)
-		require.Equal(t, initialCount, len(tags))
+		require.Len(t, tags, initialCount)
 
 		// Verify tag is not found
 		_, err = client.GetTag(ctx, tagID)
@@ -201,7 +201,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 
 		require.Equal(t, "production", tagsByID[tag1ID].Value)
 		require.Equal(t, "high", tagsByID[tag2ID].Value)
-		require.Equal(t, "", tagsByID[tag3ID].Value)
+		require.Empty(t, tagsByID[tag3ID].Value)
 	})
 
 	t.Run("add_same_tag_with_different_values", func(t *testing.T) {
@@ -325,7 +325,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 		mon, err := client.GetMonitor(ctx, monitorID2)
 		require.NoError(t, err)
 		require.NotNil(t, mon.Tags)
-		require.Greater(t, len(mon.Tags), 0)
+		require.NotEmpty(t, mon.Tags)
 
 		// Verify tag details
 		found := false

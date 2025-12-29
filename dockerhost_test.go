@@ -39,7 +39,7 @@ func TestDockerHostCRUD(t *testing.T) {
 
 		socketHostID, err = client.CreateDockerHost(ctx, config)
 		require.NoError(t, err)
-		require.Greater(t, socketHostID, int64(0))
+		require.Positive(t, socketHostID)
 
 		hosts := client.GetDockerHostList(ctx)
 		require.Len(t, hosts, initialCount+1)
@@ -65,7 +65,7 @@ func TestDockerHostCRUD(t *testing.T) {
 
 		tcpHostID, err = client.CreateDockerHost(ctx, config)
 		require.NoError(t, err)
-		require.Greater(t, tcpHostID, int64(0))
+		require.Positive(t, tcpHostID)
 
 		hosts := client.GetDockerHostList(ctx)
 		require.Len(t, hosts, initialCount+1)
@@ -189,7 +189,7 @@ func TestDockerHostString(t *testing.T) {
 
 		hostID, err = client.CreateDockerHost(ctx, config)
 		require.NoError(t, err)
-		require.Greater(t, hostID, int64(0))
+		require.Positive(t, hostID)
 
 		host, err := client.GetDockerHost(ctx, hostID)
 		require.NoError(t, err)

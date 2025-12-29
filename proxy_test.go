@@ -43,7 +43,7 @@ func TestProxyCRUD(t *testing.T) {
 
 		httpProxyID, err = client.CreateProxy(ctx, config)
 		require.NoError(t, err)
-		require.Greater(t, httpProxyID, int64(0))
+		require.Positive(t, httpProxyID)
 
 		proxies := client.GetProxyList(ctx)
 		require.Len(t, proxies, initialCount+1)
@@ -77,7 +77,7 @@ func TestProxyCRUD(t *testing.T) {
 
 		socksProxyID, err = client.CreateProxy(ctx, config)
 		require.NoError(t, err)
-		require.Greater(t, socksProxyID, int64(0))
+		require.Positive(t, socksProxyID)
 
 		proxies := client.GetProxyList(ctx)
 		require.Len(t, proxies, initialCount+1)
@@ -211,7 +211,7 @@ func TestProxyWithMonitor(t *testing.T) {
 
 		proxyID, err = client.CreateProxy(ctx, config)
 		require.NoError(t, err)
-		require.Greater(t, proxyID, int64(0))
+		require.Positive(t, proxyID)
 	})
 
 	var monitorID int64
@@ -232,7 +232,7 @@ func TestProxyWithMonitor(t *testing.T) {
 
 		monitorID, err = client.CreateMonitor(ctx, httpMonitor)
 		require.NoError(t, err)
-		require.Greater(t, monitorID, int64(0))
+		require.Positive(t, monitorID)
 
 		createdMonitor, err := client.GetMonitor(ctx, monitorID)
 		require.NoError(t, err)
@@ -359,7 +359,7 @@ func TestProxyApplyExisting(t *testing.T) {
 
 		proxyID, err = client.CreateProxy(ctx, config)
 		require.NoError(t, err)
-		require.Greater(t, proxyID, int64(0))
+		require.Positive(t, proxyID)
 
 		m1, err := client.GetMonitor(ctx, monitor1ID)
 		require.NoError(t, err)
@@ -407,7 +407,7 @@ func TestProxyProtocols(t *testing.T) {
 
 			id, err := client.CreateProxy(ctx, config)
 			require.NoError(t, err)
-			require.Greater(t, id, int64(0))
+			require.Positive(t, id)
 
 			createdProxy, err := client.GetProxy(ctx, id)
 			require.NoError(t, err)

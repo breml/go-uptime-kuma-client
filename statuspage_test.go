@@ -118,7 +118,7 @@ func TestClient_StatusPageWithMonitors(t *testing.T) {
 
 		monitor1ID, err = client.CreateMonitor(ctx, httpMonitor1)
 		require.NoError(t, err)
-		require.Greater(t, monitor1ID, int64(0))
+		require.Positive(t, monitor1ID)
 
 		httpMonitor2 := monitor.HTTP{
 			Base: monitor.Base{
@@ -144,7 +144,7 @@ func TestClient_StatusPageWithMonitors(t *testing.T) {
 
 		monitor2ID, err = client.CreateMonitor(ctx, httpMonitor2)
 		require.NoError(t, err)
-		require.Greater(t, monitor2ID, int64(0))
+		require.Positive(t, monitor2ID)
 	})
 
 	t.Run("add_status_page", func(t *testing.T) {

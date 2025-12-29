@@ -37,7 +37,7 @@ func TestClient_MaintenanceCRUD(t *testing.T) {
 		created, err := client.CreateMaintenance(ctx, m)
 		require.NoError(t, err)
 		require.NotNil(t, created)
-		require.Greater(t, created.ID, int64(0))
+		require.Positive(t, created.ID)
 		require.Equal(t, "Server Upgrade", created.Title)
 		require.Equal(t, "Planned server upgrade", created.Description)
 		require.Equal(t, "single", created.Strategy)
@@ -251,7 +251,7 @@ func TestClient_MaintenanceWithMonitors(t *testing.T) {
 
 		monitor1ID, err = client.CreateMonitor(ctx, httpMonitor1)
 		require.NoError(t, err)
-		require.Greater(t, monitor1ID, int64(0))
+		require.Positive(t, monitor1ID)
 
 		httpMonitor2 := monitor.HTTP{
 			Base: monitor.Base{
@@ -277,7 +277,7 @@ func TestClient_MaintenanceWithMonitors(t *testing.T) {
 
 		monitor2ID, err = client.CreateMonitor(ctx, httpMonitor2)
 		require.NoError(t, err)
-		require.Greater(t, monitor2ID, int64(0))
+		require.Positive(t, monitor2ID)
 	})
 
 	t.Run("create_maintenance", func(t *testing.T) {
@@ -371,7 +371,7 @@ func TestClient_MaintenanceWithStatusPages(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, sp)
 		statusPageID = sp.ID
-		require.Greater(t, statusPageID, int64(0))
+		require.Positive(t, statusPageID)
 	})
 
 	t.Run("create_maintenance", func(t *testing.T) {

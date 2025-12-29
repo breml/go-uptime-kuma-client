@@ -4071,7 +4071,7 @@ func TestNotificationCRUD(t *testing.T) {
 
 				id, err = client.CreateNotification(ctx, tc.create)
 				require.NoError(t, err)
-				require.Greater(t, id, int64(0))
+				require.Positive(t, id)
 
 				notifications := client.GetNotifications(ctx)
 				require.Len(t, notifications, initialCount+1)
@@ -4148,7 +4148,7 @@ func TestWebhookNotificationVariants(t *testing.T) {
 
 		id, err := client.CreateNotification(ctx, createNotification)
 		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
+		require.Positive(t, id)
 
 		notifications := client.GetNotifications(ctx)
 		require.Len(t, notifications, initialCount+1)
@@ -4191,7 +4191,7 @@ func TestWebhookNotificationVariants(t *testing.T) {
 
 		id, err := client.CreateNotification(ctx, createNotification)
 		require.NoError(t, err)
-		require.Greater(t, id, int64(0))
+		require.Positive(t, id)
 
 		notifications := client.GetNotifications(ctx)
 		require.Len(t, notifications, initialCount+1)
@@ -4203,7 +4203,7 @@ func TestWebhookNotificationVariants(t *testing.T) {
 		err = createdNotification.As(&specificNotification)
 		require.NoError(t, err)
 
-		require.Equal(t, 2, len(specificNotification.WebhookAdditionalHeaders))
+		require.Len(t, specificNotification.WebhookAdditionalHeaders, 2)
 		require.Equal(t, "Bearer secret-token", specificNotification.WebhookAdditionalHeaders["Authorization"])
 		require.Equal(t, "uptime-kuma", specificNotification.WebhookAdditionalHeaders["X-App-ID"])
 
