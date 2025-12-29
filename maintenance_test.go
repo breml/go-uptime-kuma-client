@@ -16,7 +16,7 @@ func TestClient_MaintenanceCRUD(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	var err error
@@ -105,7 +105,7 @@ func TestClient_MaintenanceStrategies(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 
 	t.Run("recurring_weekday_maintenance", func(t *testing.T) {
@@ -219,7 +219,7 @@ func TestClient_MaintenanceWithMonitors(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 
 	var err error
@@ -350,7 +350,7 @@ func TestClient_MaintenanceWithStatusPages(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 
 	var err error
@@ -429,7 +429,7 @@ func TestClient_MaintenanceTimezones(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	t.Run("maintenance_with_utc_timezone", func(t *testing.T) {
@@ -480,7 +480,7 @@ func TestClient_MaintenanceEdgeCases(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	t.Run("maintenance_with_last_day_of_month", func(t *testing.T) {

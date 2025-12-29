@@ -17,7 +17,7 @@ func TestClient_TagCRUD(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	var err error
@@ -93,7 +93,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 
 	// Create test tags

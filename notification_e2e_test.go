@@ -42,7 +42,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 	}
 
 	// Use a 60-second timeout to fit within the 120-second container expiration.
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 
 	// Track webhook calls.
@@ -190,6 +190,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 
 	// Cleanup notification
 	t.Cleanup(func() {
+		//nolint:usetesting // t.Context() cannot be used in cleanup, since it is already done.
 		err := client.DeleteNotification(context.Background(), notificationID)
 		if err != nil {
 			t.Logf("Failed to delete notification: %v", err)
@@ -236,6 +237,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 
 	// Cleanup monitor.
 	t.Cleanup(func() {
+		//nolint:usetesting // t.Context() cannot be used in cleanup, since it is already done.
 		err := client.DeleteMonitor(context.Background(), monitorID)
 		if err != nil {
 			t.Logf("Failed to delete monitor: %v", err)
