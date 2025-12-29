@@ -162,7 +162,8 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 		return fmt.Errorf("read entry-page response: %w", err)
 	}
 
-	if err := json.Unmarshal(body, &entryPage); err != nil {
+	err = json.Unmarshal(body, &entryPage)
+	if err != nil {
 		return fmt.Errorf("parse entry-page response: %w", err)
 	}
 
@@ -210,7 +211,8 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	}
 
 	var setupResp setupDatabaseResponse
-	if err := json.Unmarshal(body, &setupResp); err != nil {
+	err = json.Unmarshal(body, &setupResp)
+	if err != nil {
 		return fmt.Errorf("parse setup-database response: %w", err)
 	}
 
@@ -256,7 +258,8 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 			}
 
 			var checkEntryPage entryPageResponse
-			if err := json.Unmarshal(pollBody, &checkEntryPage); err != nil {
+			err = json.Unmarshal(pollBody, &checkEntryPage)
+			if err != nil {
 				continue
 			}
 
@@ -289,7 +292,8 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	// Handle database setup for Uptime Kuma v2 if autosetup is enabled
 	if c.autosetup {
-		if err := setupDatabase(ctxWithConnectTimeout, baseURL); err != nil {
+		err := setupDatabase(ctxWithConnectTimeout, baseURL)
+		if err != nil {
 			return nil, fmt.Errorf("database setup: %w", err)
 		}
 	}

@@ -147,7 +147,8 @@ func (c *Client) AddMonitorTag(
 	}
 
 	// Refresh the monitor in cache to get the updated tags
-	if err := c.refreshMonitorInCache(ctx, monitorID); err != nil {
+	err = c.refreshMonitorInCache(ctx, monitorID)
+	if err != nil {
 		return nil, fmt.Errorf(
 			"add monitor tag (tag %d, monitor %d): failed to refresh cache: %w",
 			tagID,
@@ -191,7 +192,8 @@ func (c *Client) UpdateMonitorTag(ctx context.Context, tagID int64, monitorID in
 	}
 
 	// Refresh the monitor in cache to get the updated tags
-	if err := c.refreshMonitorInCache(ctx, monitorID); err != nil {
+	err = c.refreshMonitorInCache(ctx, monitorID)
+	if err != nil {
 		return fmt.Errorf("update monitor tag (tag %d, monitor %d): failed to refresh cache: %w", tagID, monitorID, err)
 	}
 
@@ -222,7 +224,8 @@ func (c *Client) DeleteMonitorTagWithValue(ctx context.Context, tagID int64, mon
 	}
 
 	// Refresh the monitor in cache to get the updated tags
-	if err := c.refreshMonitorInCache(ctx, monitorID); err != nil {
+	err = c.refreshMonitorInCache(ctx, monitorID)
+	if err != nil {
 		return fmt.Errorf(
 			"delete monitor tag with value (tag %d, monitor %d, value %q): failed to refresh cache: %w",
 			tagID,

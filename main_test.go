@@ -106,7 +106,8 @@ func testMainSetup(m *testing.M) (int, error) {
 
 	// as of go1.15 testing.M returns the exit code of m.Run(), so it is safe to use defer here
 	defer func() {
-		if err := pool.Purge(resource); err != nil {
+		err := pool.Purge(resource)
+		if err != nil {
 			log.Printf("Could not purge resource: %v", err)
 		}
 	}()

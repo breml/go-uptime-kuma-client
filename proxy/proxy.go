@@ -44,7 +44,8 @@ func (p *Proxy) UnmarshalJSON(data []byte) error {
 		CreatedDate string `json:"createdDate"`
 	}{}
 
-	if err := json.Unmarshal(data, &aux); err != nil {
+	err := json.Unmarshal(data, &aux)
+	if err != nil {
 		return err
 	}
 

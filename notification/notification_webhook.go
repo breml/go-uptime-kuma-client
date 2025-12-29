@@ -88,7 +88,8 @@ func (h *WebhookAdditionalHeaders) UnmarshalJSON(data []byte) error {
 
 	// Unmarshal the outer JSON string
 	var jsonStr string
-	if err := json.Unmarshal(data, &jsonStr); err != nil {
+	err := json.Unmarshal(data, &jsonStr)
+	if err != nil {
 		return err
 	}
 
@@ -100,7 +101,8 @@ func (h *WebhookAdditionalHeaders) UnmarshalJSON(data []byte) error {
 
 	// Unmarshal the inner JSON object
 	var headers map[string]string
-	if err := json.Unmarshal([]byte(jsonStr), &headers); err != nil {
+	err = json.Unmarshal([]byte(jsonStr), &headers)
+	if err != nil {
 		return err
 	}
 
