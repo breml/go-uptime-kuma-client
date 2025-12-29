@@ -348,7 +348,7 @@ type MonitorInfo struct {
 	Type     string `json:"type"`
 }
 
-// getDockerGatewayIP attempts to detect the Docker bridge gateway IP
+// getDockerGatewayIP attempts to detect the Docker bridge gateway IP.
 func getDockerGatewayIP(t *testing.T) string {
 	t.Helper()
 

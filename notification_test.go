@@ -10,7 +10,7 @@ import (
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
-// notificationTestCase defines a single notification type's CRUD test scenario
+// notificationTestCase defines a single notification type's CRUD test scenario.
 type notificationTestCase struct {
 	name              string                                                                                             // Test name (e.g., "Ntfy", "Slack")
 	expectedType      string                                                                                             // Expected type string from API

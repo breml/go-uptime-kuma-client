@@ -61,7 +61,7 @@ func (w Webhook) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalJSON serializes the headers map to a JSON string.
-// Example: {"Authorization": "Bearer token"} becomes "{\"Authorization\":\"Bearer token\"}"
+// Example: {"Authorization": "Bearer token"} becomes "{\"Authorization\":\"Bearer token\"}".
 func (h WebhookAdditionalHeaders) MarshalJSON() ([]byte, error) {
 	if h == nil {
 		return []byte("null"), nil
@@ -78,7 +78,7 @@ func (h WebhookAdditionalHeaders) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON deserializes a JSON string into the headers map.
-// Example: "{\"Authorization\":\"Bearer token\"}" becomes {"Authorization": "Bearer token"}
+// Example: "{\"Authorization\":\"Bearer token\"}" becomes {"Authorization": "Bearer token"}.
 func (h *WebhookAdditionalHeaders) UnmarshalJSON(data []byte) error {
 	// First check if it's null or empty string
 	if string(data) == "null" || string(data) == `""` {

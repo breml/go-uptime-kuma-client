@@ -12,7 +12,7 @@ import (
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
-// monitorTestCase defines a single monitor type's CRUD test scenario
+// monitorTestCase defines a single monitor type's CRUD test scenario.
 type monitorTestCase struct {
 	name              string                                                   // Test name (e.g., "HTTP", "Ping")
 	create            monitor.Monitor                                          // Monitor to create

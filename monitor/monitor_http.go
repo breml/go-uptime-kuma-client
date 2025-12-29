@@ -128,10 +128,10 @@ func (h HTTPDetails) Type() string {
 	return "http"
 }
 
-// AuthMethod represents the authentication method for monitors
+// AuthMethod represents the authentication method for monitors.
 type AuthMethod string
 
-// Auth methods
+// Auth methods.
 const (
 	AuthMethodNone     AuthMethod = ""
 	AuthMethodBasic    AuthMethod = "basic"

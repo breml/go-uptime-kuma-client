@@ -90,10 +90,10 @@ func (d DNSDetails) Type() string {
 	return "dns"
 }
 
-// DNSResolveType represents the DNS record type to resolve
+// DNSResolveType represents the DNS record type to resolve.
 type DNSResolveType string
 
-// DNS resolve types
+// DNS resolve types.
 const (
 	DNSResolveTypeA     DNSResolveType = "A"
 	DNSResolveTypeAAAA  DNSResolveType = "AAAA"
