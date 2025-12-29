@@ -6,19 +6,23 @@ import (
 	"strconv"
 )
 
+// Redis ...
 type Redis struct {
 	Base
 	RedisDetails
 }
 
+// Type ...
 func (r Redis) Type() string {
 	return r.RedisDetails.Type()
 }
 
+// String ...
 func (r Redis) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(r.Base, false), formatMonitor(r.RedisDetails, true))
 }
 
+// UnmarshalJSON ...
 func (r *Redis) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -40,6 +44,7 @@ func (r *Redis) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (r Redis) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = r.ID
@@ -81,11 +86,13 @@ func (r Redis) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// RedisDetails ...
 type RedisDetails struct {
 	ConnectionString string `json:"databaseConnectionString"`
 	IgnoreTLS        bool   `json:"ignoreTls"`
 }
 
+// Type ...
 func (r RedisDetails) Type() string {
 	return "redis"
 }

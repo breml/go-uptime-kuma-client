@@ -6,19 +6,23 @@ import (
 	"strconv"
 )
 
+// Postgres ...
 type Postgres struct {
 	Base
 	PostgresDetails
 }
 
+// Type ...
 func (p Postgres) Type() string {
 	return p.PostgresDetails.Type()
 }
 
+// String ...
 func (p Postgres) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(p.Base, false), formatMonitor(p.PostgresDetails, true))
 }
 
+// UnmarshalJSON ...
 func (p *Postgres) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -40,6 +44,7 @@ func (p *Postgres) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (p Postgres) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = p.ID
@@ -81,11 +86,13 @@ func (p Postgres) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// PostgresDetails ...
 type PostgresDetails struct {
 	DatabaseConnectionString string `json:"databaseConnectionString"`
 	DatabaseQuery            string `json:"databaseQuery"`
 }
 
+// Type ...
 func (p PostgresDetails) Type() string {
 	return "postgres"
 }

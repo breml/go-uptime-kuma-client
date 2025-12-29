@@ -6,19 +6,23 @@ import (
 	"strconv"
 )
 
+// GrpcKeyword ...
 type GrpcKeyword struct {
 	Base
 	GrpcKeywordDetails
 }
 
+// Type ...
 func (g GrpcKeyword) Type() string {
 	return g.GrpcKeywordDetails.Type()
 }
 
+// String ...
 func (g GrpcKeyword) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(g.Base, false), formatMonitor(g.GrpcKeywordDetails, true))
 }
 
+// UnmarshalJSON ...
 func (g *GrpcKeyword) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -40,6 +44,7 @@ func (g *GrpcKeyword) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = g.ID
@@ -87,6 +92,7 @@ func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// GrpcKeywordDetails ...
 type GrpcKeywordDetails struct {
 	GrpcURL         string `json:"grpcUrl"`
 	GrpcProtobuf    string `json:"grpcProtobuf"`
@@ -98,6 +104,7 @@ type GrpcKeywordDetails struct {
 	InvertKeyword   bool   `json:"invertKeyword"`
 }
 
+// Type ...
 func (g GrpcKeywordDetails) Type() string {
 	return "grpc-keyword"
 }

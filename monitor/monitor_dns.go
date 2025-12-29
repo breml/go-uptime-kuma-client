@@ -6,19 +6,23 @@ import (
 	"strconv"
 )
 
+// DNS ...
 type DNS struct {
 	Base
 	DNSDetails
 }
 
+// Type ...
 func (d DNS) Type() string {
 	return d.DNSDetails.Type()
 }
 
+// String ...
 func (d DNS) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(d.Base, false), formatMonitor(d.DNSDetails, true))
 }
 
+// UnmarshalJSON ...
 func (d *DNS) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -40,6 +44,7 @@ func (d *DNS) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (d DNS) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = d.ID
@@ -83,6 +88,7 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// DNSDetails ...
 type DNSDetails struct {
 	Hostname       string         `json:"hostname"`
 	ResolverServer string         `json:"dns_resolve_server"`
@@ -90,6 +96,7 @@ type DNSDetails struct {
 	Port           int            `json:"port"`
 }
 
+// Type ...
 func (d DNSDetails) Type() string {
 	return "dns"
 }

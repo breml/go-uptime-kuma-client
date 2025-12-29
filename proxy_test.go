@@ -230,7 +230,7 @@ func TestProxyWithMonitor(t *testing.T) {
 			},
 		}
 
-		monitorID, err = client.CreateMonitor(ctx, httpMonitor)
+		monitorID, err = client.CreateMonitor(ctx, &httpMonitor)
 		require.NoError(t, err)
 		require.Positive(t, monitorID)
 
@@ -250,7 +250,7 @@ func TestProxyWithMonitor(t *testing.T) {
 
 		current.ProxyID = nil
 
-		err = client.UpdateMonitor(ctx, current)
+		err = client.UpdateMonitor(ctx, &current)
 		require.NoError(t, err)
 
 		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
@@ -268,7 +268,7 @@ func TestProxyWithMonitor(t *testing.T) {
 
 		current.ProxyID = &proxyID
 
-		err = client.UpdateMonitor(ctx, current)
+		err = client.UpdateMonitor(ctx, &current)
 		require.NoError(t, err)
 
 		updatedMonitor, err := client.GetMonitor(ctx, monitorID)
@@ -317,7 +317,7 @@ func TestProxyApplyExisting(t *testing.T) {
 			},
 		}
 
-		monitor1ID, err = client.CreateMonitor(ctx, httpMonitor1)
+		monitor1ID, err = client.CreateMonitor(ctx, &httpMonitor1)
 		require.NoError(t, err)
 
 		httpMonitor2 := monitor.HTTP{
@@ -333,7 +333,7 @@ func TestProxyApplyExisting(t *testing.T) {
 			},
 		}
 
-		monitor2ID, err = client.CreateMonitor(ctx, httpMonitor2)
+		monitor2ID, err = client.CreateMonitor(ctx, &httpMonitor2)
 		require.NoError(t, err)
 
 		m1, err := client.GetMonitor(ctx, monitor1ID)

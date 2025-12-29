@@ -6,16 +6,19 @@ import (
 	"strconv"
 )
 
+// HTTPKeyword ...
 type HTTPKeyword struct {
 	Base
 	HTTPDetails
 	HTTPKeywordDetails
 }
 
+// Type ...
 func (h HTTPKeyword) Type() string {
 	return h.HTTPKeywordDetails.Type()
 }
 
+// String ...
 func (h HTTPKeyword) String() string {
 	return fmt.Sprintf(
 		"%s, %s, %s",
@@ -25,6 +28,7 @@ func (h HTTPKeyword) String() string {
 	)
 }
 
+// UnmarshalJSON ...
 func (h *HTTPKeyword) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -53,6 +57,7 @@ func (h *HTTPKeyword) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = h.ID
@@ -118,11 +123,13 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// HTTPKeywordDetails ...
 type HTTPKeywordDetails struct {
 	Keyword       string `json:"keyword"`
 	InvertKeyword bool   `json:"invertKeyword"`
 }
 
+// Type ...
 func (h HTTPKeywordDetails) Type() string {
 	return "keyword"
 }

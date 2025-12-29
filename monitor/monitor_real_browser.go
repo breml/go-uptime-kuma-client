@@ -6,19 +6,23 @@ import (
 	"strconv"
 )
 
+// RealBrowser ...
 type RealBrowser struct {
 	Base
 	RealBrowserDetails
 }
 
+// Type ...
 func (r RealBrowser) Type() string {
 	return r.RealBrowserDetails.Type()
 }
 
+// String ...
 func (r RealBrowser) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(r.Base, false), formatMonitor(r.RealBrowserDetails, true))
 }
 
+// UnmarshalJSON ...
 func (r *RealBrowser) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -40,6 +44,7 @@ func (r *RealBrowser) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (r RealBrowser) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = r.ID
@@ -83,6 +88,7 @@ func (r RealBrowser) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// RealBrowserDetails ...
 type RealBrowserDetails struct {
 	URL                 string   `json:"url"`
 	Timeout             int64    `json:"timeout"`
@@ -92,6 +98,7 @@ type RealBrowserDetails struct {
 	RemoteBrowser       *int64   `json:"remote_browser,omitempty"`
 }
 
+// Type ...
 func (r RealBrowserDetails) Type() string {
 	return "real-browser"
 }

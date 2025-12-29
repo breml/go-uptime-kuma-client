@@ -6,19 +6,23 @@ import (
 	"strconv"
 )
 
+// TCPPort ...
 type TCPPort struct {
 	Base
 	TCPPortDetails
 }
 
+// Type ...
 func (t TCPPort) Type() string {
 	return t.TCPPortDetails.Type()
 }
 
+// String ...
 func (t TCPPort) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(t.Base, false), formatMonitor(t.TCPPortDetails, true))
 }
 
+// UnmarshalJSON ...
 func (t *TCPPort) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -40,6 +44,7 @@ func (t *TCPPort) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (t TCPPort) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = t.ID
@@ -81,11 +86,13 @@ func (t TCPPort) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// TCPPortDetails ...
 type TCPPortDetails struct {
 	Hostname string `json:"hostname"`
 	Port     int    `json:"port"`
 }
 
+// Type ...
 func (t TCPPortDetails) Type() string {
 	return "port"
 }

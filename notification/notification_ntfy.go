@@ -4,11 +4,13 @@ import (
 	"fmt"
 )
 
+// Ntfy ...
 type Ntfy struct {
 	Base
 	NtfyDetails
 }
 
+// NtfyDetails ...
 type NtfyDetails struct {
 	AccessToken          string `json:"ntfyaccesstoken"`
 	AuthenticationMethod string `json:"ntfyAuthenticationMethod"`
@@ -20,18 +22,22 @@ type NtfyDetails struct {
 	Username             string `json:"ntfyusername"`
 }
 
+// Type ...
 func (n Ntfy) Type() string {
 	return n.NtfyDetails.Type()
 }
 
+// Type ...
 func (n NtfyDetails) Type() string {
 	return "ntfy"
 }
 
+// String ...
 func (n Ntfy) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(n.Base, false), formatNotification(n.NtfyDetails, true))
 }
 
+// UnmarshalJSON ...
 func (n *Ntfy) UnmarshalJSON(data []byte) error {
 	detail := NtfyDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -47,6 +53,7 @@ func (n *Ntfy) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (n Ntfy) MarshalJSON() ([]byte, error) {
-	return marshalJSON(n.Base, n.NtfyDetails)
+	return marshalJSON(n.Base, &n.NtfyDetails)
 }

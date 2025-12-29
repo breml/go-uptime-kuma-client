@@ -4,11 +4,13 @@ import (
 	"fmt"
 )
 
+// FortySixElks ...
 type FortySixElks struct {
 	Base
 	FortySixElksDetails
 }
 
+// FortySixElksDetails ...
 type FortySixElksDetails struct {
 	Username   string `json:"elksUsername"`
 	AuthToken  string `json:"elksAuthToken"`
@@ -16,18 +18,22 @@ type FortySixElksDetails struct {
 	ToNumber   string `json:"elksToNumber"`
 }
 
+// Type ...
 func (f FortySixElks) Type() string {
 	return f.FortySixElksDetails.Type()
 }
 
+// Type ...
 func (n FortySixElksDetails) Type() string {
 	return "46elks"
 }
 
+// String ...
 func (f FortySixElks) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(f.Base, false), formatNotification(f.FortySixElksDetails, true))
 }
 
+// UnmarshalJSON ...
 func (f *FortySixElks) UnmarshalJSON(data []byte) error {
 	detail := FortySixElksDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -43,6 +49,7 @@ func (f *FortySixElks) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (f FortySixElks) MarshalJSON() ([]byte, error) {
-	return marshalJSON(f.Base, f.FortySixElksDetails)
+	return marshalJSON(f.Base, &f.FortySixElksDetails)
 }

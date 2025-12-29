@@ -6,16 +6,19 @@ import (
 	"strconv"
 )
 
+// HTTPJSONQuery ...
 type HTTPJSONQuery struct {
 	Base
 	HTTPDetails
 	HTTPJSONQueryDetails
 }
 
+// Type ...
 func (h HTTPJSONQuery) Type() string {
 	return h.HTTPJSONQueryDetails.Type()
 }
 
+// String ...
 func (h HTTPJSONQuery) String() string {
 	return fmt.Sprintf(
 		"%s, %s, %s",
@@ -25,6 +28,7 @@ func (h HTTPJSONQuery) String() string {
 	)
 }
 
+// UnmarshalJSON ...
 func (h *HTTPJSONQuery) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -53,6 +57,7 @@ func (h *HTTPJSONQuery) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = h.ID
@@ -119,12 +124,14 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// HTTPJSONQueryDetails ...
 type HTTPJSONQueryDetails struct {
 	JSONPath         string `json:"jsonPath"`
 	ExpectedValue    string `json:"expectedValue"`
 	JSONPathOperator string `json:"jsonPathOperator"`
 }
 
+// Type ...
 func (h HTTPJSONQueryDetails) Type() string {
 	return "json-query"
 }

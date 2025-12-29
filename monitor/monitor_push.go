@@ -6,19 +6,23 @@ import (
 	"strconv"
 )
 
+// Push ...
 type Push struct {
 	Base
 	PushDetails
 }
 
+// Type ...
 func (p Push) Type() string {
 	return p.PushDetails.Type()
 }
 
+// String ...
 func (p Push) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(p.Base, false), formatMonitor(p.PushDetails, true))
 }
 
+// UnmarshalJSON ...
 func (p *Push) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -40,6 +44,7 @@ func (p *Push) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (p Push) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = p.ID
@@ -80,10 +85,12 @@ func (p Push) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// PushDetails ...
 type PushDetails struct {
 	PushToken string `json:"pushToken"`
 }
 
+// Type ...
 func (p PushDetails) Type() string {
 	return "push"
 }

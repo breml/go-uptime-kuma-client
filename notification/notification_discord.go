@@ -4,11 +4,13 @@ import (
 	"fmt"
 )
 
+// Discord ...
 type Discord struct {
 	Base
 	DiscordDetails
 }
 
+// DiscordDetails ...
 type DiscordDetails struct {
 	WebhookURL    string `json:"discordWebhookUrl"`
 	Username      string `json:"discordUsername"`
@@ -19,18 +21,22 @@ type DiscordDetails struct {
 	DisableURL    bool   `json:"disableUrl"`
 }
 
+// Type ...
 func (d Discord) Type() string {
 	return d.DiscordDetails.Type()
 }
 
+// Type ...
 func (n DiscordDetails) Type() string {
 	return "discord"
 }
 
+// String ...
 func (d Discord) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(d.Base, false), formatNotification(d.DiscordDetails, true))
 }
 
+// UnmarshalJSON ...
 func (d *Discord) UnmarshalJSON(data []byte) error {
 	detail := DiscordDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -46,6 +52,7 @@ func (d *Discord) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (d Discord) MarshalJSON() ([]byte, error) {
-	return marshalJSON(d.Base, d.DiscordDetails)
+	return marshalJSON(d.Base, &d.DiscordDetails)
 }

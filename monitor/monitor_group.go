@@ -6,19 +6,23 @@ import (
 	"strconv"
 )
 
+// Group ...
 type Group struct {
 	Base
 	GroupDetails
 }
 
+// Type ...
 func (g Group) Type() string {
 	return g.GroupDetails.Type()
 }
 
+// String ...
 func (g Group) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(g.Base, false), formatMonitor(g.GroupDetails, true))
 }
 
+// UnmarshalJSON ...
 func (g *Group) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -40,6 +44,7 @@ func (g *Group) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (g Group) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = g.ID
@@ -77,10 +82,12 @@ func (g Group) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// GroupDetails ...
 type GroupDetails struct {
 	// Groups don't have additional fields beyond Base.
 }
 
+// Type ...
 func (g GroupDetails) Type() string {
 	return "group"
 }

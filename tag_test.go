@@ -110,7 +110,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 	defer func() { _ = client.DeleteTag(ctx, tag3ID) }()
 
 	// Create test monitors
-	monitorID1, err := client.CreateMonitor(ctx, monitor.HTTP{
+	monitorID1, err := client.CreateMonitor(ctx, &monitor.HTTP{
 		Base: monitor.Base{
 			Name:           "Test Monitor 1",
 			Interval:       60,
@@ -134,7 +134,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = client.DeleteMonitor(ctx, monitorID1) }()
 
-	monitorID2, err := client.CreateMonitor(ctx, monitor.HTTP{
+	monitorID2, err := client.CreateMonitor(ctx, &monitor.HTTP{
 		Base: monitor.Base{
 			Name:           "Test Monitor 2",
 			Interval:       60,

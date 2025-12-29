@@ -22,6 +22,7 @@ type Proxy struct {
 	CreatedDate time.Time `json:"-"`
 }
 
+// GetID returns the proxy's unique identifier.
 func (p Proxy) GetID() int64 {
 	return p.ID
 }
@@ -30,6 +31,7 @@ func (p Proxy) String() string {
 	return formatProxy(p)
 }
 
+// UnmarshalJSON unmarshals a proxy from JSON data.
 func (p *Proxy) UnmarshalJSON(data []byte) error {
 	aux := &struct {
 		ID          int64  `json:"id"`
@@ -86,6 +88,7 @@ func (p *Proxy) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a proxy to JSON data.
 func (p Proxy) MarshalJSON() ([]byte, error) {
 	auth := 0
 	if p.Auth {

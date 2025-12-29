@@ -4,11 +4,13 @@ import (
 	"fmt"
 )
 
+// SMTP ...
 type SMTP struct {
 	Base
 	SMTPDetails
 }
 
+// SMTPDetails ...
 type SMTPDetails struct {
 	Host                 string `json:"smtpHost"`
 	Port                 int    `json:"smtpPort"`
@@ -31,18 +33,22 @@ type SMTPDetails struct {
 	HTMLBody             bool   `json:"htmlBody"`
 }
 
+// Type ...
 func (s SMTP) Type() string {
 	return s.SMTPDetails.Type()
 }
 
+// Type ...
 func (n SMTPDetails) Type() string {
 	return "smtp"
 }
 
+// String ...
 func (s SMTP) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(s.Base, false), formatNotification(s.SMTPDetails, true))
 }
 
+// UnmarshalJSON ...
 func (s *SMTP) UnmarshalJSON(data []byte) error {
 	detail := SMTPDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -58,6 +64,7 @@ func (s *SMTP) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (s SMTP) MarshalJSON() ([]byte, error) {
-	return marshalJSON(s.Base, s.SMTPDetails)
+	return marshalJSON(s.Base, &s.SMTPDetails)
 }

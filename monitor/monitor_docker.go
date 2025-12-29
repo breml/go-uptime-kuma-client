@@ -12,14 +12,17 @@ type Docker struct {
 	DockerDetails
 }
 
+// Type ...
 func (d Docker) Type() string {
 	return d.DockerDetails.Type()
 }
 
+// String ...
 func (d Docker) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(d.Base, false), formatMonitor(d.DockerDetails, true))
 }
 
+// UnmarshalJSON ...
 func (d *Docker) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -41,6 +44,7 @@ func (d *Docker) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (d Docker) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = d.ID
@@ -88,6 +92,7 @@ type DockerDetails struct {
 	DockerContainer string `json:"docker_container"`
 }
 
+// Type ...
 func (d DockerDetails) Type() string {
 	return "docker"
 }

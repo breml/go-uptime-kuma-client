@@ -1,5 +1,6 @@
 package statuspage
 
+// StatusPage represents a public status page.
 type StatusPage struct {
 	ID                    int64         `json:"id"`
 	Slug                  string        `json:"slug"`
@@ -18,6 +19,7 @@ type StatusPage struct {
 	PublicGroupList       []PublicGroup `json:"publicGroupList"`
 }
 
+// PublicGroup represents a group of monitors in a public status page.
 type PublicGroup struct {
 	ID          int64           `json:"id"`
 	Name        string          `json:"name"`
@@ -25,6 +27,7 @@ type PublicGroup struct {
 	MonitorList []PublicMonitor `json:"monitorList"`
 }
 
+// PublicMonitor represents a monitor in a public status page.
 type PublicMonitor struct {
 	ID      int64 `json:"id"`
 	SendURL *bool `json:"sendUrl,omitempty"`

@@ -31,7 +31,7 @@ func TestMonitorCRUD(t *testing.T) {
 	testCases := []monitorTestCase{
 		{
 			name: "HTTP",
-			create: monitor.HTTP{
+			create: &monitor.HTTP{
 				Base: monitor.Base{
 					Name:           "Test HTTP Monitor",
 					Interval:       60,
@@ -84,7 +84,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "Monitor Group",
-			create: monitor.Group{
+			create: &monitor.Group{
 				Base: monitor.Base{
 					Name:           "Test Monitor Group",
 					Interval:       60,
@@ -125,7 +125,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "Ping",
-			create: monitor.Ping{
+			create: &monitor.Ping{
 				Base: monitor.Base{
 					Name:           "Test Ping Monitor",
 					Interval:       60,
@@ -174,7 +174,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "Push",
-			create: monitor.Push{
+			create: &monitor.Push{
 				Base: monitor.Base{
 					Name:           "Test Push Monitor",
 					Interval:       60,
@@ -219,7 +219,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "TCP Port",
-			create: monitor.TCPPort{
+			create: &monitor.TCPPort{
 				Base: monitor.Base{
 					Name:           "Test TCP Port Monitor",
 					Interval:       60,
@@ -268,7 +268,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "HTTP Keyword",
-			create: monitor.HTTPKeyword{
+			create: &monitor.HTTPKeyword{
 				Base: monitor.Base{
 					Name:           "Test HTTP Keyword Monitor",
 					Interval:       60,
@@ -327,7 +327,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "DNS",
-			create: monitor.DNS{
+			create: &monitor.DNS{
 				Base: monitor.Base{
 					Name:           "Test DNS Monitor",
 					Interval:       60,
@@ -381,7 +381,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "HTTP JSON Query",
-			create: monitor.HTTPJSONQuery{
+			create: &monitor.HTTPJSONQuery{
 				Base: monitor.Base{
 					Name:           "Test JSON Query Monitor",
 					Interval:       60,
@@ -440,7 +440,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "Postgres",
-			create: monitor.Postgres{
+			create: &monitor.Postgres{
 				Base: monitor.Base{
 					Name:           "Test Postgres Monitor",
 					Interval:       60,
@@ -489,7 +489,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "Real Browser",
-			create: monitor.RealBrowser{
+			create: &monitor.RealBrowser{
 				Base: monitor.Base{
 					Name:           "Test RealBrowser Monitor",
 					Interval:       60,
@@ -539,7 +539,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "Redis",
-			create: monitor.Redis{
+			create: &monitor.Redis{
 				Base: monitor.Base{
 					Name:           "Test Redis Monitor",
 					Interval:       60,
@@ -585,7 +585,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "SMTP",
-			create: monitor.SMTP{
+			create: &monitor.SMTP{
 				Base: monitor.Base{
 					Name:           "Test SMTP Monitor",
 					Interval:       60,
@@ -639,7 +639,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "gRPC Keyword",
-			create: monitor.GrpcKeyword{
+			create: &monitor.GrpcKeyword{
 				Base: monitor.Base{
 					Name:           "Test gRPC Keyword Monitor",
 					Interval:       60,
@@ -698,7 +698,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "SNMP",
-			create: monitor.SNMP{
+			create: &monitor.SNMP{
 				Base: monitor.Base{
 					Name:           "Test SNMP Monitor",
 					Interval:       60,
@@ -750,7 +750,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "Docker",
-			create: monitor.Docker{
+			create: &monitor.Docker{
 				Base: monitor.Base{
 					Name:           "Test Docker Monitor",
 					Interval:       60,
@@ -797,7 +797,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "Steam",
-			create: monitor.Steam{
+			create: &monitor.Steam{
 				Base: monitor.Base{
 					Name:           "Test Steam Monitor",
 					Interval:       60,
@@ -847,7 +847,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "GameDig",
-			create: monitor.GameDig{
+			create: &monitor.GameDig{
 				Base: monitor.Base{
 					Name:           "Test GameDig Monitor",
 					Interval:       60,
@@ -902,7 +902,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "MQTT",
-			create: monitor.MQTT{
+			create: &monitor.MQTT{
 				Base: monitor.Base{
 					Name:           "Test MQTT Monitor",
 					Interval:       60,
@@ -966,7 +966,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "RabbitMQ",
-			create: monitor.RabbitMQ{
+			create: &monitor.RabbitMQ{
 				Base: monitor.Base{
 					Name:           "Test RabbitMQ Monitor",
 					Interval:       60,
@@ -1021,7 +1021,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "Kafka Producer",
-			create: monitor.KafkaProducer{
+			create: &monitor.KafkaProducer{
 				Base: monitor.Base{
 					Name:           "Test Kafka Producer Monitor",
 					Interval:       60,
@@ -1080,7 +1080,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "SQL Server",
-			create: monitor.SQLServer{
+			create: &monitor.SQLServer{
 				Base: monitor.Base{
 					Name:           "Test SQL Server Monitor",
 					Interval:       60,
@@ -1133,7 +1133,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "MySQL",
-			create: monitor.MySQL{
+			create: &monitor.MySQL{
 				Base: monitor.Base{
 					Name:           "Test MySQL Monitor",
 					Interval:       60,
@@ -1182,7 +1182,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "MongoDB",
-			create: monitor.MongoDB{
+			create: &monitor.MongoDB{
 				Base: monitor.Base{
 					Name:           "Test MongoDB Monitor",
 					Interval:       60,
@@ -1241,7 +1241,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "Radius",
-			create: monitor.Radius{
+			create: &monitor.Radius{
 				Base: monitor.Base{
 					Name:           "Test Radius Monitor",
 					Interval:       60,
@@ -1305,7 +1305,7 @@ func TestMonitorCRUD(t *testing.T) {
 		},
 		{
 			name: "Tailscale Ping",
-			create: monitor.TailscalePing{
+			create: &monitor.TailscalePing{
 				Base: monitor.Base{
 					Name:           "Test Tailscale Ping Monitor",
 					Interval:       60,
@@ -1368,7 +1368,7 @@ func TestMonitorCRUD(t *testing.T) {
 				dockerHostID = hostID
 
 				// Update the monitor's docker_host to use the created host
-				dockerMonitor := tc.create.(monitor.Docker)
+				dockerMonitor := tc.create.(*monitor.Docker)
 				dockerMonitor.DockerHost = dockerHostID
 				tc.create = dockerMonitor
 			}
@@ -1395,7 +1395,7 @@ func TestMonitorCRUD(t *testing.T) {
 			require.Equal(t, monitorID, retrievedMonitor.ID)
 
 			// Verify retrieved monitor
-			retrieved := tc.createTypedFunc(t, retrievedMonitor)
+			retrieved := tc.createTypedFunc(t, &retrievedMonitor)
 			tc.verifyCreatedFunc(t, retrieved, monitorID)
 
 			// Update
@@ -1406,7 +1406,7 @@ func TestMonitorCRUD(t *testing.T) {
 			// Verify update
 			updated, err := client.GetMonitor(ctx, monitorID)
 			require.NoError(t, err)
-			updatedTyped := tc.createTypedFunc(t, updated)
+			updatedTyped := tc.createTypedFunc(t, &updated)
 			tc.verifyUpdatedFunc(t, updatedTyped)
 
 			// Pause/Resume if supported

@@ -4,27 +4,33 @@ import (
 	"fmt"
 )
 
+// Pushbullet ...
 type Pushbullet struct {
 	Base
 	PushbulletDetails
 }
 
+// PushbulletDetails ...
 type PushbulletDetails struct {
 	AccessToken string `json:"pushbulletAccessToken"`
 }
 
+// Type ...
 func (p Pushbullet) Type() string {
 	return p.PushbulletDetails.Type()
 }
 
+// Type ...
 func (n PushbulletDetails) Type() string {
 	return "pushbullet"
 }
 
+// String ...
 func (p Pushbullet) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(p.Base, false), formatNotification(p.PushbulletDetails, true))
 }
 
+// UnmarshalJSON ...
 func (p *Pushbullet) UnmarshalJSON(data []byte) error {
 	detail := PushbulletDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -40,6 +46,7 @@ func (p *Pushbullet) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (p Pushbullet) MarshalJSON() ([]byte, error) {
-	return marshalJSON(p.Base, p.PushbulletDetails)
+	return marshalJSON(p.Base, &p.PushbulletDetails)
 }

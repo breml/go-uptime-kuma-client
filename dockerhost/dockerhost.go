@@ -15,6 +15,7 @@ type DockerHost struct {
 	Name         string `json:"name"`         // Human-readable name
 }
 
+// GetID returns the Docker host's unique identifier.
 func (d DockerHost) GetID() int64 {
 	return d.ID
 }

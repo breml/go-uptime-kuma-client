@@ -4,11 +4,13 @@ import (
 	"fmt"
 )
 
+// PagerDuty ...
 type PagerDuty struct {
 	Base
 	PagerDutyDetails
 }
 
+// PagerDutyDetails ...
 type PagerDutyDetails struct {
 	IntegrationURL string `json:"pagerdutyIntegrationUrl"`
 	IntegrationKey string `json:"pagerdutyIntegrationKey"`
@@ -16,18 +18,22 @@ type PagerDutyDetails struct {
 	AutoResolve    string `json:"pagerdutyAutoResolve"`
 }
 
+// Type ...
 func (p PagerDuty) Type() string {
 	return p.PagerDutyDetails.Type()
 }
 
+// Type ...
 func (n PagerDutyDetails) Type() string {
 	return "PagerDuty"
 }
 
+// String ...
 func (p PagerDuty) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(p.Base, false), formatNotification(p.PagerDutyDetails, true))
 }
 
+// UnmarshalJSON ...
 func (p *PagerDuty) UnmarshalJSON(data []byte) error {
 	detail := PagerDutyDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -43,6 +49,7 @@ func (p *PagerDuty) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (p PagerDuty) MarshalJSON() ([]byte, error) {
-	return marshalJSON(p.Base, p.PagerDutyDetails)
+	return marshalJSON(p.Base, &p.PagerDutyDetails)
 }

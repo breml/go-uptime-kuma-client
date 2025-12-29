@@ -6,19 +6,23 @@ import (
 	"strconv"
 )
 
+// HTTP ...
 type HTTP struct {
 	Base
 	HTTPDetails
 }
 
+// Type ...
 func (h HTTP) Type() string {
 	return h.HTTPDetails.Type()
 }
 
+// String ...
 func (h HTTP) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(h.Base, false), formatMonitor(h.HTTPDetails, true))
 }
 
+// UnmarshalJSON ...
 func (h *HTTP) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -40,6 +44,7 @@ func (h *HTTP) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = h.ID
@@ -101,6 +106,7 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// HTTPDetails ...
 type HTTPDetails struct {
 	URL                 string     `json:"url"`
 	Timeout             int64      `json:"timeout"`
@@ -128,6 +134,7 @@ type HTTPDetails struct {
 	CacheBust           bool       `json:"cacheBust"`
 }
 
+// Type ...
 func (h HTTPDetails) Type() string {
 	return "http"
 }

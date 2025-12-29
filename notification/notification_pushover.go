@@ -4,11 +4,13 @@ import (
 	"fmt"
 )
 
+// Pushover ...
 type Pushover struct {
 	Base
 	PushoverDetails
 }
 
+// PushoverDetails ...
 type PushoverDetails struct {
 	UserKey  string `json:"pushoveruserkey"`
 	AppToken string `json:"pushoverapptoken"`
@@ -20,18 +22,22 @@ type PushoverDetails struct {
 	TTL      string `json:"pushoverttl"`
 }
 
+// Type ...
 func (p Pushover) Type() string {
 	return p.PushoverDetails.Type()
 }
 
+// Type ...
 func (n PushoverDetails) Type() string {
 	return "pushover"
 }
 
+// String ...
 func (p Pushover) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(p.Base, false), formatNotification(p.PushoverDetails, true))
 }
 
+// UnmarshalJSON ...
 func (p *Pushover) UnmarshalJSON(data []byte) error {
 	detail := PushoverDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -47,6 +53,7 @@ func (p *Pushover) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (p Pushover) MarshalJSON() ([]byte, error) {
-	return marshalJSON(p.Base, p.PushoverDetails)
+	return marshalJSON(p.Base, &p.PushoverDetails)
 }

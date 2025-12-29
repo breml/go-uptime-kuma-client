@@ -249,7 +249,7 @@ func TestClient_MaintenanceWithMonitors(t *testing.T) {
 			},
 		}
 
-		monitor1ID, err = client.CreateMonitor(ctx, httpMonitor1)
+		monitor1ID, err = client.CreateMonitor(ctx, &httpMonitor1)
 		require.NoError(t, err)
 		require.Positive(t, monitor1ID)
 
@@ -275,7 +275,7 @@ func TestClient_MaintenanceWithMonitors(t *testing.T) {
 			},
 		}
 
-		monitor2ID, err = client.CreateMonitor(ctx, httpMonitor2)
+		monitor2ID, err = client.CreateMonitor(ctx, &httpMonitor2)
 		require.NoError(t, err)
 		require.Positive(t, monitor2ID)
 	})

@@ -6,19 +6,23 @@ import (
 	"strconv"
 )
 
+// Ping ...
 type Ping struct {
 	Base
 	PingDetails
 }
 
+// Type ...
 func (p Ping) Type() string {
 	return p.PingDetails.Type()
 }
 
+// String ...
 func (p Ping) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(p.Base, false), formatMonitor(p.PingDetails, true))
 }
 
+// UnmarshalJSON ...
 func (p *Ping) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -40,6 +44,7 @@ func (p *Ping) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (p Ping) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = p.ID
@@ -81,11 +86,13 @@ func (p Ping) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
+// PingDetails ...
 type PingDetails struct {
 	Hostname   string `json:"hostname"`
 	PacketSize int    `json:"packetSize"`
 }
 
+// Type ...
 func (p PingDetails) Type() string {
 	return "ping"
 }

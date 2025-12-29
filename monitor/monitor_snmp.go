@@ -12,14 +12,17 @@ type SNMP struct {
 	SNMPDetails
 }
 
+// Type ...
 func (s SNMP) Type() string {
 	return s.SNMPDetails.Type()
 }
 
+// String ...
 func (s SNMP) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(s.Base, false), formatMonitor(s.SNMPDetails, true))
 }
 
+// UnmarshalJSON ...
 func (s *SNMP) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -41,6 +44,7 @@ func (s *SNMP) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON ...
 func (s SNMP) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = s.ID
@@ -100,6 +104,7 @@ type SNMPDetails struct {
 	ExpectedValue    *string `json:"expectedValue"`
 }
 
+// Type ...
 func (s SNMPDetails) Type() string {
 	return "snmp"
 }

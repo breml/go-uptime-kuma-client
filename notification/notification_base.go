@@ -6,12 +6,17 @@ import (
 	"fmt"
 )
 
+// Notification is the interface that all notification types must implement.
 type Notification interface {
+	// GetID returns the notification's unique identifier.
 	GetID() int64
+	// Type returns the notification's type name.
 	Type() string
+	// As converts the notification to the given target type.
 	As(any) error
 }
 
+// Base contains the common fields for all notification types.
 type Base struct {
 	ID            int64  `json:"id,omitzero"`
 	Name          string `json:"name"`
@@ -29,6 +34,7 @@ func (b Base) String() string {
 	return formatNotification(b, true)
 }
 
+// UnmarshalJSON unmarshals a notification from JSON data.
 func (b *Base) UnmarshalJSON(data []byte) error {
 	raw := struct {
 		ID        int64  `json:"id"`
@@ -86,6 +92,7 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a notification to JSON data.
 func (b Base) MarshalJSON() ([]byte, error) {
 	if b.configStr == "" {
 		return nil, errors.New("not unmarshaled notification, unable to marshal")
@@ -100,14 +107,17 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	return marshalJSON(b, genericDetails)
 }
 
+// GetID returns the notification's unique identifier.
 func (b Base) GetID() int64 {
 	return b.ID
 }
 
+// Type returns the notification's type name.
 func (b Base) Type() string {
 	return b.typeFromConfigStr
 }
 
+// As converts the notification to the given target type.
 func (b Base) As(target any) error {
 	if b.raw == nil {
 		return fmt.Errorf("not unmarshaled notification, cannot convert to %T", target)

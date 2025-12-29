@@ -26,8 +26,10 @@ import (
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
 
+// ErrNotFound is returned when a requested resource is not found.
 var ErrNotFound = errors.New("not found")
 
+// Log level constants for configuring socket.io client logging verbosity.
 const (
 	LogLevelDebug = utils.DEBUG
 	LogLevelInfo  = utils.INFO
@@ -36,6 +38,7 @@ const (
 	LogLevelNone  = utils.NONE
 )
 
+// LogLevel converts a string log level to its corresponding integer constant.
 func LogLevel(level string) int {
 	switch strings.ToUpper(level) {
 	case "DEBUG":
@@ -83,6 +86,7 @@ type state struct {
 	dockerHosts   []dockerhost.DockerHost
 }
 
+// Client represents a connection to an Uptime Kuma server.
 type Client struct {
 	socketioClient               *socketio.Client
 	socketioClientConnectTimeout time.Duration
@@ -94,14 +98,17 @@ type Client struct {
 	state   state
 }
 
+// Option is a functional option for configuring a Client.
 type Option func(c *Client)
 
+// WithAutosetup enables automatic server setup during client connection.
 func WithAutosetup() Option {
 	return func(c *Client) {
 		c.autosetup = true
 	}
 }
 
+// WithLogLevel sets the socket.io client logging level.
 func WithLogLevel(level int) Option {
 	return func(c *Client) {
 		if level >= utils.DEBUG && level <= utils.NONE {
@@ -110,6 +117,7 @@ func WithLogLevel(level int) Option {
 	}
 }
 
+// WithConnectTimeout sets the socket.io client connection timeout.
 func WithConnectTimeout(timeout time.Duration) Option {
 	return func(c *Client) {
 		c.socketioClientConnectTimeout = timeout
@@ -272,6 +280,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	}
 }
 
+// New creates a new Client connected to an Uptime Kuma server.
 func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
 	c := &Client{
 		socketioLogger: &utils.DefaultLogger{Level: utils.NONE},
@@ -542,6 +551,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 }
 
+// Disconnect closes the connection to the Uptime Kuma server.
 func (c *Client) Disconnect() error {
 	err := c.socketioClient.Close()
 	if err != nil {

@@ -223,7 +223,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 		},
 	}
 
-	monitorID, err := client.CreateMonitor(ctx, httpMonitor)
+	monitorID, err := client.CreateMonitor(ctx, &httpMonitor)
 	require.NoError(t, err)
 	require.Positive(t, monitorID)
 	t.Logf("Created monitor with ID: %d", monitorID)
