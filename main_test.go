@@ -17,6 +17,7 @@ import (
 	kuma "github.com/breml/go-uptime-kuma-client"
 )
 
+//nolint:gochecknoglobals // client is used across multiple tests.
 var client *kuma.Client
 
 func TestMain(m *testing.M) {

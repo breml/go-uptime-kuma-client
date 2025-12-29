@@ -54,6 +54,7 @@ func LogLevel(level string) int {
 	}
 }
 
+//nolint:gochecknoglobals // empty is used as a placeholder value in maps to represent set membership.
 var empty = struct{}{}
 
 type entryPageResponse struct {
