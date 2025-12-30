@@ -105,6 +105,6 @@ type SNMPDetails struct {
 }
 
 // Type ...
-func (s SNMPDetails) Type() string {
+func (SNMPDetails) Type() string {
 	return "snmp"
 }

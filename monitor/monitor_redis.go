@@ -93,6 +93,6 @@ type RedisDetails struct {
 }
 
 // Type ...
-func (r RedisDetails) Type() string {
+func (RedisDetails) Type() string {
 	return "redis"
 }

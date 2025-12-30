@@ -29,7 +29,7 @@ func (o OneBot) Type() string {
 }
 
 // Type returns the notification type identifier for OneBotDetails.
-func (o OneBotDetails) Type() string {
+func (OneBotDetails) Type() string {
 	return "OneBot"
 }
 

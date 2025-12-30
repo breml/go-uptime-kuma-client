@@ -21,7 +21,7 @@ func (t Teams) Type() string {
 }
 
 // Type ...
-func (t TeamsDetails) Type() string {
+func (TeamsDetails) Type() string {
 	return "teams"
 }
 

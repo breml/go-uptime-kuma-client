@@ -101,6 +101,6 @@ type MongoDBDetails struct {
 }
 
 // Type returns the monitor type.
-func (m MongoDBDetails) Type() string {
+func (MongoDBDetails) Type() string {
 	return "mongodb"
 }

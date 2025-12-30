@@ -55,7 +55,7 @@ func (s SMSEagle) Type() string {
 }
 
 // Type returns the notification type identifier for SMSEagleDetails.
-func (s SMSEagleDetails) Type() string {
+func (SMSEagleDetails) Type() string {
 	return "SMSEagle"
 }
 

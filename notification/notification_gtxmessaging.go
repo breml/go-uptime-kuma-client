@@ -27,7 +27,7 @@ func (g GTXMessaging) Type() string {
 }
 
 // Type returns the notification type identifier for GTXMessagingDetails.
-func (n GTXMessagingDetails) Type() string {
+func (GTXMessagingDetails) Type() string {
 	return "gtxmessaging"
 }
 

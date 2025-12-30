@@ -91,6 +91,6 @@ type PushDetails struct {
 }
 
 // Type ...
-func (p PushDetails) Type() string {
+func (PushDetails) Type() string {
 	return "push"
 }

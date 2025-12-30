@@ -28,7 +28,7 @@ func (p Pushover) Type() string {
 }
 
 // Type ...
-func (n PushoverDetails) Type() string {
+func (PushoverDetails) Type() string {
 	return "pushover"
 }
 

@@ -135,7 +135,7 @@ type HTTPDetails struct {
 }
 
 // Type ...
-func (h HTTPDetails) Type() string {
+func (HTTPDetails) Type() string {
 	return "http"
 }
 

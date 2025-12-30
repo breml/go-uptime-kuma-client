@@ -99,6 +99,6 @@ type RealBrowserDetails struct {
 }
 
 // Type ...
-func (r RealBrowserDetails) Type() string {
+func (RealBrowserDetails) Type() string {
 	return "real-browser"
 }

@@ -23,7 +23,7 @@ func (a Apprise) Type() string {
 }
 
 // Type returns the notification type identifier for Apprise details.
-func (d AppriseDetails) Type() string {
+func (AppriseDetails) Type() string {
 	return "apprise"
 }
 

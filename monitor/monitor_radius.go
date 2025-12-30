@@ -110,6 +110,6 @@ type RadiusDetails struct {
 }
 
 // Type returns the monitor type.
-func (r RadiusDetails) Type() string {
+func (RadiusDetails) Type() string {
 	return "radius"
 }

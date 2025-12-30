@@ -23,7 +23,7 @@ func (m Matrix) Type() string {
 }
 
 // Type ...
-func (n MatrixDetails) Type() string {
+func (MatrixDetails) Type() string {
 	return "matrix"
 }
 

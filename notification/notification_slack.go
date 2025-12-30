@@ -26,7 +26,7 @@ func (s Slack) Type() string {
 }
 
 // Type ...
-func (n SlackDetails) Type() string {
+func (SlackDetails) Type() string {
 	return "slack"
 }
 

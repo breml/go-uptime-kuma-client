@@ -25,7 +25,7 @@ func (r RocketChat) Type() string {
 }
 
 // Type ...
-func (n RocketChatDetails) Type() string {
+func (RocketChatDetails) Type() string {
 	return "rocket.chat"
 }
 

@@ -23,7 +23,7 @@ func (p Pushy) Type() string {
 }
 
 // Type returns the notification type identifier for Pushy details.
-func (p PushyDetails) Type() string {
+func (PushyDetails) Type() string {
 	return "pushy"
 }
 

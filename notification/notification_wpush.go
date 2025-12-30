@@ -25,7 +25,7 @@ func (w WPush) Type() string {
 }
 
 // Type returns the notification type identifier for WPushDetails.
-func (n WPushDetails) Type() string {
+func (WPushDetails) Type() string {
 	return "WPush"
 }
 

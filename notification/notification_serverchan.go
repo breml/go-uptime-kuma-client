@@ -23,7 +23,7 @@ func (s ServerChan) Type() string {
 }
 
 // Type returns the notification type identifier for ServerChanDetails.
-func (n ServerChanDetails) Type() string {
+func (ServerChanDetails) Type() string {
 	return "ServerChan"
 }
 

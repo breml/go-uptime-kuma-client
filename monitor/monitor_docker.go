@@ -93,6 +93,6 @@ type DockerDetails struct {
 }
 
 // Type ...
-func (d DockerDetails) Type() string {
+func (DockerDetails) Type() string {
 	return "docker"
 }

@@ -23,7 +23,7 @@ func (s SIGNL4) Type() string {
 }
 
 // Type returns the notification type identifier for SIGNL4Details.
-func (n SIGNL4Details) Type() string {
+func (SIGNL4Details) Type() string {
 	return "SIGNL4"
 }
 

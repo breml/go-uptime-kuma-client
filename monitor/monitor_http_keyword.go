@@ -130,6 +130,6 @@ type HTTPKeywordDetails struct {
 }
 
 // Type ...
-func (h HTTPKeywordDetails) Type() string {
+func (HTTPKeywordDetails) Type() string {
 	return "keyword"
 }

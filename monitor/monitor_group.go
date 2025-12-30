@@ -88,6 +88,6 @@ type GroupDetails struct {
 }
 
 // Type ...
-func (g GroupDetails) Type() string {
+func (GroupDetails) Type() string {
 	return "group"
 }

@@ -107,6 +107,6 @@ type KafkaProducerDetails struct {
 }
 
 // Type returns the monitor type.
-func (k KafkaProducerDetails) Type() string {
+func (KafkaProducerDetails) Type() string {
 	return "kafka-producer"
 }

@@ -105,6 +105,6 @@ type GrpcKeywordDetails struct {
 }
 
 // Type ...
-func (g GrpcKeywordDetails) Type() string {
+func (GrpcKeywordDetails) Type() string {
 	return "grpc-keyword"
 }

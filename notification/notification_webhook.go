@@ -30,7 +30,7 @@ func (w Webhook) Type() string {
 }
 
 // Type returns the notification type identifier for webhook details.
-func (d WebhookDetails) Type() string {
+func (WebhookDetails) Type() string {
 	return "webhook"
 }
 

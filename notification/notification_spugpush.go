@@ -23,7 +23,7 @@ func (s SpugPush) Type() string {
 }
 
 // Type returns the notification type identifier for SpugPushDetails.
-func (n SpugPushDetails) Type() string {
+func (SpugPushDetails) Type() string {
 	return "SpugPush"
 }
 

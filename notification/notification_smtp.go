@@ -39,7 +39,7 @@ func (s SMTP) Type() string {
 }
 
 // Type ...
-func (n SMTPDetails) Type() string {
+func (SMTPDetails) Type() string {
 	return "smtp"
 }
 

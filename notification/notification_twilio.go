@@ -25,7 +25,7 @@ func (t Twilio) Type() string {
 }
 
 // Type ...
-func (n TwilioDetails) Type() string {
+func (TwilioDetails) Type() string {
 	return "twilio"
 }
 

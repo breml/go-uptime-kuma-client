@@ -23,7 +23,7 @@ func (s Signal) Type() string {
 }
 
 // Type ...
-func (n SignalDetails) Type() string {
+func (SignalDetails) Type() string {
 	return "signal"
 }
 

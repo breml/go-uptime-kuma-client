@@ -24,7 +24,7 @@ func (f FortySixElks) Type() string {
 }
 
 // Type ...
-func (n FortySixElksDetails) Type() string {
+func (FortySixElksDetails) Type() string {
 	return "46elks"
 }
 

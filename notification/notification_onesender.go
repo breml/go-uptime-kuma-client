@@ -29,7 +29,7 @@ func (o OneSender) Type() string {
 }
 
 // Type returns the notification type identifier for OneSenderDetails.
-func (o OneSenderDetails) Type() string {
+func (OneSenderDetails) Type() string {
 	return "onesender"
 }
 

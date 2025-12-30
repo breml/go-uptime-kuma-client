@@ -95,6 +95,6 @@ type SQLServerDetails struct {
 }
 
 // Type returns the monitor type.
-func (s SQLServerDetails) Type() string {
+func (SQLServerDetails) Type() string {
 	return "sqlserver"
 }

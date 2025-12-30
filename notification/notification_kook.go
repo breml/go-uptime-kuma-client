@@ -25,7 +25,7 @@ func (k Kook) Type() string {
 }
 
 // Type returns the notification type identifier for KookDetails.
-func (n KookDetails) Type() string {
+func (KookDetails) Type() string {
 	return "Kook"
 }
 

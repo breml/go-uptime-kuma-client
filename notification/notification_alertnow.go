@@ -21,7 +21,7 @@ func (a AlertNow) Type() string {
 }
 
 // Type ...
-func (n AlertNowDetails) Type() string {
+func (AlertNowDetails) Type() string {
 	return "AlertNow"
 }
 

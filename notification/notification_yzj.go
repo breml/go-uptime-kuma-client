@@ -25,7 +25,7 @@ func (y YZJ) Type() string {
 }
 
 // Type returns the notification type identifier for YZJDetails.
-func (n YZJDetails) Type() string {
+func (YZJDetails) Type() string {
 	return "YZJ"
 }
 

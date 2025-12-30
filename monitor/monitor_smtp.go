@@ -95,6 +95,6 @@ type SMTPDetails struct {
 }
 
 // Type returns the monitor type.
-func (s SMTPDetails) Type() string {
+func (SMTPDetails) Type() string {
 	return "smtp"
 }

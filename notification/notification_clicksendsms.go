@@ -29,7 +29,7 @@ func (c ClickSendSMS) Type() string {
 }
 
 // Type returns the notification type identifier for ClickSendSMSDetails.
-func (n ClickSendSMSDetails) Type() string {
+func (ClickSendSMSDetails) Type() string {
 	return "clicksendsms"
 }
 

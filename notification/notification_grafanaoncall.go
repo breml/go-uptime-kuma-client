@@ -21,7 +21,7 @@ func (g GrafanaOncall) Type() string {
 }
 
 // Type ...
-func (n GrafanaOncallDetails) Type() string {
+func (GrafanaOncallDetails) Type() string {
 	return "GrafanaOncall"
 }
 

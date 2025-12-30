@@ -29,7 +29,7 @@ func (w WAHA) Type() string {
 }
 
 // Type returns the notification type identifier for WAHADetails.
-func (n WAHADetails) Type() string {
+func (WAHADetails) Type() string {
 	return "waha"
 }
 

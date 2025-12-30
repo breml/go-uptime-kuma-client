@@ -93,6 +93,6 @@ type PostgresDetails struct {
 }
 
 // Type ...
-func (p PostgresDetails) Type() string {
+func (PostgresDetails) Type() string {
 	return "postgres"
 }

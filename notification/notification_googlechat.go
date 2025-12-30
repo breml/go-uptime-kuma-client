@@ -24,7 +24,7 @@ func (g GoogleChat) Type() string {
 }
 
 // Type returns the notification type identifier for Google Chat details.
-func (d GoogleChatDetails) Type() string {
+func (GoogleChatDetails) Type() string {
 	return "GoogleChat"
 }
 

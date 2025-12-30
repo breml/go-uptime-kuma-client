@@ -29,7 +29,7 @@ func (b Bark) Type() string {
 }
 
 // Type returns the notification type identifier for BarkDetails.
-func (n BarkDetails) Type() string {
+func (BarkDetails) Type() string {
 	return "bark"
 }
 

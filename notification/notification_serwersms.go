@@ -29,7 +29,7 @@ func (s SerwerSMS) Type() string {
 }
 
 // Type returns the notification type identifier for SerwerSMSDetails.
-func (n SerwerSMSDetails) Type() string {
+func (SerwerSMSDetails) Type() string {
 	return "serwersms"
 }
 

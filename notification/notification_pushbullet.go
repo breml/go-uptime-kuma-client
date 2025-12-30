@@ -21,7 +21,7 @@ func (p Pushbullet) Type() string {
 }
 
 // Type ...
-func (n PushbulletDetails) Type() string {
+func (PushbulletDetails) Type() string {
 	return "pushbullet"
 }
 

@@ -119,7 +119,7 @@ type MQTTDetails struct {
 }
 
 // Type returns the monitor type string.
-func (m MQTTDetails) Type() string {
+func (MQTTDetails) Type() string {
 	return "mqtt"
 }
 

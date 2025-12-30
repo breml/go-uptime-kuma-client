@@ -23,7 +23,7 @@ func (h HomeAssistant) Type() string {
 }
 
 // Type ...
-func (n HomeAssistantDetails) Type() string {
+func (HomeAssistantDetails) Type() string {
 	return "HomeAssistant"
 }
 

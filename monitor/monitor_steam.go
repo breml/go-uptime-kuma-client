@@ -98,6 +98,6 @@ type SteamDetails struct {
 }
 
 // Type returns the monitor type string.
-func (s SteamDetails) Type() string {
+func (SteamDetails) Type() string {
 	return "steam"
 }

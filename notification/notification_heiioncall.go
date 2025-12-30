@@ -25,7 +25,7 @@ func (h HeiiOnCall) Type() string {
 }
 
 // Type returns the notification type identifier for HeiiOnCallDetails.
-func (n HeiiOnCallDetails) Type() string {
+func (HeiiOnCallDetails) Type() string {
 	return "HeiiOnCall"
 }
 

@@ -34,7 +34,7 @@ func (p PromoSMS) Type() string {
 }
 
 // Type returns the notification type identifier for PromoSMSDetails.
-func (p PromoSMSDetails) Type() string {
+func (PromoSMSDetails) Type() string {
 	return "promosms"
 }
 

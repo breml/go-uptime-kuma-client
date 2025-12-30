@@ -93,6 +93,6 @@ type TCPPortDetails struct {
 }
 
 // Type ...
-func (t TCPPortDetails) Type() string {
+func (TCPPortDetails) Type() string {
 	return "port"
 }

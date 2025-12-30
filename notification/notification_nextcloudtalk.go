@@ -31,7 +31,7 @@ func (n NextcloudTalk) Type() string {
 }
 
 // Type returns the notification type identifier for NextcloudTalkDetails.
-func (n NextcloudTalkDetails) Type() string {
+func (NextcloudTalkDetails) Type() string {
 	return "NextcloudTalk"
 }
 

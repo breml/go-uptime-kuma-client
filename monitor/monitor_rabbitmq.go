@@ -101,6 +101,6 @@ type RabbitMQDetails struct {
 }
 
 // Type returns the monitor type.
-func (r RabbitMQDetails) Type() string {
+func (RabbitMQDetails) Type() string {
 	return "rabbitmq"
 }

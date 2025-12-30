@@ -22,7 +22,7 @@ func (f Feishu) Type() string {
 }
 
 // Type returns the notification type identifier for Feishu details.
-func (d FeishuDetails) Type() string {
+func (FeishuDetails) Type() string {
 	return "Feishu"
 }
 

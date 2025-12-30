@@ -24,7 +24,7 @@ func (p PagerDuty) Type() string {
 }
 
 // Type ...
-func (n PagerDutyDetails) Type() string {
+func (PagerDutyDetails) Type() string {
 	return "PagerDuty"
 }
 

@@ -23,7 +23,7 @@ func (g Gotify) Type() string {
 }
 
 // Type ...
-func (n GotifyDetails) Type() string {
+func (GotifyDetails) Type() string {
 	return "gotify"
 }
 

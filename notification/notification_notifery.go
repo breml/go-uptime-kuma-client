@@ -27,7 +27,7 @@ func (n Notifery) Type() string {
 }
 
 // Type returns the notification type identifier for NotiferyDetails.
-func (n NotiferyDetails) Type() string {
+func (NotiferyDetails) Type() string {
 	return "notifery"
 }
 

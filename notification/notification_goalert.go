@@ -25,7 +25,7 @@ func (g GoAlert) Type() string {
 }
 
 // Type returns the notification type identifier for GoAlertDetails.
-func (n GoAlertDetails) Type() string {
+func (GoAlertDetails) Type() string {
 	return "GoAlert"
 }
 

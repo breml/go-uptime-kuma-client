@@ -29,7 +29,7 @@ func (e Evolution) Type() string {
 }
 
 // Type returns the notification type identifier for EvolutionDetails.
-func (n EvolutionDetails) Type() string {
+func (EvolutionDetails) Type() string {
 	return "EvolutionApi"
 }
 

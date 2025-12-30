@@ -43,7 +43,7 @@ func (o Octopush) Type() string {
 }
 
 // Type returns the notification type identifier for OctopushDetails.
-func (o OctopushDetails) Type() string {
+func (OctopushDetails) Type() string {
 	return "octopush"
 }
 

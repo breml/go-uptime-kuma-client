@@ -132,6 +132,6 @@ type HTTPJSONQueryDetails struct {
 }
 
 // Type ...
-func (h HTTPJSONQueryDetails) Type() string {
+func (HTTPJSONQueryDetails) Type() string {
 	return "json-query"
 }

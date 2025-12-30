@@ -29,7 +29,7 @@ func (t Telegram) Type() string {
 }
 
 // Type ...
-func (n TelegramDetails) Type() string {
+func (TelegramDetails) Type() string {
 	return "telegram"
 }
 

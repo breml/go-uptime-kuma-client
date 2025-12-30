@@ -95,6 +95,6 @@ type MySQLDetails struct {
 }
 
 // Type returns the monitor type.
-func (m MySQLDetails) Type() string {
+func (MySQLDetails) Type() string {
 	return "mysql"
 }

@@ -25,7 +25,7 @@ func (f FlashDuty) Type() string {
 }
 
 // Type returns the notification type identifier for FlashDutyDetails.
-func (n FlashDutyDetails) Type() string {
+func (FlashDutyDetails) Type() string {
 	return "FlashDuty"
 }
 

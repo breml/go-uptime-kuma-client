@@ -27,7 +27,7 @@ func (s SendGrid) Type() string {
 }
 
 // Type returns the notification type identifier for SendGrid details.
-func (s SendGridDetails) Type() string {
+func (SendGridDetails) Type() string {
 	return "SendGrid"
 }
 

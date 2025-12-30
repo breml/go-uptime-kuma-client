@@ -25,7 +25,7 @@ func (a AliyunSMS) Type() string {
 }
 
 // Type returns the notification type identifier for AliyunSMS.
-func (n AliyunSMSDetails) Type() string {
+func (AliyunSMSDetails) Type() string {
 	return "AliyunSMS"
 }
 

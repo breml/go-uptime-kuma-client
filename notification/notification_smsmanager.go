@@ -27,7 +27,7 @@ func (s SMSManager) Type() string {
 }
 
 // Type returns the notification type identifier for SMSManagerDetails.
-func (n SMSManagerDetails) Type() string {
+func (SMSManagerDetails) Type() string {
 	return "SMSManager"
 }
 

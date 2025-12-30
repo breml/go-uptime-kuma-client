@@ -27,7 +27,7 @@ func (w Whapi) Type() string {
 }
 
 // Type returns the notification type identifier for WhapiDetails.
-func (n WhapiDetails) Type() string {
+func (WhapiDetails) Type() string {
 	return "whapi"
 }
 

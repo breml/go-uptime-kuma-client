@@ -25,7 +25,7 @@ func (m Mattermost) Type() string {
 }
 
 // Type ...
-func (n MattermostDetails) Type() string {
+func (MattermostDetails) Type() string {
 	return "mattermost"
 }
 

@@ -23,7 +23,7 @@ func (o Opsgenie) Type() string {
 }
 
 // Type ...
-func (n OpsgenieDetails) Type() string {
+func (OpsgenieDetails) Type() string {
 	return "Opsgenie"
 }
 

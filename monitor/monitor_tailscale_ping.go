@@ -92,6 +92,6 @@ type TailscalePingDetails struct {
 }
 
 // Type returns the monitor type.
-func (t TailscalePingDetails) Type() string {
+func (TailscalePingDetails) Type() string {
 	return "tailscale-ping"
 }

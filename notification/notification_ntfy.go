@@ -28,7 +28,7 @@ func (n Ntfy) Type() string {
 }
 
 // Type ...
-func (n NtfyDetails) Type() string {
+func (NtfyDetails) Type() string {
 	return "ntfy"
 }
 

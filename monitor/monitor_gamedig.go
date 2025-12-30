@@ -101,6 +101,6 @@ type GameDigDetails struct {
 }
 
 // Type returns the monitor type string.
-func (g GameDigDetails) Type() string {
+func (GameDigDetails) Type() string {
 	return "gamedig"
 }

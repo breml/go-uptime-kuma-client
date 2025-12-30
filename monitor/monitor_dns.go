@@ -97,7 +97,7 @@ type DNSDetails struct {
 }
 
 // Type ...
-func (d DNSDetails) Type() string {
+func (DNSDetails) Type() string {
 	return "dns"
 }
 

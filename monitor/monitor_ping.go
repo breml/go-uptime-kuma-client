@@ -93,6 +93,6 @@ type PingDetails struct {
 }
 
 // Type ...
-func (p PingDetails) Type() string {
+func (PingDetails) Type() string {
 	return "ping"
 }

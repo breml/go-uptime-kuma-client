@@ -27,7 +27,7 @@ func (d Discord) Type() string {
 }
 
 // Type ...
-func (n DiscordDetails) Type() string {
+func (DiscordDetails) Type() string {
 	return "discord"
 }
 
