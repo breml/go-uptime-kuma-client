@@ -4,13 +4,13 @@ import (
 	"fmt"
 )
 
-// Pushover ...
+// Pushover represents a pushover notification.
 type Pushover struct {
 	Base
 	PushoverDetails
 }
 
-// PushoverDetails ...
+// PushoverDetails contains pushover-specific notification configuration.
 type PushoverDetails struct {
 	UserKey  string `json:"pushoveruserkey"`
 	AppToken string `json:"pushoverapptoken"`
@@ -22,22 +22,22 @@ type PushoverDetails struct {
 	TTL      string `json:"pushoverttl"`
 }
 
-// Type ...
+// Type returns the notification type.
 func (p Pushover) Type() string {
 	return p.PushoverDetails.Type()
 }
 
-// Type ...
+// Type returns the notification type.
 func (PushoverDetails) Type() string {
 	return "pushover"
 }
 
-// String ...
+// String returns a string representation of the notification.
 func (p Pushover) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(p.Base, false), formatNotification(p.PushoverDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a notification.
 func (p *Pushover) UnmarshalJSON(data []byte) error {
 	detail := PushoverDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -53,7 +53,7 @@ func (p *Pushover) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a notification into a JSON byte slice.
 func (p Pushover) MarshalJSON() ([]byte, error) {
 	return marshalJSON(p.Base, &p.PushoverDetails)
 }

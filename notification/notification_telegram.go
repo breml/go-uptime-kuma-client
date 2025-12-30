@@ -4,13 +4,13 @@ import (
 	"fmt"
 )
 
-// Telegram ...
+// Telegram represents a telegram notification.
 type Telegram struct {
 	Base
 	TelegramDetails
 }
 
-// TelegramDetails ...
+// TelegramDetails contains telegram-specific notification configuration.
 type TelegramDetails struct {
 	BotToken          string `json:"telegramBotToken"`
 	ChatID            string `json:"telegramChatID"`
@@ -23,22 +23,22 @@ type TelegramDetails struct {
 	TemplateParseMode string `json:"telegramTemplateParseMode"`
 }
 
-// Type ...
+// Type returns the notification type.
 func (t Telegram) Type() string {
 	return t.TelegramDetails.Type()
 }
 
-// Type ...
+// Type returns the notification type.
 func (TelegramDetails) Type() string {
 	return "telegram"
 }
 
-// String ...
+// String returns a string representation of the notification.
 func (t Telegram) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(t.Base, false), formatNotification(t.TelegramDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a notification.
 func (t *Telegram) UnmarshalJSON(data []byte) error {
 	detail := TelegramDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -54,7 +54,7 @@ func (t *Telegram) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a notification into a JSON byte slice.
 func (t Telegram) MarshalJSON() ([]byte, error) {
 	return marshalJSON(t.Base, &t.TelegramDetails)
 }

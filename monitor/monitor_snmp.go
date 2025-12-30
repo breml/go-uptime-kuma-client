@@ -12,17 +12,17 @@ type SNMP struct {
 	SNMPDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (s SNMP) Type() string {
 	return s.SNMPDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (s SNMP) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(s.Base, false), formatMonitor(s.SNMPDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (s *SNMP) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (s *SNMP) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (s SNMP) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = s.ID
@@ -104,7 +104,7 @@ type SNMPDetails struct {
 	ExpectedValue    *string `json:"expectedValue"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (SNMPDetails) Type() string {
 	return "snmp"
 }

@@ -6,23 +6,23 @@ import (
 	"strconv"
 )
 
-// Group ...
+// Group represents a group monitor.
 type Group struct {
 	Base
 	GroupDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (g Group) Type() string {
 	return g.GroupDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (g Group) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(g.Base, false), formatMonitor(g.GroupDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (g *Group) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (g *Group) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (g Group) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = g.ID
@@ -82,12 +82,12 @@ func (g Group) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// GroupDetails ...
+// GroupDetails contains group-specific monitor configuration.
 type GroupDetails struct {
 	// Groups don't have additional fields beyond Base.
 }
 
-// Type ...
+// Type returns the monitor type.
 func (GroupDetails) Type() string {
 	return "group"
 }

@@ -6,23 +6,23 @@ import (
 	"strconv"
 )
 
-// TCPPort ...
+// TCPPort represents a tcpport monitor.
 type TCPPort struct {
 	Base
 	TCPPortDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (t TCPPort) Type() string {
 	return t.TCPPortDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (t TCPPort) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(t.Base, false), formatMonitor(t.TCPPortDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (t *TCPPort) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (t *TCPPort) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (t TCPPort) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = t.ID
@@ -86,13 +86,13 @@ func (t TCPPort) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// TCPPortDetails ...
+// TCPPortDetails contains tcpport-specific monitor configuration.
 type TCPPortDetails struct {
 	Hostname string `json:"hostname"`
 	Port     int    `json:"port"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (TCPPortDetails) Type() string {
 	return "port"
 }

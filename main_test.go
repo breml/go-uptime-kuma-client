@@ -20,13 +20,12 @@ import (
 //nolint:gochecknoglobals // client is used across multiple tests.
 var client *kuma.Client
 
-func TestMain(m *testing.M) int {
+func TestMain(m *testing.M) {
 	code, err := testMainSetup(m)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Test setup failed: %v\n", err)
-		return 1
+		os.Exit(code)
 	}
-	return code
 }
 
 func testMainSetup(m *testing.M) (int, error) {

@@ -6,23 +6,23 @@ import (
 	"strconv"
 )
 
-// GrpcKeyword ...
+// GrpcKeyword represents a grpckeyword monitor.
 type GrpcKeyword struct {
 	Base
 	GrpcKeywordDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (g GrpcKeyword) Type() string {
 	return g.GrpcKeywordDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (g GrpcKeyword) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(g.Base, false), formatMonitor(g.GrpcKeywordDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (g *GrpcKeyword) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (g *GrpcKeyword) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = g.ID
@@ -92,7 +92,7 @@ func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// GrpcKeywordDetails ...
+// GrpcKeywordDetails contains grpckeyword-specific monitor configuration.
 type GrpcKeywordDetails struct {
 	GrpcURL         string `json:"grpcUrl"`
 	GrpcProtobuf    string `json:"grpcProtobuf"`
@@ -104,7 +104,7 @@ type GrpcKeywordDetails struct {
 	InvertKeyword   bool   `json:"invertKeyword"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (GrpcKeywordDetails) Type() string {
 	return "grpc-keyword"
 }

@@ -4,13 +4,13 @@ import (
 	"fmt"
 )
 
-// SMTP ...
+// SMTP represents a smtp notification.
 type SMTP struct {
 	Base
 	SMTPDetails
 }
 
-// SMTPDetails ...
+// SMTPDetails contains smtp-specific notification configuration.
 type SMTPDetails struct {
 	Host                 string `json:"smtpHost"`
 	Port                 int    `json:"smtpPort"`
@@ -33,22 +33,22 @@ type SMTPDetails struct {
 	HTMLBody             bool   `json:"htmlBody"`
 }
 
-// Type ...
+// Type returns the notification type.
 func (s SMTP) Type() string {
 	return s.SMTPDetails.Type()
 }
 
-// Type ...
+// Type returns the notification type.
 func (SMTPDetails) Type() string {
 	return "smtp"
 }
 
-// String ...
+// String returns a string representation of the notification.
 func (s SMTP) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(s.Base, false), formatNotification(s.SMTPDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a notification.
 func (s *SMTP) UnmarshalJSON(data []byte) error {
 	detail := SMTPDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -64,7 +64,7 @@ func (s *SMTP) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a notification into a JSON byte slice.
 func (s SMTP) MarshalJSON() ([]byte, error) {
 	return marshalJSON(s.Base, &s.SMTPDetails)
 }

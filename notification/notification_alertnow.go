@@ -4,33 +4,33 @@ import (
 	"fmt"
 )
 
-// AlertNow ...
+// AlertNow represents a alertnow notification.
 type AlertNow struct {
 	Base
 	AlertNowDetails
 }
 
-// AlertNowDetails ...
+// AlertNowDetails contains alertnow-specific notification configuration.
 type AlertNowDetails struct {
 	WebhookURL string `json:"alertNowWebhookURL"`
 }
 
-// Type ...
+// Type returns the notification type.
 func (a AlertNow) Type() string {
 	return a.AlertNowDetails.Type()
 }
 
-// Type ...
+// Type returns the notification type.
 func (AlertNowDetails) Type() string {
 	return "AlertNow"
 }
 
-// String ...
+// String returns a string representation of the notification.
 func (a AlertNow) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(a.Base, false), formatNotification(a.AlertNowDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a notification.
 func (a *AlertNow) UnmarshalJSON(data []byte) error {
 	detail := AlertNowDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -46,7 +46,7 @@ func (a *AlertNow) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a notification into a JSON byte slice.
 func (a AlertNow) MarshalJSON() ([]byte, error) {
 	return marshalJSON(a.Base, &a.AlertNowDetails)
 }

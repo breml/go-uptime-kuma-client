@@ -6,23 +6,23 @@ import (
 	"strconv"
 )
 
-// DNS ...
+// DNS represents a DNS monitor.
 type DNS struct {
 	Base
 	DNSDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (d DNS) Type() string {
 	return d.DNSDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the DNS monitor.
 func (d DNS) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(d.Base, false), formatMonitor(d.DNSDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a DNS monitor.
 func (d *DNS) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (d *DNS) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a DNS monitor into a JSON byte slice.
 func (d DNS) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = d.ID
@@ -88,7 +88,7 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// DNSDetails ...
+// DNSDetails contains DNS-specific monitor configuration.
 type DNSDetails struct {
 	Hostname       string         `json:"hostname"`
 	ResolverServer string         `json:"dns_resolve_server"`
@@ -96,7 +96,7 @@ type DNSDetails struct {
 	Port           int            `json:"port"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (DNSDetails) Type() string {
 	return "dns"
 }

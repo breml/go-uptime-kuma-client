@@ -4,13 +4,13 @@ import (
 	"fmt"
 )
 
-// Mattermost ...
+// Mattermost represents a mattermost notification.
 type Mattermost struct {
 	Base
 	MattermostDetails
 }
 
-// MattermostDetails ...
+// MattermostDetails contains mattermost-specific notification configuration.
 type MattermostDetails struct {
 	WebhookURL string `json:"mattermostWebhookUrl"`
 	Username   string `json:"mattermostusername"`
@@ -19,22 +19,22 @@ type MattermostDetails struct {
 	IconURL    string `json:"mattermosticonurl"`
 }
 
-// Type ...
+// Type returns the notification type.
 func (m Mattermost) Type() string {
 	return m.MattermostDetails.Type()
 }
 
-// Type ...
+// Type returns the notification type.
 func (MattermostDetails) Type() string {
 	return "mattermost"
 }
 
-// String ...
+// String returns a string representation of the notification.
 func (m Mattermost) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(m.Base, false), formatNotification(m.MattermostDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a notification.
 func (m *Mattermost) UnmarshalJSON(data []byte) error {
 	detail := MattermostDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -50,7 +50,7 @@ func (m *Mattermost) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a notification into a JSON byte slice.
 func (m Mattermost) MarshalJSON() ([]byte, error) {
 	return marshalJSON(m.Base, &m.MattermostDetails)
 }

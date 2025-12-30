@@ -12,17 +12,17 @@ type Docker struct {
 	DockerDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (d Docker) Type() string {
 	return d.DockerDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the Docker monitor.
 func (d Docker) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(d.Base, false), formatMonitor(d.DockerDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a Docker monitor.
 func (d *Docker) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (d *Docker) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a Docker monitor into a JSON byte slice.
 func (d Docker) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = d.ID
@@ -92,7 +92,7 @@ type DockerDetails struct {
 	DockerContainer string `json:"docker_container"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (DockerDetails) Type() string {
 	return "docker"
 }

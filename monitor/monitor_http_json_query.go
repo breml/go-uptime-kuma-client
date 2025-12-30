@@ -6,19 +6,19 @@ import (
 	"strconv"
 )
 
-// HTTPJSONQuery ...
+// HTTPJSONQuery represents a httpjsonquery monitor.
 type HTTPJSONQuery struct {
 	Base
 	HTTPDetails
 	HTTPJSONQueryDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (h HTTPJSONQuery) Type() string {
 	return h.HTTPJSONQueryDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (h HTTPJSONQuery) String() string {
 	return fmt.Sprintf(
 		"%s, %s, %s",
@@ -28,7 +28,7 @@ func (h HTTPJSONQuery) String() string {
 	)
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (h *HTTPJSONQuery) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -57,7 +57,7 @@ func (h *HTTPJSONQuery) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = h.ID
@@ -124,14 +124,14 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// HTTPJSONQueryDetails ...
+// HTTPJSONQueryDetails contains httpjsonquery-specific monitor configuration.
 type HTTPJSONQueryDetails struct {
 	JSONPath         string `json:"jsonPath"`
 	ExpectedValue    string `json:"expectedValue"`
 	JSONPathOperator string `json:"jsonPathOperator"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (HTTPJSONQueryDetails) Type() string {
 	return "json-query"
 }

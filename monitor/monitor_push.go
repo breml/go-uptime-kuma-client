@@ -6,23 +6,23 @@ import (
 	"strconv"
 )
 
-// Push ...
+// Push represents a push monitor.
 type Push struct {
 	Base
 	PushDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (p Push) Type() string {
 	return p.PushDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (p Push) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(p.Base, false), formatMonitor(p.PushDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (p *Push) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (p *Push) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (p Push) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = p.ID
@@ -85,12 +85,12 @@ func (p Push) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// PushDetails ...
+// PushDetails contains push-specific monitor configuration.
 type PushDetails struct {
 	PushToken string `json:"pushToken"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (PushDetails) Type() string {
 	return "push"
 }

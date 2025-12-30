@@ -4,13 +4,13 @@ import (
 	"fmt"
 )
 
-// Twilio ...
+// Twilio represents a twilio notification.
 type Twilio struct {
 	Base
 	TwilioDetails
 }
 
-// TwilioDetails ...
+// TwilioDetails contains twilio-specific notification configuration.
 type TwilioDetails struct {
 	AccountSID string `json:"twilioAccountSID"`
 	APIKey     string `json:"twilioApiKey"`
@@ -19,22 +19,22 @@ type TwilioDetails struct {
 	FromNumber string `json:"twilioFromNumber"`
 }
 
-// Type ...
+// Type returns the notification type.
 func (t Twilio) Type() string {
 	return t.TwilioDetails.Type()
 }
 
-// Type ...
+// Type returns the notification type.
 func (TwilioDetails) Type() string {
 	return "twilio"
 }
 
-// String ...
+// String returns a string representation of the notification.
 func (t Twilio) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(t.Base, false), formatNotification(t.TwilioDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a notification.
 func (t *Twilio) UnmarshalJSON(data []byte) error {
 	detail := TwilioDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -50,7 +50,7 @@ func (t *Twilio) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a notification into a JSON byte slice.
 func (t Twilio) MarshalJSON() ([]byte, error) {
 	return marshalJSON(t.Base, &t.TwilioDetails)
 }

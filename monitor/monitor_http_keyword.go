@@ -6,19 +6,19 @@ import (
 	"strconv"
 )
 
-// HTTPKeyword ...
+// HTTPKeyword represents a httpkeyword monitor.
 type HTTPKeyword struct {
 	Base
 	HTTPDetails
 	HTTPKeywordDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (h HTTPKeyword) Type() string {
 	return h.HTTPKeywordDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (h HTTPKeyword) String() string {
 	return fmt.Sprintf(
 		"%s, %s, %s",
@@ -28,7 +28,7 @@ func (h HTTPKeyword) String() string {
 	)
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (h *HTTPKeyword) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -57,7 +57,7 @@ func (h *HTTPKeyword) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = h.ID
@@ -123,13 +123,13 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// HTTPKeywordDetails ...
+// HTTPKeywordDetails contains httpkeyword-specific monitor configuration.
 type HTTPKeywordDetails struct {
 	Keyword       string `json:"keyword"`
 	InvertKeyword bool   `json:"invertKeyword"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (HTTPKeywordDetails) Type() string {
 	return "keyword"
 }

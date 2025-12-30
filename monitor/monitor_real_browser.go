@@ -6,23 +6,23 @@ import (
 	"strconv"
 )
 
-// RealBrowser ...
+// RealBrowser represents a realbrowser monitor.
 type RealBrowser struct {
 	Base
 	RealBrowserDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (r RealBrowser) Type() string {
 	return r.RealBrowserDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (r RealBrowser) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(r.Base, false), formatMonitor(r.RealBrowserDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (r *RealBrowser) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (r *RealBrowser) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (r RealBrowser) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = r.ID
@@ -88,7 +88,7 @@ func (r RealBrowser) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// RealBrowserDetails ...
+// RealBrowserDetails contains realbrowser-specific monitor configuration.
 type RealBrowserDetails struct {
 	URL                 string   `json:"url"`
 	Timeout             int64    `json:"timeout"`
@@ -98,7 +98,7 @@ type RealBrowserDetails struct {
 	RemoteBrowser       *int64   `json:"remote_browser,omitempty"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (RealBrowserDetails) Type() string {
 	return "real-browser"
 }

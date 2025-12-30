@@ -6,23 +6,23 @@ import (
 	"strconv"
 )
 
-// Ping ...
+// Ping represents a ping monitor.
 type Ping struct {
 	Base
 	PingDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (p Ping) Type() string {
 	return p.PingDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (p Ping) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(p.Base, false), formatMonitor(p.PingDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (p *Ping) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (p *Ping) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (p Ping) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = p.ID
@@ -86,13 +86,13 @@ func (p Ping) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// PingDetails ...
+// PingDetails contains ping-specific monitor configuration.
 type PingDetails struct {
 	Hostname   string `json:"hostname"`
 	PacketSize int    `json:"packetSize"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (PingDetails) Type() string {
 	return "ping"
 }

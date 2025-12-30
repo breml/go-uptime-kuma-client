@@ -6,23 +6,23 @@ import (
 	"strconv"
 )
 
-// Redis ...
+// Redis represents a redis monitor.
 type Redis struct {
 	Base
 	RedisDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (r Redis) Type() string {
 	return r.RedisDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (r Redis) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(r.Base, false), formatMonitor(r.RedisDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (r *Redis) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (r *Redis) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (r Redis) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = r.ID
@@ -86,13 +86,13 @@ func (r Redis) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// RedisDetails ...
+// RedisDetails contains redis-specific monitor configuration.
 type RedisDetails struct {
 	ConnectionString string `json:"databaseConnectionString"`
 	IgnoreTLS        bool   `json:"ignoreTls"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (RedisDetails) Type() string {
 	return "redis"
 }

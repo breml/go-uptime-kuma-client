@@ -6,23 +6,23 @@ import (
 	"strconv"
 )
 
-// Postgres ...
+// Postgres represents a postgres monitor.
 type Postgres struct {
 	Base
 	PostgresDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (p Postgres) Type() string {
 	return p.PostgresDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (p Postgres) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(p.Base, false), formatMonitor(p.PostgresDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (p *Postgres) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (p *Postgres) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (p Postgres) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = p.ID
@@ -86,13 +86,13 @@ func (p Postgres) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// PostgresDetails ...
+// PostgresDetails contains postgres-specific monitor configuration.
 type PostgresDetails struct {
 	DatabaseConnectionString string `json:"databaseConnectionString"`
 	DatabaseQuery            string `json:"databaseQuery"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (PostgresDetails) Type() string {
 	return "postgres"
 }

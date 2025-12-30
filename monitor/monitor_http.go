@@ -6,23 +6,23 @@ import (
 	"strconv"
 )
 
-// HTTP ...
+// HTTP represents a http monitor.
 type HTTP struct {
 	Base
 	HTTPDetails
 }
 
-// Type ...
+// Type returns the monitor type.
 func (h HTTP) Type() string {
 	return h.HTTPDetails.Type()
 }
 
-// String ...
+// String returns a string representation of the monitor.
 func (h HTTP) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(h.Base, false), formatMonitor(h.HTTPDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (h *HTTP) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
@@ -44,7 +44,7 @@ func (h *HTTP) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = h.ID
@@ -106,7 +106,7 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// HTTPDetails ...
+// HTTPDetails contains http-specific monitor configuration.
 type HTTPDetails struct {
 	URL                 string     `json:"url"`
 	Timeout             int64      `json:"timeout"`
@@ -134,7 +134,7 @@ type HTTPDetails struct {
 	CacheBust           bool       `json:"cacheBust"`
 }
 
-// Type ...
+// Type returns the monitor type.
 func (HTTPDetails) Type() string {
 	return "http"
 }

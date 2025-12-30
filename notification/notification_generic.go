@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Generic ...
+// Generic represents a generic notification.
 type Generic struct {
 	Base
 	GenericDetails
@@ -15,12 +15,12 @@ type Generic struct {
 	TypeName string
 }
 
-// Type ...
+// Type returns the notification type.
 func (n Generic) Type() string {
 	return n.TypeName
 }
 
-// String ...
+// String returns a string representation of the notification.
 func (n Generic) String() string {
 	buf := strings.Builder{}
 	buf.WriteString(fmt.Sprintf("%s: %q", "type", n.TypeName))
@@ -43,7 +43,7 @@ func (n Generic) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(n.Base, false), buf.String())
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a notification.
 func (n *Generic) UnmarshalJSON(data []byte) error {
 	details := GenericDetails{}
 	base, err := unmarshalTo(data, &details)
@@ -78,7 +78,7 @@ func (n *Generic) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a notification into a JSON byte slice.
 func (n Generic) MarshalJSON() ([]byte, error) {
 	details := maps.Clone(n.GenericDetails)
 	details["type"] = n.TypeName
@@ -89,7 +89,7 @@ func (n Generic) MarshalJSON() ([]byte, error) {
 // GenericDetails represents generic notification configuration details.
 type GenericDetails map[string]any
 
-// Type ...
+// Type returns the notification type.
 func (n GenericDetails) Type() string {
 	if n == nil {
 		return ""

@@ -4,13 +4,13 @@ import (
 	"fmt"
 )
 
-// Alerta ...
+// Alerta represents a alerta notification.
 type Alerta struct {
 	Base
 	AlertaDetails
 }
 
-// AlertaDetails ...
+// AlertaDetails contains alerta-specific notification configuration.
 type AlertaDetails struct {
 	APIEndpoint  string `json:"alertaApiEndpoint"`
 	APIKey       string `json:"alertaApiKey"`
@@ -19,22 +19,22 @@ type AlertaDetails struct {
 	RecoverState string `json:"alertaRecoverState"`
 }
 
-// Type ...
+// Type returns the notification type.
 func (a Alerta) Type() string {
 	return a.AlertaDetails.Type()
 }
 
-// Type ...
+// Type returns the notification type.
 func (AlertaDetails) Type() string {
 	return "alerta"
 }
 
-// String ...
+// String returns a string representation of the notification.
 func (a Alerta) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(a.Base, false), formatNotification(a.AlertaDetails, true))
 }
 
-// UnmarshalJSON ...
+// UnmarshalJSON unmarshals a JSON byte slice into a notification.
 func (a *Alerta) UnmarshalJSON(data []byte) error {
 	detail := AlertaDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -50,7 +50,7 @@ func (a *Alerta) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON ...
+// MarshalJSON marshals a notification into a JSON byte slice.
 func (a Alerta) MarshalJSON() ([]byte, error) {
-	return marshalJSON(a.Base, a.AlertaDetails)
+	return marshalJSON(a.Base, &a.AlertaDetails)
 }
