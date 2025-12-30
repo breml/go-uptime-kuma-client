@@ -46,7 +46,7 @@ func (c *Client) GetStatusPage(ctx context.Context, slug string) (*statuspage.St
 }
 
 // AddStatusPage creates a new status page with the given title and slug.
-func (c *Client) AddStatusPage(ctx context.Context, title, slug string) error {
+func (c *Client) AddStatusPage(ctx context.Context, title string, slug string) error {
 	_, err := c.syncEmit(ctx, "addStatusPage", title, slug)
 	if err != nil {
 		return fmt.Errorf("add status page: %w", err)

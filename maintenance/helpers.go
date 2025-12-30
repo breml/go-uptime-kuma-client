@@ -3,7 +3,7 @@ package maintenance
 import "time"
 
 // NewSingleMaintenance creates a one-time maintenance window.
-func NewSingleMaintenance(title, description string, startDate, endDate time.Time, timezone string) *Maintenance {
+func NewSingleMaintenance(title string, description string, startDate time.Time, endDate time.Time, timezone string) *Maintenance {
 	return &Maintenance{
 		Title:          title,
 		Description:    description,
@@ -16,7 +16,7 @@ func NewSingleMaintenance(title, description string, startDate, endDate time.Tim
 
 // NewRecurringIntervalMaintenance creates a maintenance window that repeats every N days.
 func NewRecurringIntervalMaintenance(
-	title, description string,
+	title string, description string,
 	intervalDay int,
 	timeRange []TimeOfDay,
 	timezone string,
@@ -36,7 +36,7 @@ func NewRecurringIntervalMaintenance(
 // NewRecurringWeekdayMaintenance creates a maintenance window that repeats on specific days of the week.
 // Weekdays: 1=Monday, 2=Tuesday, ..., 7=Sunday.
 func NewRecurringWeekdayMaintenance(
-	title, description string,
+	title string, description string,
 	weekdays []int,
 	timeRange []TimeOfDay,
 	timezone string,
@@ -56,7 +56,7 @@ func NewRecurringWeekdayMaintenance(
 // NewRecurringDayOfMonthMaintenance creates a maintenance window that repeats on specific days of the month.
 // daysOfMonth can contain integers 1-31 or special strings "lastDay1"-"lastDay4".
 func NewRecurringDayOfMonthMaintenance(
-	title, description string,
+	title string, description string,
 	daysOfMonth []any,
 	timeRange []TimeOfDay,
 	timezone string,
@@ -76,7 +76,7 @@ func NewRecurringDayOfMonthMaintenance(
 // NewCronMaintenance creates a maintenance window using a cron expression.
 // cronExpr: standard cron expression (e.g., "0 2 * * *" for daily at 2 AM).
 // durationMinutes: how long the maintenance window should last.
-func NewCronMaintenance(title, description, cronExpr string, durationMinutes int, timezone string) *Maintenance {
+func NewCronMaintenance(title string, description string, cronExpr string, durationMinutes int, timezone string) *Maintenance {
 	return &Maintenance{
 		Title:           title,
 		Description:     description,
@@ -91,7 +91,7 @@ func NewCronMaintenance(title, description, cronExpr string, durationMinutes int
 
 // NewManualMaintenance creates a manually-triggered maintenance window.
 // Manual maintenance windows do not have a schedule and must be activated manually.
-func NewManualMaintenance(title, description string) *Maintenance {
+func NewManualMaintenance(title string, description string) *Maintenance {
 	return &Maintenance{
 		Title:       title,
 		Description: description,
