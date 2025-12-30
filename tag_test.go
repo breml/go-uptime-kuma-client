@@ -333,6 +333,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 			if mt.TagID != tag1ID {
 				continue
 			}
+
 			require.Equal(t, "development", mt.Value)
 			require.Equal(t, "Environment", mt.Name)
 			require.Equal(t, "#FF0000", mt.Color)

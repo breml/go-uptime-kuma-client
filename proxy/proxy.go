@@ -138,6 +138,7 @@ func (p Proxy) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal proxy: %w", err)
 	}
+
 	return data, nil
 }
 

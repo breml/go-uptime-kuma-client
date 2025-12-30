@@ -50,6 +50,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Ntfy notification")
 				}
+
 				ntfy.Name = "Test Ntfy Updated"
 				ntfy.AuthenticationMethod = "usernamePassword"
 				ntfy.Username = "testuser"
@@ -108,6 +109,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Slack notification")
 				}
+
 				slack.Name = "Test Slack Updated"
 				slack.Username = "uptime-bot"
 				slack.IconEmoji = ":warning:"
@@ -161,6 +163,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Teams notification")
 				}
+
 				teams.Name = "Test Teams Updated"
 				teams.WebhookURL = "https://outlook.office.com/webhook/updated-xxx-xxx/IncomingWebhook/updated-yyy-yyy"
 			},
@@ -212,6 +215,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Webhook notification")
 				}
+
 				webhook.Name = "Test Webhook Updated"
 				webhook.WebhookContentType = "custom"
 				webhook.WebhookCustomBody = `{"title": "Alert - {{ monitorJSON['name'] }}", "message": "{{ msg }}"}`
@@ -275,6 +279,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert SMTP notification")
 				}
+
 				smtp.Name = "Test SMTP Updated"
 				smtp.Host = "smtp.office365.com"
 				smtp.Port = 25
@@ -332,6 +337,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Telegram notification")
 				}
+
 				telegram.Name = "Test Telegram Updated"
 				telegram.ChatID = "123456789"
 				telegram.SendSilently = true
@@ -386,6 +392,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert PagerDuty notification")
 				}
+
 				pagerduty.Name = "Test PagerDuty Updated"
 				pagerduty.Priority = "critical"
 				pagerduty.AutoResolve = "null"
@@ -439,6 +446,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Signal notification")
 				}
+
 				signal.Name = "Test Signal Updated"
 				signal.URL = "http://signal-api:9998"
 				signal.Recipients = "+1111111111,+2222222222"
@@ -492,6 +500,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Opsgenie notification")
 				}
+
 				opsgenie.Name = "Test Opsgenie Updated"
 				opsgenie.Region = "eu"
 				opsgenie.Priority = 5
@@ -545,6 +554,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert HomeAssistant notification")
 				}
+
 				ha.Name = "Test Home Assistant Updated"
 				ha.HomeAssistantURL = "http://ha.example.com:8123"
 				ha.NotificationService = "notify.persistent_notification"
@@ -601,6 +611,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Discord notification")
 				}
+
 				discord.Name = "Test Discord Updated"
 				discord.Username = "Updated Monitor"
 				discord.ChannelType = "createNewForumPost"
@@ -654,6 +665,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Pushbullet notification")
 				}
+
 				pushbullet.Name = "Test Pushbullet Updated"
 				pushbullet.AccessToken = "o.updated_access_token"
 			},
@@ -711,6 +723,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Pushover notification")
 				}
+
 				pushover.Name = "Test Pushover Updated"
 				pushover.Title = "Updated Alert"
 				pushover.Priority = "2"
@@ -765,6 +778,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Gotify notification")
 				}
+
 				gotify.Name = "Test Gotify Updated"
 				gotify.Priority = 5
 			},
@@ -815,6 +829,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert GrafanaOncall notification")
 				}
+
 				grafana.Name = "Test Grafana OnCall Updated"
 				grafana.GrafanaOncallURL = "https://oncall.example.com/api/v1/incidents/create"
 			},
@@ -869,6 +884,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Twilio notification")
 				}
+
 				twilio.Name = "Test Twilio Updated"
 				twilio.ToNumber = "+15559999999"
 			},
@@ -923,6 +939,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Mattermost notification")
 				}
+
 				mattermost.Name = "Test Mattermost Updated"
 				mattermost.Username = "Updated Bot"
 				mattermost.Channel = "#monitoring"
@@ -977,6 +994,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Matrix notification")
 				}
+
 				matrix.Name = "Test Matrix Updated"
 				matrix.InternalRoomID = "!newroomid:example.com"
 			},
@@ -1031,6 +1049,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert RocketChat notification")
 				}
+
 				rocketchat.Name = "Test Rocket.Chat Updated"
 				rocketchat.Channel = "#monitoring"
 				rocketchat.Username = "Updated Bot"
@@ -1083,6 +1102,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert WeCom notification")
 				}
+
 				wecom.Name = "Test WeCom Updated"
 				wecom.BotKey = "yyyy"
 			},
@@ -1133,6 +1153,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Feishu notification")
 				}
+
 				feishu.Name = "Test Feishu Updated"
 				feishu.WebHookURL = "https://open.feishu.cn/open-apis/bot/v2/hook/yyyy"
 			},
@@ -1185,6 +1206,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert DingDing notification")
 				}
+
 				dingding.Name = "Test DingDing Updated"
 				dingding.Mentioning = ""
 			},
@@ -1238,6 +1260,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert FortySixElks notification")
 				}
+
 				elks.Name = "Test 46elks Updated"
 				elks.ToNumber = "0709999999"
 			},
@@ -1292,6 +1315,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Alerta notification")
 				}
+
 				alerta.Name = "Test Alerta Updated"
 				alerta.Environment = "Staging"
 			},
@@ -1342,6 +1366,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert AlertNow notification")
 				}
+
 				alertnow.Name = "Test AlertNow Updated"
 				alertnow.WebhookURL = "https://alertnow.example.com/api/webhook/updated"
 			},
@@ -1396,6 +1421,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert AliyunSMS notification")
 				}
+
 				aliyunsms.Name = "Test AliyunSMS Updated"
 				aliyunsms.PhoneNumber = "8613800000002"
 			},
@@ -1447,6 +1473,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Apprise notification")
 				}
+
 				apprise.Name = "Test Apprise Updated"
 				apprise.Title = "Updated Alert"
 			},
@@ -1499,6 +1526,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert GoogleChat notification")
 				}
+
 				googlechat.Name = "Test Google Chat Updated"
 				googlechat.UseTemplate = true
 				googlechat.Template = "Updated Template"
@@ -1553,6 +1581,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Bark notification")
 				}
+
 				bark.Name = "Test Bark Updated"
 				bark.Sound = "telegraph"
 				bark.APIVersion = "v2"
@@ -1605,6 +1634,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Bitrix24 notification")
 				}
+
 				bitrix24.Name = "Test Bitrix24 Updated"
 				bitrix24.NotificationUserID = "admin"
 			},
@@ -1659,6 +1689,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Brevo notification")
 				}
+
 				brevo.Name = "Test Brevo Updated"
 				brevo.ToEmail = "updated@example.com"
 				brevo.FromName = "Updated System"
@@ -1713,6 +1744,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert CallMeBot notification")
 				}
+
 				callmebot.Name = "Test CallMeBot Updated"
 				callmebot.Endpoint = "https://custom.callmebot.endpoint.com/start"
 			},
@@ -1768,6 +1800,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Cellsynt notification")
 				}
+
 				cellsynt.Name = "Test Cellsynt Updated"
 				cellsynt.Destination = "46709876543"
 				cellsynt.Originator = "Updated"
@@ -1824,6 +1857,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert ClickSendSMS notification")
 				}
+
 				clicksendsms.Name = "Test ClickSend Updated"
 				clicksendsms.ToNumber = "61487654321"
 				clicksendsms.SenderName = "Updated Monitor"
@@ -1878,6 +1912,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Evolution notification")
 				}
+
 				evolution.Name = "Test Evolution Updated"
 				evolution.APIURL = "https://custom.api.com"
 				evolution.InstanceName = "newinstance"
@@ -1931,6 +1966,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert FlashDuty notification")
 				}
+
 				flashduty.Name = "Test FlashDuty Updated"
 				flashduty.Severity = "Warning"
 				flashduty.IntegrationKey = "updated_key_456"
@@ -1983,6 +2019,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert GoAlert notification")
 				}
+
 				goalert.Name = "Test GoAlert Updated"
 				goalert.Token = "updated-token-456"
 			},
@@ -2039,6 +2076,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Gorush notification")
 				}
+
 				gorush.Name = "Test Gorush Updated"
 				gorush.Priority = "critical"
 				gorush.Retry = 5
@@ -2092,6 +2130,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert GTXMessaging notification")
 				}
+
 				gtx.Name = "Test GTX Messaging Updated"
 				gtx.From = "Monitor"
 			},
@@ -2143,6 +2182,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert HeiiOnCall notification")
 				}
+
 				heii.Name = "Test Heii On-Call Updated"
 				heii.APIKey = "updated-api-key"
 			},
@@ -2194,6 +2234,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Keep notification")
 				}
+
 				keep.Name = "Test Keep Updated"
 				keep.APIKey = "updated-api-key"
 			},
@@ -2245,6 +2286,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Kook notification")
 				}
+
 				kook.Name = "Test Kook Updated"
 				kook.BotToken = "updated-bot-token"
 			},
@@ -2296,6 +2338,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert FreeMobile notification")
 				}
+
 				freemobile.Name = "Test Free Mobile Updated"
 				freemobile.Pass = "updated123456"
 			},
@@ -2347,6 +2390,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Line notification")
 				}
+
 				line.Name = "Test LINE Updated"
 				line.ChannelAccessToken = "updated-token-123"
 				line.LineDetails.UserID = "U9876543210fedcba9876543210fedcba"
@@ -2398,6 +2442,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert LineNotify notification")
 				}
+
 				linenotify.Name = "Test LINE Notify Updated"
 				linenotify.AccessToken = "updated-token-123"
 			},
@@ -2450,6 +2495,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert LunaSea notification")
 				}
+
 				lunasea.Name = "Test LunaSea Updated"
 				lunasea.Target = "device"
 				lunasea.LunaSeaUserID = ""
@@ -2506,6 +2552,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert NextcloudTalk notification")
 				}
+
 				nextcloudtalk.Name = "Test Nextcloud Talk Updated"
 				nextcloudtalk.Host = "https://updated.example.com"
 				nextcloudtalk.ConversationToken = "token-updated"
@@ -2561,6 +2608,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Nostr notification")
 				}
+
 				nostr.Name = "Test Nostr Updated"
 				nostr.Sender = "nsec1updated-sender"
 				nostr.Recipients = "npub1updated-recipient"
@@ -2616,6 +2664,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert OneBot notification")
 				}
+
 				onebot.Name = "Test OneBot Updated"
 				onebot.AccessToken = "updated-token"
 				onebot.MsgType = "private"
@@ -2673,6 +2722,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Octopush notification")
 				}
+
 				octopush.Name = "Test Octopush V2 Updated"
 				octopush.APIKey = "updated-api-key"
 				octopush.PhoneNumber = "+33698765432"
@@ -2727,6 +2777,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert OneChat notification")
 				}
+
 				onechat.Name = "Test OneChat Updated"
 				onechat.AccessToken = "updated-token"
 				onechat.ReceiverID = "group789"
@@ -2781,6 +2832,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Notifery notification")
 				}
+
 				notifery.Name = "Test Notifery Updated"
 				notifery.APIKey = "updated-api-key"
 				notifery.Title = "Critical Alert"
@@ -2836,6 +2888,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert OneSender notification")
 				}
+
 				onesender.Name = "Test OneSender Updated"
 				onesender.Token = "updated-token"
 				onesender.Receiver = "120363123456789-1234567890"
@@ -2890,6 +2943,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert PagerTree notification")
 				}
+
 				pagertree.Name = "Test PagerTree Updated"
 				pagertree.Urgency = "medium"
 				pagertree.AutoResolve = ""
@@ -2946,6 +3000,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert PromoSMS notification")
 				}
+
 				promosms.Name = "Test PromoSMS Updated"
 				promosms.Password = "newpassword"
 				promosms.PhoneNumber = "+48987654321"
@@ -2998,6 +3053,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Pumble notification")
 				}
+
 				pumble.Name = "Test Pumble Updated"
 				pumble.WebhookURL = "https://pumble.com/webhook/updated"
 			},
@@ -3049,6 +3105,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert PushDeer notification")
 				}
+
 				pushdeer.Name = "Test PushDeer Updated"
 				pushdeer.Key = "PDyyyyyyyyyyyyyyyy"
 				pushdeer.Server = "https://custom.pushdeer.com"
@@ -3100,6 +3157,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert PushPlus notification")
 				}
+
 				pushplus.Name = "Test PushPlus Updated"
 				pushplus.SendKey = "updated_send_key_yyyyy"
 			},
@@ -3151,6 +3209,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Pushy notification")
 				}
+
 				pushy.Name = "Test Pushy Updated"
 				pushy.APIKey = "updated_api_key_yyyyy"
 				pushy.Token = "updated_device_token_yyyyy"
@@ -3207,6 +3266,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert SendGrid notification")
 				}
+
 				sendgrid.Name = "Test SendGrid Updated"
 				sendgrid.APIKey = "SG.updated_api_key_yyyyy"
 				sendgrid.ToEmail = "updated@example.com"
@@ -3259,6 +3319,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert ServerChan notification")
 				}
+
 				serverchan.Name = "Test ServerChan Updated"
 				serverchan.SendKey = "SCT000000000000000000000000000000"
 			},
@@ -3312,6 +3373,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert SerwerSMS notification")
 				}
+
 				serwersms.Name = "Test SerwerSMS Updated"
 				serwersms.PhoneNumber = "48987654321"
 				serwersms.SenderName = "UpdatedAlert"
@@ -3365,6 +3427,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert SevenIO notification")
 				}
+
 				sevenio.Name = "Test SevenIO Updated"
 				sevenio.To = "49987654321"
 				sevenio.Sender = "UpdatedAlert"
@@ -3416,6 +3479,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert SIGNL4 notification")
 				}
+
 				signl4.Name = "Test SIGNL4 Updated"
 				signl4.WebhookURL = "https://connect.signl4.com/webhook/updated-webhook"
 			},
@@ -3470,6 +3534,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert SMSC notification")
 				}
+
 				smsc.Name = "Test SMSC Updated"
 				smsc.SenderName = "Updated"
 				smsc.Translit = "0"
@@ -3528,6 +3593,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert SMSEagle notification")
 				}
+
 				smseagle.Name = "Test SMSEagle Updated"
 				smseagle.Priority = 2
 				smseagle.Encoding = true
@@ -3581,6 +3647,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert SMSManager notification")
 				}
+
 				smsmanager.Name = "Test SMSManager Updated"
 				smsmanager.Numbers = "420999888777"
 				smsmanager.MessageType = "2"
@@ -3634,6 +3701,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert SMSPartner notification")
 				}
+
 				smspartner.Name = "Test SMSPartner Updated"
 				smspartner.PhoneNumber = "33687654321"
 				smspartner.SenderName = "Monitor"
@@ -3687,6 +3755,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert SMSPlanet notification")
 				}
+
 				smsplanet.Name = "Test SMS Planet Updated"
 				smsplanet.PhoneNumbers = "48987654321"
 				smsplanet.SenderName = "Monitor"
@@ -3741,6 +3810,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Splunk notification")
 				}
+
 				splunk.Name = "Test Splunk Updated"
 				splunk.Severity = "HIGH"
 				splunk.AutoResolve = "ACKNOWLEDGED"
@@ -3792,6 +3862,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert SpugPush notification")
 				}
+
 				spugpush.Name = "Test SpugPush Updated"
 				spugpush.TemplateKey = "updated-template-key"
 			},
@@ -3842,6 +3913,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Squadcast notification")
 				}
+
 				squadcast.Name = "Test Squadcast Updated"
 				squadcast.WebhookURL = "https://updated.squadcast.com/webhook"
 			},
@@ -3892,6 +3964,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Stackfield notification")
 				}
+
 				stackfield.Name = "Test Stackfield Updated"
 				stackfield.WebhookURL = "https://updated.stackfield.com/webhook"
 			},
@@ -3946,6 +4019,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert TechulusPush notification")
 				}
+
 				techuluspush.Name = "Test TechulusPush Updated"
 				techuluspush.Title = "Updated Title"
 				techuluspush.Sound = "bell"
@@ -4001,6 +4075,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Threema notification")
 				}
+
 				threema.Name = "Test Threema Updated"
 				threema.Recipient = "+41791234567"
 				threema.RecipientType = "phone"
@@ -4055,6 +4130,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert WAHA notification")
 				}
+
 				waha.Name = "Test WAHA Updated"
 				waha.Session = "alerts"
 				waha.ChatID = "+5511987654321"
@@ -4108,6 +4184,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert Whapi notification")
 				}
+
 				whapi.Name = "Test Whapi Updated"
 				whapi.Recipient = "+5511987654321"
 			},
@@ -4159,6 +4236,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert WPush notification")
 				}
+
 				wpush.Name = "Test WPush Updated"
 				wpush.Channel = "channel-monitoring"
 			},
@@ -4210,6 +4288,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert YZJ notification")
 				}
+
 				yzj.Name = "Test YZJ Updated"
 				yzj.Token = "updated-token-456"
 			},
@@ -4260,6 +4339,7 @@ func TestNotificationCRUD(t *testing.T) {
 				if !ok {
 					panic("failed to assert ZohoCliq notification")
 				}
+
 				zohocliq.Name = "Test ZohoCliq Updated"
 				zohocliq.WebhookURL = "https://zoho-cliq.example.com/webhook/updated456"
 			},

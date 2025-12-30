@@ -78,6 +78,7 @@ func (h WebhookAdditionalHeaders) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal webhook headers: %w", err)
 	}
+
 	return data, nil
 }
 

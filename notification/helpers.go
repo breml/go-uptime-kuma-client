@@ -110,6 +110,7 @@ func marshalJSON(base Base, details interface{ Type() string }) ([]byte, error) 
 	if err != nil {
 		return nil, fmt.Errorf("marshal notification: %w", err)
 	}
+
 	return data, nil
 }
 

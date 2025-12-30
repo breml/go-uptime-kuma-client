@@ -561,6 +561,7 @@ func (c *Client) Disconnect() error {
 	if err != nil {
 		return fmt.Errorf("close socket.io client: %w", err)
 	}
+
 	return nil
 }
 

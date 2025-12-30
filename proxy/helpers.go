@@ -30,8 +30,10 @@ func formatProxy(p Proxy) string {
 		switch {
 		case field.Name == "Password" && value.Kind() == reflect.String && value.String() != "":
 			valueStr = "\"***\""
+
 		case value.Kind() == reflect.String:
 			valueStr = fmt.Sprintf("%q", value.String())
+
 		default:
 			valueStr = fmt.Sprintf("%v", value.Interface())
 		}

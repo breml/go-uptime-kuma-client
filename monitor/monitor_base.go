@@ -146,6 +146,7 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal monitor base: %w", err)
 	}
+
 	return data, nil
 }
 

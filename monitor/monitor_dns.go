@@ -85,6 +85,7 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal: %w", err)
 	}
+
 	return data, nil
 }
 
