@@ -9,7 +9,7 @@ import (
 )
 
 // GetStatusPages retrieves all status pages from the client cache.
-func (c *Client) GetStatusPages(ctx context.Context) (map[int64]statuspage.StatusPage, error) {
+func (c *Client) GetStatusPages(_ context.Context) (map[int64]statuspage.StatusPage, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

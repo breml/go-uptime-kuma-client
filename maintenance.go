@@ -8,7 +8,7 @@ import (
 )
 
 // GetMaintenances retrieves all maintenance windows from the client cache.
-func (c *Client) GetMaintenances(ctx context.Context) ([]maintenance.Maintenance, error) {
+func (c *Client) GetMaintenances(_ context.Context) ([]maintenance.Maintenance, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

@@ -337,7 +337,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	})
 	defer closeReady()
 
-	c.updates.AddListener(func(ctx context.Context, s string) {
+	c.updates.AddListener(func(_ context.Context, s string) {
 		updateSeenMu.Lock()
 		defer updateSeenMu.Unlock()
 
@@ -475,7 +475,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		})
 	}
 
-	client.OnAny(func(s string, i []any) {
+	client.OnAny(func(s string, _ []any) {
 		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" &&
 			s != "proxyList" &&
 			s != "dockerHostList" {
@@ -619,7 +619,7 @@ func (c *Client) syncEmitWithUpdateEvent(
 	// Register listener for notifications updates.
 	// Signal done, if update is received and remove listener.
 	listenerID := uuid.New()
-	c.updates.AddListener(func(ctx context.Context, update string) {
+	c.updates.AddListener(func(_ context.Context, update string) {
 		if update == updateEvent {
 			c.updates.RemoveListener(listenerID.String())
 			closeDone()

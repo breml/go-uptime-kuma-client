@@ -63,7 +63,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 	// Check 1: Success (200) - establish UP state.
 	// Check 2: Failure (503) - trigger DOWN notification.
 	// Check 3+: Success (200) - trigger recovery notification.
-	mux.HandleFunc("/monitored-endpoint", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/monitored-endpoint", func(w http.ResponseWriter, _ *http.Request) {
 		endpointMu.Lock()
 		checkCount++
 		currentCheck := checkCount

@@ -263,7 +263,7 @@ func (c *Client) DeleteMonitorTag(ctx context.Context, tagID int64, monitorID in
 // This method uses the client's local state cache, which is kept synchronized
 // via socket.io events. The cache is automatically updated by monitorList,
 // updateMonitorIntoList, and deleteMonitorFromList events.
-func (c *Client) GetMonitorTags(ctx context.Context, monitorID int64) ([]tag.MonitorTag, error) {
+func (c *Client) GetMonitorTags(_ context.Context, monitorID int64) ([]tag.MonitorTag, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -280,7 +280,7 @@ func (c *Client) GetMonitorTags(ctx context.Context, monitorID int64) ([]tag.Mon
 // This method uses the client's local state cache, which is kept synchronized
 // via socket.io events. The cache is automatically updated by monitorList,
 // updateMonitorIntoList, and deleteMonitorFromList events.
-func (c *Client) GetTagMonitors(ctx context.Context, tagID int64) ([]int64, error) {
+func (c *Client) GetTagMonitors(_ context.Context, tagID int64) ([]int64, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
