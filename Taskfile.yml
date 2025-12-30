@@ -38,7 +38,7 @@ tasks:
     cmds:
       - |
         if [ ! -f "coverage.out" ]; then
-          go test -v -shuffle on -coverprofile coverage.out -timeout 120s ./...
+          go test -v -shuffle on -coverprofile coverage.out -timeout 240s ./...
         fi
       - go tool cover -func=coverage.out | sort -k3 -rn
     silent: true

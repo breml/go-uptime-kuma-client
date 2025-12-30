@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 
 	e2eTest, _ := strconv.ParseBool(os.Getenv("E2E_TEST"))
 	if e2eTest {
-		dockerTimeout = 120
+		dockerTimeout = 600
 	}
 
 	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
