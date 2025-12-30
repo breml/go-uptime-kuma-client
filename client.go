@@ -127,6 +127,7 @@ func WithConnectTimeout(timeout time.Duration) Option {
 // setupDatabase handles the database setup phase for Uptime Kuma v2.
 // It checks if database setup is needed and configures SQLite if required.
 // The function will wait for the server to restart after database configuration.
+//
 //nolint:revive // Complexity is necessary for complete database setup logic
 func setupDatabase(ctx context.Context, baseURL string) error {
 	// Convert socket.io URL to HTTP URL
@@ -282,6 +283,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 }
 
 // New creates a new Client connected to an Uptime Kuma server.
+//
 //nolint:revive // Complexity is necessary for complete client initialization and event setup
 func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
 	c := &Client{

@@ -3,7 +3,13 @@ package maintenance
 import "time"
 
 // NewSingleMaintenance creates a one-time maintenance window.
-func NewSingleMaintenance(title string, description string, startDate time.Time, endDate time.Time, timezone string) *Maintenance {
+func NewSingleMaintenance(
+	title string,
+	description string,
+	startDate time.Time,
+	endDate time.Time,
+	timezone string,
+) *Maintenance {
 	return &Maintenance{
 		Title:          title,
 		Description:    description,
@@ -76,7 +82,13 @@ func NewRecurringDayOfMonthMaintenance(
 // NewCronMaintenance creates a maintenance window using a cron expression.
 // cronExpr: standard cron expression (e.g., "0 2 * * *" for daily at 2 AM).
 // durationMinutes: how long the maintenance window should last.
-func NewCronMaintenance(title string, description string, cronExpr string, durationMinutes int, timezone string) *Maintenance {
+func NewCronMaintenance(
+	title string,
+	description string,
+	cronExpr string,
+	durationMinutes int,
+	timezone string,
+) *Maintenance {
 	return &Maintenance{
 		Title:           title,
 		Description:     description,

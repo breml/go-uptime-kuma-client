@@ -12,6 +12,7 @@ import (
 
 // formatNotification formats a notification instance as a string representation.
 // If includeType is true, it includes the notification type in the output.
+//
 //nolint:revive // includeType is not a control coupling flag, it's a meaningful parameter
 func formatNotification(s any, includeType bool) string {
 	buf := strings.Builder{}
