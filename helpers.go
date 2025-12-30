@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+// structToMap converts a struct to a map using JSON marshaling and unmarshaling.
+// This allows structs to be converted to their map representation.
 func structToMap(v any) (map[string]any, error) {
 	data, err := json.Marshal(v)
 	if err != nil {
@@ -20,6 +22,8 @@ func structToMap(v any) (map[string]any, error) {
 	return result, nil
 }
 
+// convertToStruct converts data from one type to another using JSON marshaling.
+// This is useful for converting between different struct types.
 func convertToStruct(src any, dst any) error {
 	data, err := json.Marshal(src)
 	if err != nil {

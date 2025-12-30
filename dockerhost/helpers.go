@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// formatDockerHost formats a DockerHost instance as a string representation.
+// It uses reflection to iterate through exported fields and builds a
+// comma-separated string of field names and values for display.
 func formatDockerHost(d DockerHost) string {
 	buf := strings.Builder{}
 

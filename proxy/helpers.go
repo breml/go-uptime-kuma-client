@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// formatProxy formats a Proxy instance as a string representation.
+// It masks the password field for security purposes before including in the output.
+// The function uses reflection to iterate through exported fields and builds a string representation.
 func formatProxy(p Proxy) string {
 	buf := strings.Builder{}
 

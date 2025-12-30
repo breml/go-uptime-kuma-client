@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+// formatMonitor formats a monitor instance as a string representation.
+// If withType is true, it includes the monitor type in the output.
 func formatMonitor(s any, withType bool) string {
 	buf := strings.Builder{}
 
@@ -63,6 +65,8 @@ func formatMonitor(s any, withType bool) string {
 	return buf.String()
 }
 
+// orderedByKey returns an iterator over a map's key-value pairs in sorted order.
+// Keys must be of a comparable ordered type.
 func orderedByKey[K cmp.Ordered, E any](m map[K]E) iter.Seq2[K, E] {
 	return func(yield func(K, E) bool) {
 		keys := make([]K, 0, len(m))

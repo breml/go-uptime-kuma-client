@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+// formatNotification formats a notification instance as a string representation.
+// If withType is true, it includes the notification type in the output.
 func formatNotification(s any, withType bool) string {
 	buf := strings.Builder{}
 
@@ -60,6 +62,8 @@ func formatNotification(s any, withType bool) string {
 	return buf.String()
 }
 
+// unmarshalTo unmarshals notification data into a Base and a detail struct.
+// It parses both the base fields and the nested configuration data.
 func unmarshalTo(data []byte, detail any) (Base, error) {
 	notificationBase := Base{}
 
@@ -76,6 +80,8 @@ func unmarshalTo(data []byte, detail any) (Base, error) {
 	return notificationBase, nil
 }
 
+// marshalJSON marshals a notification into JSON bytes.
+// It combines base notification fields with type-specific details.
 func marshalJSON(base Base, details interface{ Type() string }) ([]byte, error) {
 	detailData, err := json.Marshal(details)
 	if err != nil {
@@ -105,6 +111,8 @@ func marshalJSON(base Base, details interface{ Type() string }) ([]byte, error) 
 	return data, nil
 }
 
+// orderedByKey returns an iterator over a map's key-value pairs in sorted order.
+// Keys must be of a comparable ordered type.
 func orderedByKey[K cmp.Ordered, E any](m map[K]E) iter.Seq2[K, E] {
 	return func(yield func(K, E) bool) {
 		keys := make([]K, 0, len(m))
