@@ -588,6 +588,10 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 	defer close(res)
 
 	args = append(args, emit.WithAck(func(response ackResponse) {
+		if ctx.Err() != nil {
+			return
+		}
+
 		res <- response
 	}))
 
@@ -635,6 +639,10 @@ func (c *Client) syncEmitWithUpdateEvent(
 	defer close(res)
 
 	args = append(args, emit.WithAck(func(response ackResponse) {
+		if ctx.Err() != nil {
+			return
+		}
+
 		res <- response
 	}))
 	err := c.socketioClient.Emit(command, args...)
