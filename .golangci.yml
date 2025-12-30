@@ -739,6 +739,7 @@ linters:
         text: '(deep-exit):'
 
       # These linters do not make sense for monitor and notification files.
-      - path: (monitor|notification)/.*\.go
+      - path: (monitor|notification|proxy)/.*\.go
         linters:
           - dupl
+          - recvcheck

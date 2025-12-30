@@ -24,7 +24,9 @@ func TestMain(m *testing.M) {
 	code, err := testMainSetup(m)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Test setup failed: %v\n", err)
+		//revive:disable:redundant-test-main-exit
 		os.Exit(code)
+		//revive:enable:redundant-test-main-exit
 	}
 }
 
