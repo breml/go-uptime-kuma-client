@@ -23,7 +23,7 @@ func (c CallMeBot) Type() string {
 }
 
 // Type returns the notification type identifier for CallMeBotDetails.
-func (n CallMeBotDetails) Type() string {
+func (CallMeBotDetails) Type() string {
 	return "CallMeBot"
 }
 

@@ -19,7 +19,9 @@ func TestNotificationTechulusPush_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Techulus Push Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Techulus Push Alert\",\"pushAPIKey\":\"test-api-key\",\"pushTitle\":\"Alert Title\",\"pushSound\":\"default\",\"pushChannel\":\"alerts\",\"pushTimeSensitive\":true,\"type\":\"PushByTechulus\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Techulus Push Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Techulus Push Alert\",\"pushAPIKey\":\"test-api-key\",\"pushTitle\":\"Alert Title\",\"pushSound\":\"default\",\"pushChannel\":\"alerts\",\"pushTimeSensitive\":true,\"type\":\"PushByTechulus\"}"}`,
+			),
 
 			want: notification.TechulusPush{
 				Base: notification.Base{
@@ -42,7 +44,9 @@ func TestNotificationTechulusPush_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Techulus Push","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Techulus Push\",\"pushAPIKey\":\"simple-key\",\"pushTitle\":\"\",\"pushSound\":\"\",\"pushChannel\":\"\",\"pushTimeSensitive\":false,\"type\":\"PushByTechulus\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Techulus Push","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Techulus Push\",\"pushAPIKey\":\"simple-key\",\"pushTitle\":\"\",\"pushSound\":\"\",\"pushChannel\":\"\",\"pushTimeSensitive\":false,\"type\":\"PushByTechulus\"}"}`,
+			),
 
 			want: notification.TechulusPush{
 				Base: notification.Base{
@@ -65,7 +69,9 @@ func TestNotificationTechulusPush_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with custom sound and channel",
-			data: []byte(`{"id":3,"name":"Techulus Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Techulus Custom\",\"pushAPIKey\":\"custom-key\",\"pushTitle\":\"Custom Alert\",\"pushSound\":\"bell\",\"pushChannel\":\"monitoring\",\"pushTimeSensitive\":true,\"type\":\"PushByTechulus\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Techulus Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Techulus Custom\",\"pushAPIKey\":\"custom-key\",\"pushTitle\":\"Custom Alert\",\"pushSound\":\"bell\",\"pushChannel\":\"monitoring\",\"pushTimeSensitive\":true,\"type\":\"PushByTechulus\"}"}`,
+			),
 
 			want: notification.TechulusPush{
 				Base: notification.Base{

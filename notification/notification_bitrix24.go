@@ -25,7 +25,7 @@ func (b Bitrix24) Type() string {
 }
 
 // Type returns the notification type identifier for Bitrix24 details.
-func (n Bitrix24Details) Type() string {
+func (Bitrix24Details) Type() string {
 	return "Bitrix24"
 }
 

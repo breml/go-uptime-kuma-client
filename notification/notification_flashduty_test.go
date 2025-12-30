@@ -19,7 +19,9 @@ func TestNotificationFlashDuty_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My FlashDuty Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My FlashDuty Alert\",\"flashdutyIntegrationKey\":\"key123\",\"flashdutySeverity\":\"Critical\",\"type\":\"FlashDuty\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My FlashDuty Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My FlashDuty Alert\",\"flashdutyIntegrationKey\":\"key123\",\"flashdutySeverity\":\"Critical\",\"type\":\"FlashDuty\"}"}`,
+			),
 
 			want: notification.FlashDuty{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationFlashDuty_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple FlashDuty","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple FlashDuty\",\"flashdutyIntegrationKey\":\"key456\",\"flashdutySeverity\":\"Warning\",\"type\":\"FlashDuty\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple FlashDuty","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple FlashDuty\",\"flashdutyIntegrationKey\":\"key456\",\"flashdutySeverity\":\"Warning\",\"type\":\"FlashDuty\"}"}`,
+			),
 
 			want: notification.FlashDuty{
 				Base: notification.Base{
@@ -59,7 +63,9 @@ func TestNotificationFlashDuty_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with URL integration key",
-			data: []byte(`{"id":3,"name":"FlashDuty URL","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"FlashDuty URL\",\"flashdutyIntegrationKey\":\"https://api.flashcat.cloud/event/push/alert/standard?integration_key=key789\",\"flashdutySeverity\":\"Info\",\"type\":\"FlashDuty\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"FlashDuty URL","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"FlashDuty URL\",\"flashdutyIntegrationKey\":\"https://api.flashcat.cloud/event/push/alert/standard?integration_key=key789\",\"flashdutySeverity\":\"Info\",\"type\":\"FlashDuty\"}"}`,
+			),
 
 			want: notification.FlashDuty{
 				Base: notification.Base{

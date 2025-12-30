@@ -1,4 +1,4 @@
-package proxy
+package proxy_test
 
 import (
 	"encoding/json"
@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/breml/go-uptime-kuma-client/proxy"
 )
 
 func TestProxy_UnmarshalJSON(t *testing.T) {
@@ -23,24 +25,24 @@ func TestProxy_UnmarshalJSON(t *testing.T) {
 		"createdDate": "2024-01-01T00:00:00.000Z"
 	}`
 
-	var proxy Proxy
-	err := json.Unmarshal([]byte(jsonData), &proxy)
+	var p proxy.Proxy
+	err := json.Unmarshal([]byte(jsonData), &p)
 	require.NoError(t, err)
 
-	require.Equal(t, int64(1), proxy.ID)
-	require.Equal(t, int64(100), proxy.UserID)
-	require.Equal(t, "http", proxy.Protocol)
-	require.Equal(t, "proxy.example.com", proxy.Host)
-	require.Equal(t, 8080, proxy.Port)
-	require.True(t, proxy.Auth)
-	require.Equal(t, "user", proxy.Username)
-	require.Equal(t, "pass", proxy.Password)
-	require.True(t, proxy.Active)
-	require.False(t, proxy.Default)
+	require.Equal(t, int64(1), p.ID)
+	require.Equal(t, int64(100), p.UserID)
+	require.Equal(t, "http", p.Protocol)
+	require.Equal(t, "proxy.example.com", p.Host)
+	require.Equal(t, 8080, p.Port)
+	require.True(t, p.Auth)
+	require.Equal(t, "user", p.Username)
+	require.Equal(t, "pass", p.Password)
+	require.True(t, p.Active)
+	require.False(t, p.Default)
 }
 
 func TestProxy_MarshalJSON(t *testing.T) {
-	proxy := Proxy{
+	p := proxy.Proxy{
 		ID:          1,
 		UserID:      100,
 		Protocol:    "socks5",
@@ -54,21 +56,21 @@ func TestProxy_MarshalJSON(t *testing.T) {
 		CreatedDate: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 
-	data, err := json.Marshal(proxy)
+	data, err := json.Marshal(p)
 	require.NoError(t, err)
 
-	var unmarshaled Proxy
+	var unmarshaled proxy.Proxy
 	err = json.Unmarshal(data, &unmarshaled)
 	require.NoError(t, err)
 
-	require.Equal(t, proxy.ID, unmarshaled.ID)
-	require.Equal(t, proxy.Protocol, unmarshaled.Protocol)
-	require.Equal(t, proxy.Host, unmarshaled.Host)
-	require.Equal(t, proxy.Default, unmarshaled.Default)
+	require.Equal(t, p.ID, unmarshaled.ID)
+	require.Equal(t, p.Protocol, unmarshaled.Protocol)
+	require.Equal(t, p.Host, unmarshaled.Host)
+	require.Equal(t, p.Default, unmarshaled.Default)
 }
 
 func TestConfig_MarshalJSON(t *testing.T) {
-	config := Config{
+	config := proxy.Config{
 		Protocol:      "https",
 		Host:          "proxy.test.com",
 		Port:          3128,
@@ -81,7 +83,7 @@ func TestConfig_MarshalJSON(t *testing.T) {
 	data, err := json.Marshal(config)
 	require.NoError(t, err)
 
-	var unmarshaled Config
+	var unmarshaled proxy.Config
 	err = json.Unmarshal(data, &unmarshaled)
 	require.NoError(t, err)
 
@@ -90,7 +92,7 @@ func TestConfig_MarshalJSON(t *testing.T) {
 }
 
 func TestConfig_WithAuth(t *testing.T) {
-	config := Config{
+	config := proxy.Config{
 		Protocol: "socks5",
 		Host:     "localhost",
 		Port:     1080,
@@ -104,7 +106,7 @@ func TestConfig_WithAuth(t *testing.T) {
 	data, err := json.Marshal(config)
 	require.NoError(t, err)
 
-	var unmarshaled Config
+	var unmarshaled proxy.Config
 	err = json.Unmarshal(data, &unmarshaled)
 	require.NoError(t, err)
 
@@ -114,6 +116,6 @@ func TestConfig_WithAuth(t *testing.T) {
 }
 
 func TestProxy_GetID(t *testing.T) {
-	proxy := Proxy{ID: 42}
-	require.Equal(t, int64(42), proxy.GetID())
+	p := proxy.Proxy{ID: 42}
+	require.Equal(t, int64(42), p.GetID())
 }

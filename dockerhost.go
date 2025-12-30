@@ -2,6 +2,7 @@ package kuma
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/breml/go-uptime-kuma-client/dockerhost"
@@ -45,7 +46,7 @@ func (c *Client) CreateDockerHost(ctx context.Context, config dockerhost.Config)
 // UpdateDockerHost updates an existing Docker host.
 func (c *Client) UpdateDockerHost(ctx context.Context, config dockerhost.Config) error {
 	if config.ID == 0 {
-		return fmt.Errorf("update docker host: config must have ID set")
+		return errors.New("update docker host: config must have ID set")
 	}
 
 	_, err := c.syncEmitWithUpdateEvent(ctx, "addDockerHost", "dockerHostList", config, config.ID)
@@ -84,8 +85,9 @@ func (c *Client) TestDockerHost(ctx context.Context, config dockerhost.Config) (
 		switch v := version.(type) {
 		case string:
 			result.Version = v
+
 		case map[string]any:
-			if ver, ok := v["Version"].(string); ok {
+			if ver, versionOk := v["Version"].(string); versionOk {
 				result.Version = ver
 			}
 		}

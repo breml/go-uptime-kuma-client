@@ -27,13 +27,13 @@ func (s *SMTP) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := SMTPDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*s = SMTP{
@@ -66,6 +66,7 @@ func (s SMTP) MarshalJSON() ([]byte, error) {
 	for _, id := range s.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current SMTP-specific field values.
@@ -79,7 +80,12 @@ func (s SMTP) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
 // SMTPDetails contains SMTP-specific monitor configuration.
@@ -90,6 +96,6 @@ type SMTPDetails struct {
 }
 
 // Type returns the monitor type.
-func (s SMTPDetails) Type() string {
+func (SMTPDetails) Type() string {
 	return "smtp"
 }

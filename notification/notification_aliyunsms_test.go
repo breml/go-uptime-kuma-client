@@ -19,7 +19,9 @@ func TestNotificationAliyunSMS_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Aliyun SMS Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Aliyun SMS Alert\",\"accessKeyId\":\"AKIAIOSFODNN7EXAMPLE\",\"secretAccessKey\":\"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\",\"phonenumber\":\"8613800000001\",\"signName\":\"Uptime Kuma\",\"templateCode\":\"SMS_1234567890\",\"type\":\"AliyunSMS\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Aliyun SMS Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Aliyun SMS Alert\",\"accessKeyId\":\"AKIAIOSFODNN7EXAMPLE\",\"secretAccessKey\":\"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\",\"phonenumber\":\"8613800000001\",\"signName\":\"Uptime Kuma\",\"templateCode\":\"SMS_1234567890\",\"type\":\"AliyunSMS\"}"}`,
+			),
 
 			want: notification.AliyunSMS{
 				Base: notification.Base{
@@ -42,7 +44,9 @@ func TestNotificationAliyunSMS_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Aliyun SMS","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Aliyun SMS\",\"accessKeyId\":\"AKIA123\",\"secretAccessKey\":\"secret123\",\"phonenumber\":\"8613800000002\",\"signName\":\"Alert\",\"templateCode\":\"SMS_0000000001\",\"type\":\"AliyunSMS\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Aliyun SMS","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Aliyun SMS\",\"accessKeyId\":\"AKIA123\",\"secretAccessKey\":\"secret123\",\"phonenumber\":\"8613800000002\",\"signName\":\"Alert\",\"templateCode\":\"SMS_0000000001\",\"type\":\"AliyunSMS\"}"}`,
+			),
 
 			want: notification.AliyunSMS{
 				Base: notification.Base{

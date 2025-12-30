@@ -19,7 +19,9 @@ func TestNotificationPagerDuty_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My PagerDuty Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My PagerDuty Alert\",\"pagerdutyIntegrationUrl\":\"https://events.pagerduty.com/v2/enqueue\",\"pagerdutyIntegrationKey\":\"test-integration-key-123\",\"pagerdutyPriority\":\"warning\",\"pagerdutyAutoResolve\":\"resolve\",\"type\":\"PagerDuty\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My PagerDuty Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My PagerDuty Alert\",\"pagerdutyIntegrationUrl\":\"https://events.pagerduty.com/v2/enqueue\",\"pagerdutyIntegrationKey\":\"test-integration-key-123\",\"pagerdutyPriority\":\"warning\",\"pagerdutyAutoResolve\":\"resolve\",\"type\":\"PagerDuty\"}"}`,
+			),
 
 			want: notification.PagerDuty{
 				Base: notification.Base{
@@ -41,7 +43,9 @@ func TestNotificationPagerDuty_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple PagerDuty","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple PagerDuty\",\"pagerdutyIntegrationKey\":\"abc-123\",\"type\":\"PagerDuty\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple PagerDuty","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple PagerDuty\",\"pagerdutyIntegrationKey\":\"abc-123\",\"type\":\"PagerDuty\"}"}`,
+			),
 
 			want: notification.PagerDuty{
 				Base: notification.Base{

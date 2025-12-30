@@ -19,7 +19,9 @@ func TestNotificationOpsgenie_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Opsgenie Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Opsgenie Alert\",\"opsgenieApiKey\":\"test-api-key-123\",\"opsgenieRegion\":\"us\",\"opsgeniePriority\":3,\"type\":\"Opsgenie\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Opsgenie Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Opsgenie Alert\",\"opsgenieApiKey\":\"test-api-key-123\",\"opsgenieRegion\":\"us\",\"opsgeniePriority\":3,\"type\":\"Opsgenie\"}"}`,
+			),
 
 			want: notification.Opsgenie{
 				Base: notification.Base{
@@ -31,7 +33,7 @@ func TestNotificationOpsgenie_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				OpsgenieDetails: notification.OpsgenieDetails{
-					ApiKey:   "test-api-key-123",
+					APIKey:   "test-api-key-123",
 					Region:   "us",
 					Priority: 3,
 				},
@@ -40,7 +42,9 @@ func TestNotificationOpsgenie_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Opsgenie","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Opsgenie\",\"opsgenieApiKey\":\"abc-123\",\"type\":\"Opsgenie\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Opsgenie","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Opsgenie\",\"opsgenieApiKey\":\"abc-123\",\"type\":\"Opsgenie\"}"}`,
+			),
 
 			want: notification.Opsgenie{
 				Base: notification.Base{
@@ -52,14 +56,16 @@ func TestNotificationOpsgenie_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				OpsgenieDetails: notification.OpsgenieDetails{
-					ApiKey: "abc-123",
+					APIKey: "abc-123",
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Opsgenie","opsgenieApiKey":"abc-123","opsgenieRegion":"","opsgeniePriority":0,"type":"Opsgenie","userId":1}`,
 		},
 		{
 			name: "with eu region",
-			data: []byte(`{"id":3,"name":"EU Opsgenie","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"EU Opsgenie\",\"opsgenieApiKey\":\"eu-api-key\",\"opsgenieRegion\":\"eu\",\"opsgeniePriority\":5,\"type\":\"Opsgenie\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"EU Opsgenie","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"EU Opsgenie\",\"opsgenieApiKey\":\"eu-api-key\",\"opsgenieRegion\":\"eu\",\"opsgeniePriority\":5,\"type\":\"Opsgenie\"}"}`,
+			),
 
 			want: notification.Opsgenie{
 				Base: notification.Base{
@@ -71,7 +77,7 @@ func TestNotificationOpsgenie_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				OpsgenieDetails: notification.OpsgenieDetails{
-					ApiKey:   "eu-api-key",
+					APIKey:   "eu-api-key",
 					Region:   "eu",
 					Priority: 5,
 				},

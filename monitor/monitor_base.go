@@ -2,19 +2,26 @@ package monitor
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
 	"github.com/breml/go-uptime-kuma-client/tag"
 )
 
+// Monitor is the interface that all monitor types must implement.
 type Monitor interface {
+	// GetID returns the monitor's unique identifier.
 	GetID() int64
+	// Type returns the monitor's type name.
 	Type() string
+	// As converts the monitor to the given target type.
 	As(any) error
+	// GetNotificationIDs returns the list of notification IDs associated with the monitor.
 	GetNotificationIDs() []int64
 }
 
+// Base contains the common fields for all monitor types.
 type Base struct {
 	ID              int64            `json:"id"`
 	Name            string           `json:"name"`
@@ -39,6 +46,7 @@ func (b Base) String() string {
 	return formatMonitor(b, true)
 }
 
+// UnmarshalJSON unmarshals a monitor from JSON data.
 func (b *Base) UnmarshalJSON(data []byte) error {
 	raw := struct {
 		ID              int64            `json:"id"`
@@ -60,7 +68,7 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 
 	err := json.Unmarshal(data, &raw)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal monitor base: %w", err)
 	}
 
 	*b = Base{
@@ -98,9 +106,10 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a monitor to JSON data.
 func (b Base) MarshalJSON() ([]byte, error) {
 	if b.raw == nil || b.internalType == "" {
-		return nil, fmt.Errorf("not unmarshaled notification, unable to marshal")
+		return nil, errors.New("not unmarshaled notification, unable to marshal")
 	}
 
 	raw := map[string]any{}
@@ -130,28 +139,34 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	for _, id := range b.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal monitor base: %w", err)
+	}
+
+	return data, nil
 }
 
-func (b Base) getType() string {
-	return b.internalType
-}
-
+// GetID returns the monitor's unique identifier.
 func (b Base) GetID() int64 {
 	return b.ID
 }
 
+// Type returns the monitor's type name.
 func (b Base) Type() string {
 	return b.internalType
 }
 
+// GetNotificationIDs returns the list of notification IDs associated with the monitor.
 func (b Base) GetNotificationIDs() []int64 {
 	return b.NotificationIDs
 }
 
-func (b Base) As(target any) error {
+// As converts the monitor to the given target type.
+func (b *Base) As(target any) error {
 	if b.raw == nil {
 		return fmt.Errorf("not unmarshaled monitor, cannot convert to %T", target)
 	}
@@ -162,4 +177,8 @@ func (b Base) As(target any) error {
 	}
 
 	return nil
+}
+
+func (b Base) getType() string {
+	return b.internalType
 }

@@ -25,7 +25,7 @@ func (f FreeMobile) Type() string {
 }
 
 // Type returns the notification type identifier for FreeMobileDetails.
-func (n FreeMobileDetails) Type() string {
+func (FreeMobileDetails) Type() string {
 	return "FreeMobile"
 }
 

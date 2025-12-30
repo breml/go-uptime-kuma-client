@@ -19,7 +19,9 @@ func TestNotificationHeiiOnCall_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Heii On-Call Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Heii On-Call Alert\",\"heiiOnCallApiKey\":\"api-key-123\",\"heiiOnCallTriggerId\":\"trigger-456\",\"type\":\"HeiiOnCall\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Heii On-Call Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Heii On-Call Alert\",\"heiiOnCallApiKey\":\"api-key-123\",\"heiiOnCallTriggerId\":\"trigger-456\",\"type\":\"HeiiOnCall\"}"}`,
+			),
 
 			want: notification.HeiiOnCall{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationHeiiOnCall_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Heii","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Heii\",\"heiiOnCallApiKey\":\"key-abc\",\"heiiOnCallTriggerId\":\"trig-123\",\"type\":\"HeiiOnCall\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Heii","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Heii\",\"heiiOnCallApiKey\":\"key-abc\",\"heiiOnCallTriggerId\":\"trig-123\",\"type\":\"HeiiOnCall\"}"}`,
+			),
 
 			want: notification.HeiiOnCall{
 				Base: notification.Base{
@@ -59,7 +63,9 @@ func TestNotificationHeiiOnCall_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different credentials",
-			data: []byte(`{"id":3,"name":"Heii Production","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Heii Production\",\"heiiOnCallApiKey\":\"prod-key-xyz\",\"heiiOnCallTriggerId\":\"prod-trigger-789\",\"type\":\"HeiiOnCall\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Heii Production","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Heii Production\",\"heiiOnCallApiKey\":\"prod-key-xyz\",\"heiiOnCallTriggerId\":\"prod-trigger-789\",\"type\":\"HeiiOnCall\"}"}`,
+			),
 
 			want: notification.HeiiOnCall{
 				Base: notification.Base{

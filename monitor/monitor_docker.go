@@ -12,25 +12,28 @@ type Docker struct {
 	DockerDetails
 }
 
+// Type returns the monitor type.
 func (d Docker) Type() string {
 	return d.DockerDetails.Type()
 }
 
+// String returns a string representation of the Docker monitor.
 func (d Docker) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(d.Base, false), formatMonitor(d.DockerDetails, true))
 }
 
+// UnmarshalJSON unmarshals a JSON byte slice into a Docker monitor.
 func (d *Docker) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := DockerDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*d = Docker{
@@ -41,6 +44,7 @@ func (d *Docker) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a Docker monitor into a JSON byte slice.
 func (d Docker) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = d.ID
@@ -62,6 +66,7 @@ func (d Docker) MarshalJSON() ([]byte, error) {
 	for _, id := range d.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current Docker-specific field values.
@@ -74,7 +79,12 @@ func (d Docker) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
 // DockerDetails contains Docker-specific monitor configuration.
@@ -83,6 +93,7 @@ type DockerDetails struct {
 	DockerContainer string `json:"docker_container"`
 }
 
-func (d DockerDetails) Type() string {
+// Type returns the monitor type.
+func (DockerDetails) Type() string {
 	return "docker"
 }

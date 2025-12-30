@@ -1,21 +1,26 @@
 package notification
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"strings"
 )
 
+// Generic represents a generic notification.
 type Generic struct {
 	Base
 	GenericDetails
+
 	TypeName string
 }
 
+// Type returns the notification type.
 func (n Generic) Type() string {
 	return n.TypeName
 }
 
+// String returns a string representation of the notification.
 func (n Generic) String() string {
 	buf := strings.Builder{}
 	buf.WriteString(fmt.Sprintf("%s: %q", "type", n.TypeName))
@@ -38,6 +43,7 @@ func (n Generic) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(n.Base, false), buf.String())
 }
 
+// UnmarshalJSON unmarshals a JSON byte slice into a notification.
 func (n *Generic) UnmarshalJSON(data []byte) error {
 	details := GenericDetails{}
 	base, err := unmarshalTo(data, &details)
@@ -47,12 +53,12 @@ func (n *Generic) UnmarshalJSON(data []byte) error {
 
 	typeNameAny, ok := details["type"]
 	if !ok {
-		return fmt.Errorf("notification does not have type attribute")
+		return errors.New("notification does not have type attribute")
 	}
 
 	typeName, ok := typeNameAny.(string)
 	if !ok {
-		return fmt.Errorf("type attribute is not a string")
+		return errors.New("type attribute is not a string")
 	}
 
 	delete(details, "id")
@@ -72,6 +78,7 @@ func (n *Generic) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a notification into a JSON byte slice.
 func (n Generic) MarshalJSON() ([]byte, error) {
 	details := maps.Clone(n.GenericDetails)
 	details["type"] = n.TypeName
@@ -79,9 +86,15 @@ func (n Generic) MarshalJSON() ([]byte, error) {
 	return marshalJSON(n.Base, details)
 }
 
+// GenericDetails represents generic notification configuration details.
 type GenericDetails map[string]any
 
+// Type returns the notification type.
 func (n GenericDetails) Type() string {
+	if n == nil {
+		return ""
+	}
+
 	tAny, ok := n["type"]
 	if !ok {
 		return ""

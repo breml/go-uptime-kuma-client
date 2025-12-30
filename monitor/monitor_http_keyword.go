@@ -6,37 +6,46 @@ import (
 	"strconv"
 )
 
+// HTTPKeyword represents a httpkeyword monitor.
 type HTTPKeyword struct {
 	Base
 	HTTPDetails
 	HTTPKeywordDetails
 }
 
+// Type returns the monitor type.
 func (h HTTPKeyword) Type() string {
 	return h.HTTPKeywordDetails.Type()
 }
 
+// String returns a string representation of the monitor.
 func (h HTTPKeyword) String() string {
-	return fmt.Sprintf("%s, %s, %s", formatMonitor(h.Base, false), formatMonitor(h.HTTPDetails, true), formatMonitor(h.HTTPKeywordDetails, true))
+	return fmt.Sprintf(
+		"%s, %s, %s",
+		formatMonitor(h.Base, false),
+		formatMonitor(h.HTTPDetails, true),
+		formatMonitor(h.HTTPKeywordDetails, true),
+	)
 }
 
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (h *HTTPKeyword) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	httpDetails := HTTPDetails{}
 	err = json.Unmarshal(data, &httpDetails)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	keywordDetails := HTTPKeywordDetails{}
 	err = json.Unmarshal(data, &keywordDetails)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*h = HTTPKeyword{
@@ -48,6 +57,7 @@ func (h *HTTPKeyword) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = h.ID
@@ -69,6 +79,7 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	for _, id := range h.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current HTTP-specific field values.
@@ -105,14 +116,21 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
+// HTTPKeywordDetails contains httpkeyword-specific monitor configuration.
 type HTTPKeywordDetails struct {
 	Keyword       string `json:"keyword"`
 	InvertKeyword bool   `json:"invertKeyword"`
 }
 
-func (h HTTPKeywordDetails) Type() string {
+// Type returns the monitor type.
+func (HTTPKeywordDetails) Type() string {
 	return "keyword"
 }

@@ -3,12 +3,13 @@ package kuma
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
 
 // GetStatusPages retrieves all status pages from the client cache.
-func (c *Client) GetStatusPages(ctx context.Context) (map[int64]statuspage.StatusPage, error) {
+func (c *Client) GetStatusPages(_ context.Context) (map[int64]statuspage.StatusPage, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -17,9 +18,7 @@ func (c *Client) GetStatusPages(ctx context.Context) (map[int64]statuspage.Statu
 	}
 
 	statusPages := make(map[int64]statuspage.StatusPage, len(c.state.statusPages))
-	for k, v := range c.state.statusPages {
-		statusPages[k] = v
-	}
+	maps.Copy(statusPages, c.state.statusPages)
 
 	return statusPages, nil
 }
@@ -30,7 +29,7 @@ func (c *Client) GetStatusPages(ctx context.Context) (map[int64]statuspage.Statu
 func (c *Client) GetStatusPage(ctx context.Context, slug string) (*statuspage.StatusPage, error) {
 	response, err := c.syncEmit(ctx, "getStatusPage", slug)
 	if err != nil {
-		return nil, fmt.Errorf("get status page %s: %v", slug, err)
+		return nil, fmt.Errorf("get status page %s: %w", slug, err)
 	}
 
 	if response.Config == nil {
@@ -40,17 +39,17 @@ func (c *Client) GetStatusPage(ctx context.Context, slug string) (*statuspage.St
 	var sp statuspage.StatusPage
 	err = convertToStruct(response.Config, &sp)
 	if err != nil {
-		return nil, fmt.Errorf("get status page %s: %v", slug, err)
+		return nil, fmt.Errorf("get status page %s: %w", slug, err)
 	}
 
 	return &sp, nil
 }
 
 // AddStatusPage creates a new status page with the given title and slug.
-func (c *Client) AddStatusPage(ctx context.Context, title, slug string) error {
+func (c *Client) AddStatusPage(ctx context.Context, title string, slug string) error {
 	_, err := c.syncEmit(ctx, "addStatusPage", title, slug)
 	if err != nil {
-		return fmt.Errorf("add status page: %v", err)
+		return fmt.Errorf("add status page: %w", err)
 	}
 
 	return nil
@@ -85,6 +84,7 @@ func (c *Client) SaveStatusPage(ctx context.Context, sp *statuspage.StatusPage) 
 			if monitor.SendURL != nil {
 				monitorData["sendUrl"] = *monitor.SendURL
 			}
+
 			monitorList[j] = monitorData
 		}
 
@@ -98,7 +98,7 @@ func (c *Client) SaveStatusPage(ctx context.Context, sp *statuspage.StatusPage) 
 
 	response, err := c.syncEmit(ctx, "saveStatusPage", sp.Slug, config, imgDataURL, publicGroupList)
 	if err != nil {
-		return nil, fmt.Errorf("save status page: %v", err)
+		return nil, fmt.Errorf("save status page: %w", err)
 	}
 
 	// Parse the returned public group list with IDs
@@ -106,7 +106,7 @@ func (c *Client) SaveStatusPage(ctx context.Context, sp *statuspage.StatusPage) 
 	if response.PublicGroupList != nil {
 		err = convertToStruct(response.PublicGroupList, &groups)
 		if err != nil {
-			return nil, fmt.Errorf("save status page: failed to parse response public group list: %v", err)
+			return nil, fmt.Errorf("save status page: failed to parse response public group list: %w", err)
 		}
 	}
 
@@ -117,7 +117,7 @@ func (c *Client) SaveStatusPage(ctx context.Context, sp *statuspage.StatusPage) 
 func (c *Client) DeleteStatusPage(ctx context.Context, slug string) error {
 	_, err := c.syncEmit(ctx, "deleteStatusPage", slug)
 	if err != nil {
-		return fmt.Errorf("delete status page: %v", err)
+		return fmt.Errorf("delete status page: %w", err)
 	}
 
 	return nil
@@ -127,12 +127,12 @@ func (c *Client) DeleteStatusPage(ctx context.Context, slug string) error {
 func (c *Client) PostIncident(ctx context.Context, slug string, incident *statuspage.Incident) error {
 	incidentData, err := structToMap(incident)
 	if err != nil {
-		return fmt.Errorf("post incident: %v", err)
+		return fmt.Errorf("post incident: %w", err)
 	}
 
 	_, err = c.syncEmit(ctx, "postIncident", slug, incidentData)
 	if err != nil {
-		return fmt.Errorf("post incident: %v", err)
+		return fmt.Errorf("post incident: %w", err)
 	}
 
 	return nil
@@ -142,7 +142,7 @@ func (c *Client) PostIncident(ctx context.Context, slug string, incident *status
 func (c *Client) UnpinIncident(ctx context.Context, slug string) error {
 	_, err := c.syncEmit(ctx, "unpinIncident", slug)
 	if err != nil {
-		return fmt.Errorf("unpin incident: %v", err)
+		return fmt.Errorf("unpin incident: %w", err)
 	}
 
 	return nil

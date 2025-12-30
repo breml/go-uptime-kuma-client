@@ -23,7 +23,7 @@ func (z ZohoCliq) Type() string {
 }
 
 // Type returns the notification type identifier for ZohoCliqDetails.
-func (n ZohoCliqDetails) Type() string {
+func (ZohoCliqDetails) Type() string {
 	return "ZohoCliq"
 }
 

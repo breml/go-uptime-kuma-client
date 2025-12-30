@@ -33,7 +33,7 @@ func (c Cellsynt) Type() string {
 }
 
 // Type returns the notification type identifier for CellsyntDetails.
-func (n CellsyntDetails) Type() string {
+func (CellsyntDetails) Type() string {
 	return "Cellsynt"
 }
 

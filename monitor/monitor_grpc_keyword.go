@@ -6,30 +6,34 @@ import (
 	"strconv"
 )
 
+// GrpcKeyword represents a grpckeyword monitor.
 type GrpcKeyword struct {
 	Base
 	GrpcKeywordDetails
 }
 
+// Type returns the monitor type.
 func (g GrpcKeyword) Type() string {
 	return g.GrpcKeywordDetails.Type()
 }
 
+// String returns a string representation of the monitor.
 func (g GrpcKeyword) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(g.Base, false), formatMonitor(g.GrpcKeywordDetails, true))
 }
 
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (g *GrpcKeyword) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := GrpcKeywordDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*g = GrpcKeyword{
@@ -40,6 +44,7 @@ func (g *GrpcKeyword) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = g.ID
@@ -61,6 +66,7 @@ func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 	for _, id := range g.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current gRPC-specific field values.
@@ -79,9 +85,15 @@ func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
+// GrpcKeywordDetails contains grpckeyword-specific monitor configuration.
 type GrpcKeywordDetails struct {
 	GrpcURL         string `json:"grpcUrl"`
 	GrpcProtobuf    string `json:"grpcProtobuf"`
@@ -93,6 +105,7 @@ type GrpcKeywordDetails struct {
 	InvertKeyword   bool   `json:"invertKeyword"`
 }
 
-func (g GrpcKeywordDetails) Type() string {
+// Type returns the monitor type.
+func (GrpcKeywordDetails) Type() string {
 	return "grpc-keyword"
 }

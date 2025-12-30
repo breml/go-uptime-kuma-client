@@ -19,7 +19,9 @@ func TestNotificationPushPlus_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My PushPlus Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My PushPlus Alert\",\"pushPlusSendKey\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"type\":\"PushPlus\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My PushPlus Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My PushPlus Alert\",\"pushPlusSendKey\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"type\":\"PushPlus\"}"}`,
+			),
 
 			want: notification.PushPlus{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationPushPlus_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple PushPlus","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple PushPlus\",\"pushPlusSendKey\":\"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\",\"type\":\"PushPlus\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple PushPlus","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple PushPlus\",\"pushPlusSendKey\":\"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\",\"type\":\"PushPlus\"}"}`,
+			),
 
 			want: notification.PushPlus{
 				Base: notification.Base{

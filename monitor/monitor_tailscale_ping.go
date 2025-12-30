@@ -27,13 +27,13 @@ func (t *TailscalePing) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := TailscalePingDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*t = TailscalePing{
@@ -66,6 +66,7 @@ func (t TailscalePing) MarshalJSON() ([]byte, error) {
 	for _, id := range t.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current Tailscale Ping-specific field values.
@@ -77,7 +78,12 @@ func (t TailscalePing) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
 // TailscalePingDetails contains Tailscale Ping-specific monitor configuration.
@@ -87,6 +93,6 @@ type TailscalePingDetails struct {
 }
 
 // Type returns the monitor type.
-func (t TailscalePingDetails) Type() string {
+func (TailscalePingDetails) Type() string {
 	return "tailscale-ping"
 }

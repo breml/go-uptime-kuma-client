@@ -30,7 +30,7 @@ func (w Webhook) Type() string {
 }
 
 // Type returns the notification type identifier for webhook details.
-func (d WebhookDetails) Type() string {
+func (WebhookDetails) Type() string {
 	return "webhook"
 }
 
@@ -61,7 +61,7 @@ func (w Webhook) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalJSON serializes the headers map to a JSON string.
-// Example: {"Authorization": "Bearer token"} becomes "{\"Authorization\":\"Bearer token\"}"
+// Example: {"Authorization": "Bearer token"} becomes "{\"Authorization\":\"Bearer token\"}".
 func (h WebhookAdditionalHeaders) MarshalJSON() ([]byte, error) {
 	if h == nil {
 		return []byte("null"), nil
@@ -70,15 +70,20 @@ func (h WebhookAdditionalHeaders) MarshalJSON() ([]byte, error) {
 	// First marshal the map to JSON bytes
 	mapJSON, err := json.Marshal(map[string]string(h))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal webhook headers map: %w", err)
 	}
 
 	// Then marshal the JSON bytes as a string
-	return json.Marshal(string(mapJSON))
+	data, err := json.Marshal(string(mapJSON))
+	if err != nil {
+		return nil, fmt.Errorf("marshal webhook headers: %w", err)
+	}
+
+	return data, nil
 }
 
 // UnmarshalJSON deserializes a JSON string into the headers map.
-// Example: "{\"Authorization\":\"Bearer token\"}" becomes {"Authorization": "Bearer token"}
+// Example: "{\"Authorization\":\"Bearer token\"}" becomes {"Authorization": "Bearer token"}.
 func (h *WebhookAdditionalHeaders) UnmarshalJSON(data []byte) error {
 	// First check if it's null or empty string
 	if string(data) == "null" || string(data) == `""` {
@@ -88,8 +93,9 @@ func (h *WebhookAdditionalHeaders) UnmarshalJSON(data []byte) error {
 
 	// Unmarshal the outer JSON string
 	var jsonStr string
-	if err := json.Unmarshal(data, &jsonStr); err != nil {
-		return err
+	err := json.Unmarshal(data, &jsonStr)
+	if err != nil {
+		return fmt.Errorf("unmarshal webhook headers outer json: %w", err)
 	}
 
 	// If the string is empty after unmarshaling, treat as nil
@@ -100,8 +106,9 @@ func (h *WebhookAdditionalHeaders) UnmarshalJSON(data []byte) error {
 
 	// Unmarshal the inner JSON object
 	var headers map[string]string
-	if err := json.Unmarshal([]byte(jsonStr), &headers); err != nil {
-		return err
+	err = json.Unmarshal([]byte(jsonStr), &headers)
+	if err != nil {
+		return fmt.Errorf("unmarshal webhook headers inner json: %w", err)
 	}
 
 	*h = WebhookAdditionalHeaders(headers)

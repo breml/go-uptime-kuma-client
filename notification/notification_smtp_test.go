@@ -19,7 +19,9 @@ func TestNotificationSMTP_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My SMTP Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMTP Alert\",\"smtpHost\":\"smtp.gmail.com\",\"smtpPort\":587,\"smtpSecure\":false,\"smtpIgnoreTLSError\":false,\"smtpFrom\":\"noreply@example.com\",\"smtpTo\":\"alerts@example.com\",\"customSubject\":\"Alert: {{ monitorJSON['name'] }}\",\"customBody\":\"Status: {{ msg }}\",\"htmlBody\":true,\"type\":\"smtp\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My SMTP Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMTP Alert\",\"smtpHost\":\"smtp.gmail.com\",\"smtpPort\":587,\"smtpSecure\":false,\"smtpIgnoreTLSError\":false,\"smtpFrom\":\"noreply@example.com\",\"smtpTo\":\"alerts@example.com\",\"customSubject\":\"Alert: {{ monitorJSON['name'] }}\",\"customBody\":\"Status: {{ msg }}\",\"htmlBody\":true,\"type\":\"smtp\"}"}`,
+			),
 
 			want: notification.SMTP{
 				Base: notification.Base{
@@ -46,7 +48,9 @@ func TestNotificationSMTP_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with authentication and DKIM",
-			data: []byte(`{"id":2,"name":"SMTP with Auth","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMTP with Auth\",\"smtpHost\":\"smtp.example.com\",\"smtpPort\":587,\"smtpSecure\":true,\"smtpIgnoreTLSError\":true,\"smtpUsername\":\"user@example.com\",\"smtpPassword\":\"secret\",\"smtpFrom\":\"sender@example.com\",\"smtpTo\":\"recipient@example.com\",\"smtpCC\":\"cc@example.com\",\"smtpBCC\":\"bcc@example.com\",\"smtpDkimDomain\":\"example.com\",\"smtpDkimKeySelector\":\"default\",\"smtpDkimPrivateKey\":\"-----BEGIN RSA PRIVATE KEY-----\\n...\",\"smtpDkimHashAlgo\":\"sha256\",\"htmlBody\":false,\"type\":\"smtp\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"SMTP with Auth","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMTP with Auth\",\"smtpHost\":\"smtp.example.com\",\"smtpPort\":587,\"smtpSecure\":true,\"smtpIgnoreTLSError\":true,\"smtpUsername\":\"user@example.com\",\"smtpPassword\":\"secret\",\"smtpFrom\":\"sender@example.com\",\"smtpTo\":\"recipient@example.com\",\"smtpCC\":\"cc@example.com\",\"smtpBCC\":\"bcc@example.com\",\"smtpDkimDomain\":\"example.com\",\"smtpDkimKeySelector\":\"default\",\"smtpDkimPrivateKey\":\"-----BEGIN RSA PRIVATE KEY-----\\n...\",\"smtpDkimHashAlgo\":\"sha256\",\"htmlBody\":false,\"type\":\"smtp\"}"}`,
+			),
 
 			want: notification.SMTP{
 				Base: notification.Base{

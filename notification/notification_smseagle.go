@@ -43,10 +43,10 @@ type SMSEagleDetails struct {
 	Duration int `json:"smseagleDuration"`
 	// TtsModel is the TTS voice ID/model for text-to-speech calls (default 1). Only used with "smseagle-tts-advanced".
 	TtsModel int `json:"smseagleTtsModel"`
-	// ApiType specifies the API version. Valid values: "smseagle-apiv1", "smseagle-apiv2".
+	// APIType specifies the API version. Valid values: "smseagle-apiv1", "smseagle-apiv2".
 	// API v1: https://www.smseagle.eu/apiv1/ (simple HTTP GET-based API)
 	// API v2: https://www.smseagle.eu/docs/apiv2/ (modern RESTful API with more features)
-	ApiType string `json:"smseagleApiType"`
+	APIType string `json:"smseagleApiType"`
 }
 
 // Type returns the notification type identifier for SMSEagle.
@@ -55,7 +55,7 @@ func (s SMSEagle) Type() string {
 }
 
 // Type returns the notification type identifier for SMSEagleDetails.
-func (s SMSEagleDetails) Type() string {
+func (SMSEagleDetails) Type() string {
 	return "SMSEagle"
 }
 

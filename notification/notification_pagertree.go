@@ -28,7 +28,7 @@ func (p PagerTree) Type() string {
 }
 
 // Type returns the notification type identifier for PagerTreeDetails.
-func (p PagerTreeDetails) Type() string {
+func (PagerTreeDetails) Type() string {
 	return "PagerTree"
 }
 

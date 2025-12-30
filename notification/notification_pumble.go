@@ -22,7 +22,7 @@ func (p Pumble) Type() string {
 }
 
 // Type returns the notification type identifier for Pumble details.
-func (p PumbleDetails) Type() string {
+func (PumbleDetails) Type() string {
 	return "Pumble"
 }
 

@@ -19,7 +19,9 @@ func TestNotificationAlerta_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Alerta Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Alerta Alert\",\"alertaApiEndpoint\":\"https://alerta.example.com/api/alerts\",\"alertaApiKey\":\"api_key_secret\",\"alertaEnvironment\":\"Production\",\"alertaAlertState\":\"critical\",\"alertaRecoverState\":\"cleared\",\"type\":\"alerta\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Alerta Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Alerta Alert\",\"alertaApiEndpoint\":\"https://alerta.example.com/api/alerts\",\"alertaApiKey\":\"api_key_secret\",\"alertaEnvironment\":\"Production\",\"alertaAlertState\":\"critical\",\"alertaRecoverState\":\"cleared\",\"type\":\"alerta\"}"}`,
+			),
 
 			want: notification.Alerta{
 				Base: notification.Base{
@@ -31,8 +33,8 @@ func TestNotificationAlerta_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				AlertaDetails: notification.AlertaDetails{
-					ApiEndpoint:  "https://alerta.example.com/api/alerts",
-					ApiKey:       "api_key_secret",
+					APIEndpoint:  "https://alerta.example.com/api/alerts",
+					APIKey:       "api_key_secret",
 					Environment:  "Production",
 					AlertState:   "critical",
 					RecoverState: "cleared",
@@ -42,7 +44,9 @@ func TestNotificationAlerta_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Alerta","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Alerta\",\"alertaApiEndpoint\":\"https://alerta.io/api/alerts\",\"alertaApiKey\":\"key123\",\"alertaEnvironment\":\"Dev\",\"alertaAlertState\":\"critical\",\"alertaRecoverState\":\"cleared\",\"type\":\"alerta\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Alerta","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Alerta\",\"alertaApiEndpoint\":\"https://alerta.io/api/alerts\",\"alertaApiKey\":\"key123\",\"alertaEnvironment\":\"Dev\",\"alertaAlertState\":\"critical\",\"alertaRecoverState\":\"cleared\",\"type\":\"alerta\"}"}`,
+			),
 
 			want: notification.Alerta{
 				Base: notification.Base{
@@ -54,8 +58,8 @@ func TestNotificationAlerta_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				AlertaDetails: notification.AlertaDetails{
-					ApiEndpoint:  "https://alerta.io/api/alerts",
-					ApiKey:       "key123",
+					APIEndpoint:  "https://alerta.io/api/alerts",
+					APIKey:       "key123",
 					Environment:  "Dev",
 					AlertState:   "critical",
 					RecoverState: "cleared",

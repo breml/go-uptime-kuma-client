@@ -18,7 +18,9 @@ func TestNotificationWAHA_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My WAHA Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My WAHA Alert\",\"wahaApiUrl\":\"https://waha.example.com\",\"wahaSession\":\"default\",\"wahaChatId\":\"5511999999999\",\"wahaApiKey\":\"test-api-key\",\"type\":\"waha\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My WAHA Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My WAHA Alert\",\"wahaApiUrl\":\"https://waha.example.com\",\"wahaSession\":\"default\",\"wahaChatId\":\"5511999999999\",\"wahaApiKey\":\"test-api-key\",\"type\":\"waha\"}"}`,
+			),
 
 			want: notification.WAHA{
 				Base: notification.Base{
@@ -30,17 +32,19 @@ func TestNotificationWAHA_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				WAHADetails: notification.WAHADetails{
-					ApiURL:  "https://waha.example.com",
+					APIURL:  "https://waha.example.com",
 					Session: "default",
 					ChatID:  "5511999999999",
-					ApiKey:  "test-api-key",
+					APIKey:  "test-api-key",
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My WAHA Alert","wahaApiKey":"test-api-key","wahaApiUrl":"https://waha.example.com","wahaChatId":"5511999999999","wahaSession":"default","type":"waha","userId":1}`,
 		},
 		{
 			name: "minimal configuration without API key",
-			data: []byte(`{"id":2,"name":"Simple WAHA","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple WAHA\",\"wahaApiUrl\":\"https://api.waha.cloud\",\"wahaSession\":\"main\",\"wahaChatId\":\"+5511987654321\",\"type\":\"waha\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple WAHA","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple WAHA\",\"wahaApiUrl\":\"https://api.waha.cloud\",\"wahaSession\":\"main\",\"wahaChatId\":\"+5511987654321\",\"type\":\"waha\"}"}`,
+			),
 
 			want: notification.WAHA{
 				Base: notification.Base{
@@ -52,17 +56,19 @@ func TestNotificationWAHA_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				WAHADetails: notification.WAHADetails{
-					ApiURL:  "https://api.waha.cloud",
+					APIURL:  "https://api.waha.cloud",
 					Session: "main",
 					ChatID:  "+5511987654321",
-					ApiKey:  "",
+					APIKey:  "",
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple WAHA","wahaApiKey":"","wahaApiUrl":"https://api.waha.cloud","wahaChatId":"+5511987654321","wahaSession":"main","type":"waha","userId":1}`,
 		},
 		{
 			name: "with different session and chat ID",
-			data: []byte(`{"id":3,"name":"WAHA Multi Session","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"WAHA Multi Session\",\"wahaApiUrl\":\"https://custom.waha.io/\",\"wahaSession\":\"alerts\",\"wahaChatId\":\"120201234567@c.us\",\"wahaApiKey\":\"secure-key-123\",\"type\":\"waha\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"WAHA Multi Session","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"WAHA Multi Session\",\"wahaApiUrl\":\"https://custom.waha.io/\",\"wahaSession\":\"alerts\",\"wahaChatId\":\"120201234567@c.us\",\"wahaApiKey\":\"secure-key-123\",\"type\":\"waha\"}"}`,
+			),
 
 			want: notification.WAHA{
 				Base: notification.Base{
@@ -74,10 +80,10 @@ func TestNotificationWAHA_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				WAHADetails: notification.WAHADetails{
-					ApiURL:  "https://custom.waha.io/",
+					APIURL:  "https://custom.waha.io/",
 					Session: "alerts",
 					ChatID:  "120201234567@c.us",
-					ApiKey:  "secure-key-123",
+					APIKey:  "secure-key-123",
 				},
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"id":3,"isDefault":false,"name":"WAHA Multi Session","wahaApiKey":"secure-key-123","wahaApiUrl":"https://custom.waha.io/","wahaChatId":"120201234567@c.us","wahaSession":"alerts","type":"waha","userId":1}`,

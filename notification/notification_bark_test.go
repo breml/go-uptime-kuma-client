@@ -19,7 +19,9 @@ func TestNotificationBark_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Bark Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Bark Alert\",\"barkEndpoint\":\"https://bark.example.com\",\"barkGroup\":\"Monitoring\",\"barkSound\":\"alarm\",\"apiVersion\":\"v1\",\"type\":\"bark\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Bark Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Bark Alert\",\"barkEndpoint\":\"https://bark.example.com\",\"barkGroup\":\"Monitoring\",\"barkSound\":\"alarm\",\"apiVersion\":\"v1\",\"type\":\"bark\"}"}`,
+			),
 
 			want: notification.Bark{
 				Base: notification.Base{
@@ -41,7 +43,9 @@ func TestNotificationBark_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Bark","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Bark\",\"barkEndpoint\":\"https://bark.example.com\",\"type\":\"bark\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Bark","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Bark\",\"barkEndpoint\":\"https://bark.example.com\",\"type\":\"bark\"}"}`,
+			),
 
 			want: notification.Bark{
 				Base: notification.Base{
@@ -60,7 +64,9 @@ func TestNotificationBark_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with v2 API version",
-			data: []byte(`{"id":3,"name":"Bark v2","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Bark v2\",\"barkEndpoint\":\"https://bark.example.com\",\"barkGroup\":\"UptimeKuma\",\"barkSound\":\"telegraph\",\"apiVersion\":\"v2\",\"type\":\"bark\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Bark v2","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Bark v2\",\"barkEndpoint\":\"https://bark.example.com\",\"barkGroup\":\"UptimeKuma\",\"barkSound\":\"telegraph\",\"apiVersion\":\"v2\",\"type\":\"bark\"}"}`,
+			),
 
 			want: notification.Bark{
 				Base: notification.Base{

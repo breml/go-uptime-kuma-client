@@ -18,7 +18,9 @@ func TestNotificationLunaSea_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with user target",
-			data: []byte(`{"id":1,"name":"My LunaSea Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My LunaSea Alert\",\"lunaseaTarget\":\"user\",\"lunaseaUserID\":\"user123\",\"lunaseaDevice\":\"\",\"type\":\"lunasea\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My LunaSea Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My LunaSea Alert\",\"lunaseaTarget\":\"user\",\"lunaseaUserID\":\"user123\",\"lunaseaDevice\":\"\",\"type\":\"lunasea\"}"}`,
+			),
 
 			want: notification.LunaSea{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationLunaSea_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with device target",
-			data: []byte(`{"id":2,"name":"Simple LunaSea","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple LunaSea\",\"lunaseaTarget\":\"device\",\"lunaseaUserID\":\"\",\"lunaseaDevice\":\"device456\",\"type\":\"lunasea\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple LunaSea","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple LunaSea\",\"lunaseaTarget\":\"device\",\"lunaseaUserID\":\"\",\"lunaseaDevice\":\"device456\",\"type\":\"lunasea\"}"}`,
+			),
 
 			want: notification.LunaSea{
 				Base: notification.Base{
@@ -60,7 +64,9 @@ func TestNotificationLunaSea_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different user",
-			data: []byte(`{"id":3,"name":"LunaSea Production","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"LunaSea Production\",\"lunaseaTarget\":\"user\",\"lunaseaUserID\":\"prod-user-789\",\"lunaseaDevice\":\"\",\"type\":\"lunasea\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"LunaSea Production","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"LunaSea Production\",\"lunaseaTarget\":\"user\",\"lunaseaUserID\":\"prod-user-789\",\"lunaseaDevice\":\"\",\"type\":\"lunasea\"}"}`,
+			),
 
 			want: notification.LunaSea{
 				Base: notification.Base{

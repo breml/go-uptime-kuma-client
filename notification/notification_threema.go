@@ -29,7 +29,7 @@ func (t Threema) Type() string {
 }
 
 // Type returns the notification type identifier for ThreemaDetails.
-func (n ThreemaDetails) Type() string {
+func (ThreemaDetails) Type() string {
 	return "threema"
 }
 

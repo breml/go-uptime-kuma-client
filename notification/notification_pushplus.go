@@ -22,7 +22,7 @@ func (p PushPlus) Type() string {
 }
 
 // Type returns the notification type identifier for PushPlus details.
-func (p PushPlusDetails) Type() string {
+func (PushPlusDetails) Type() string {
 	return "PushPlus"
 }
 

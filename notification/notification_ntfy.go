@@ -4,11 +4,13 @@ import (
 	"fmt"
 )
 
+// Ntfy represents a ntfy notification.
 type Ntfy struct {
 	Base
 	NtfyDetails
 }
 
+// NtfyDetails contains ntfy-specific notification configuration.
 type NtfyDetails struct {
 	AccessToken          string `json:"ntfyaccesstoken"`
 	AuthenticationMethod string `json:"ntfyAuthenticationMethod"`
@@ -20,18 +22,22 @@ type NtfyDetails struct {
 	Username             string `json:"ntfyusername"`
 }
 
+// Type returns the notification type.
 func (n Ntfy) Type() string {
 	return n.NtfyDetails.Type()
 }
 
-func (n NtfyDetails) Type() string {
+// Type returns the notification type.
+func (NtfyDetails) Type() string {
 	return "ntfy"
 }
 
+// String returns a string representation of the notification.
 func (n Ntfy) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(n.Base, false), formatNotification(n.NtfyDetails, true))
 }
 
+// UnmarshalJSON unmarshals a JSON byte slice into a notification.
 func (n *Ntfy) UnmarshalJSON(data []byte) error {
 	detail := NtfyDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -47,6 +53,7 @@ func (n *Ntfy) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a notification into a JSON byte slice.
 func (n Ntfy) MarshalJSON() ([]byte, error) {
-	return marshalJSON(n.Base, n.NtfyDetails)
+	return marshalJSON(n.Base, &n.NtfyDetails)
 }

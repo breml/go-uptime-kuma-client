@@ -19,7 +19,9 @@ func TestNotificationStackfield_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with webhook URL",
-			data: []byte(`{"id":1,"name":"My Stackfield Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Stackfield Alert\",\"stackfieldwebhookURL\":\"https://app.stackfield.com/webhook/v1/xxx\",\"type\":\"stackfield\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Stackfield Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Stackfield Alert\",\"stackfieldwebhookURL\":\"https://app.stackfield.com/webhook/v1/xxx\",\"type\":\"stackfield\"}"}`,
+			),
 
 			want: notification.Stackfield{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationStackfield_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Stackfield","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Stackfield\",\"stackfieldwebhookURL\":\"https://webhook.example.com\",\"type\":\"stackfield\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Stackfield","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Stackfield\",\"stackfieldwebhookURL\":\"https://webhook.example.com\",\"type\":\"stackfield\"}"}`,
+			),
 
 			want: notification.Stackfield{
 				Base: notification.Base{
@@ -57,7 +61,9 @@ func TestNotificationStackfield_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different webhook endpoint",
-			data: []byte(`{"id":3,"name":"Stackfield Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Stackfield Custom\",\"stackfieldwebhookURL\":\"https://custom.stackfield.instance/webhook/abc123\",\"type\":\"stackfield\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Stackfield Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Stackfield Custom\",\"stackfieldwebhookURL\":\"https://custom.stackfield.instance/webhook/abc123\",\"type\":\"stackfield\"}"}`,
+			),
 
 			want: notification.Stackfield{
 				Base: notification.Base{

@@ -23,7 +23,7 @@ func (p PushDeer) Type() string {
 }
 
 // Type returns the notification type identifier for PushDeer details.
-func (p PushDeerDetails) Type() string {
+func (PushDeerDetails) Type() string {
 	return "PushDeer"
 }
 

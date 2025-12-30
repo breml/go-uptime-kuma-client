@@ -19,7 +19,9 @@ func TestNotificationSquadcast_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with webhook URL",
-			data: []byte(`{"id":1,"name":"My Squadcast Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Squadcast Alert\",\"squadcastWebhookURL\":\"https://api.squadcast.com/api/v3/incidents/webhook\",\"type\":\"squadcast\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Squadcast Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Squadcast Alert\",\"squadcastWebhookURL\":\"https://api.squadcast.com/api/v3/incidents/webhook\",\"type\":\"squadcast\"}"}`,
+			),
 
 			want: notification.Squadcast{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationSquadcast_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Squadcast","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Squadcast\",\"squadcastWebhookURL\":\"https://webhook.example.com\",\"type\":\"squadcast\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Squadcast","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Squadcast\",\"squadcastWebhookURL\":\"https://webhook.example.com\",\"type\":\"squadcast\"}"}`,
+			),
 
 			want: notification.Squadcast{
 				Base: notification.Base{
@@ -57,7 +61,9 @@ func TestNotificationSquadcast_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different webhook endpoint",
-			data: []byte(`{"id":3,"name":"Squadcast Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Squadcast Custom\",\"squadcastWebhookURL\":\"https://custom.squadcast.instance.com/webhook/xyz123\",\"type\":\"squadcast\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Squadcast Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Squadcast Custom\",\"squadcastWebhookURL\":\"https://custom.squadcast.instance.com/webhook/xyz123\",\"type\":\"squadcast\"}"}`,
+			),
 
 			want: notification.Squadcast{
 				Base: notification.Base{

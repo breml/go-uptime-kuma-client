@@ -19,7 +19,9 @@ func TestNotificationWebhook_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "json content type",
-			data: []byte(`{"id":1,"name":"Webhook JSON","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":true,\"isDefault\":false,\"name\":\"Webhook JSON\",\"webhookURL\":\"https://example.com/webhook\",\"webhookContentType\":\"json\",\"type\":\"webhook\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"Webhook JSON","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":true,\"isDefault\":false,\"name\":\"Webhook JSON\",\"webhookURL\":\"https://example.com/webhook\",\"webhookContentType\":\"json\",\"type\":\"webhook\"}"}`,
+			),
 
 			want: notification.Webhook{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationWebhook_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "form-data content type",
-			data: []byte(`{"id":2,"name":"Webhook Form","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Webhook Form\",\"webhookURL\":\"https://example.com/form-handler\",\"webhookContentType\":\"form-data\",\"type\":\"webhook\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Webhook Form","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Webhook Form\",\"webhookURL\":\"https://example.com/form-handler\",\"webhookContentType\":\"form-data\",\"type\":\"webhook\"}"}`,
+			),
 
 			want: notification.Webhook{
 				Base: notification.Base{
@@ -59,7 +63,9 @@ func TestNotificationWebhook_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "custom content type with body",
-			data: []byte(`{"id":3,"name":"Webhook Custom","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Webhook Custom\",\"webhookURL\":\"https://api.example.com/alerts\",\"webhookContentType\":\"custom\",\"webhookCustomBody\":\"{\\\"title\\\": \\\"Alert - {{ monitorJSON['name'] }}\\\", \\\"message\\\": \\\"{{ msg }}\\\"}\",\"type\":\"webhook\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Webhook Custom","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Webhook Custom\",\"webhookURL\":\"https://api.example.com/alerts\",\"webhookContentType\":\"custom\",\"webhookCustomBody\":\"{\\\"title\\\": \\\"Alert - {{ monitorJSON['name'] }}\\\", \\\"message\\\": \\\"{{ msg }}\\\"}\",\"type\":\"webhook\"}"}`,
+			),
 
 			want: notification.Webhook{
 				Base: notification.Base{
@@ -80,7 +86,9 @@ func TestNotificationWebhook_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with additional headers",
-			data: []byte(`{"id":4,"name":"Webhook Headers","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Webhook Headers\",\"webhookURL\":\"https://api.example.com/notify\",\"webhookContentType\":\"json\",\"webhookAdditionalHeaders\":\"{\\\"Authorization\\\":\\\"Bearer secret-token\\\",\\\"X-App-ID\\\":\\\"uptime-kuma\\\"}\",\"type\":\"webhook\"}"}`),
+			data: []byte(
+				`{"id":4,"name":"Webhook Headers","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Webhook Headers\",\"webhookURL\":\"https://api.example.com/notify\",\"webhookContentType\":\"json\",\"webhookAdditionalHeaders\":\"{\\\"Authorization\\\":\\\"Bearer secret-token\\\",\\\"X-App-ID\\\":\\\"uptime-kuma\\\"}\",\"type\":\"webhook\"}"}`,
+			),
 
 			want: notification.Webhook{
 				Base: notification.Base{
@@ -104,7 +112,9 @@ func TestNotificationWebhook_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "all features combined",
-			data: []byte(`{"id":5,"name":"Webhook Full","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"Webhook Full\",\"webhookURL\":\"https://alerts.example.com/v1/webhook\",\"webhookContentType\":\"custom\",\"webhookCustomBody\":\"{\\\"event\\\": \\\"{{ msg }}\\\", \\\"service\\\": \\\"{{ monitorJSON['name'] }}\\\"}\",\"webhookAdditionalHeaders\":\"{\\\"Authorization\\\":\\\"Bearer xyz123\\\",\\\"Content-Type\\\":\\\"application/json\\\",\\\"X-Custom-Header\\\":\\\"custom-value\\\"}\",\"type\":\"webhook\"}"}`),
+			data: []byte(
+				`{"id":5,"name":"Webhook Full","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"Webhook Full\",\"webhookURL\":\"https://alerts.example.com/v1/webhook\",\"webhookContentType\":\"custom\",\"webhookCustomBody\":\"{\\\"event\\\": \\\"{{ msg }}\\\", \\\"service\\\": \\\"{{ monitorJSON['name'] }}\\\"}\",\"webhookAdditionalHeaders\":\"{\\\"Authorization\\\":\\\"Bearer xyz123\\\",\\\"Content-Type\\\":\\\"application/json\\\",\\\"X-Custom-Header\\\":\\\"custom-value\\\"}\",\"type\":\"webhook\"}"}`,
+			),
 
 			want: notification.Webhook{
 				Base: notification.Base{

@@ -27,7 +27,7 @@ func (l LunaSea) Type() string {
 }
 
 // Type returns the notification type identifier for LunaSeaDetails.
-func (n LunaSeaDetails) Type() string {
+func (LunaSeaDetails) Type() string {
 	return "lunasea"
 }
 

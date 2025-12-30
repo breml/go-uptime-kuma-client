@@ -18,7 +18,9 @@ func TestNotificationSplunk_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Splunk Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Splunk Alert\",\"splunkRestURL\":\"https://api.victorops.com/api/v1/incidents\",\"splunkSeverity\":\"CRITICAL\",\"splunkAutoResolve\":\"RECOVERY\",\"pagerdutyIntegrationKey\":\"test-routing-key\",\"type\":\"Splunk\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Splunk Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Splunk Alert\",\"splunkRestURL\":\"https://api.victorops.com/api/v1/incidents\",\"splunkSeverity\":\"CRITICAL\",\"splunkAutoResolve\":\"RECOVERY\",\"pagerdutyIntegrationKey\":\"test-routing-key\",\"type\":\"Splunk\"}"}`,
+			),
 
 			want: notification.Splunk{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationSplunk_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Splunk","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Splunk\",\"splunkRestURL\":\"https://api.victorops.com/api/v1/incidents\",\"splunkSeverity\":\"HIGH\",\"splunkAutoResolve\":\"0\",\"pagerdutyIntegrationKey\":\"routing-key\",\"type\":\"Splunk\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Splunk","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Splunk\",\"splunkRestURL\":\"https://api.victorops.com/api/v1/incidents\",\"splunkSeverity\":\"HIGH\",\"splunkAutoResolve\":\"0\",\"pagerdutyIntegrationKey\":\"routing-key\",\"type\":\"Splunk\"}"}`,
+			),
 
 			want: notification.Splunk{
 				Base: notification.Base{
@@ -62,7 +66,9 @@ func TestNotificationSplunk_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with warning severity",
-			data: []byte(`{"id":3,"name":"Splunk Warning","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Splunk Warning\",\"splunkRestURL\":\"https://custom.victorops.com/api/v1/incidents\",\"splunkSeverity\":\"WARNING\",\"splunkAutoResolve\":\"ACKNOWLEDGED\",\"pagerdutyIntegrationKey\":\"custom-key\",\"type\":\"Splunk\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Splunk Warning","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Splunk Warning\",\"splunkRestURL\":\"https://custom.victorops.com/api/v1/incidents\",\"splunkSeverity\":\"WARNING\",\"splunkAutoResolve\":\"ACKNOWLEDGED\",\"pagerdutyIntegrationKey\":\"custom-key\",\"type\":\"Splunk\"}"}`,
+			),
 
 			want: notification.Splunk{
 				Base: notification.Base{

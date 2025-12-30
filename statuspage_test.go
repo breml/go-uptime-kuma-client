@@ -16,7 +16,7 @@ func TestClient_StatusPageCRUD(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	var err error
@@ -83,7 +83,7 @@ func TestClient_StatusPageWithMonitors(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 
 	var err error
@@ -116,9 +116,9 @@ func TestClient_StatusPageWithMonitors(t *testing.T) {
 			},
 		}
 
-		monitor1ID, err = client.CreateMonitor(ctx, httpMonitor1)
+		monitor1ID, err = client.CreateMonitor(ctx, &httpMonitor1)
 		require.NoError(t, err)
-		require.Greater(t, monitor1ID, int64(0))
+		require.Positive(t, monitor1ID)
 
 		httpMonitor2 := monitor.HTTP{
 			Base: monitor.Base{
@@ -142,9 +142,9 @@ func TestClient_StatusPageWithMonitors(t *testing.T) {
 			},
 		}
 
-		monitor2ID, err = client.CreateMonitor(ctx, httpMonitor2)
+		monitor2ID, err = client.CreateMonitor(ctx, &httpMonitor2)
 		require.NoError(t, err)
-		require.Greater(t, monitor2ID, int64(0))
+		require.Positive(t, monitor2ID)
 	})
 
 	t.Run("add_status_page", func(t *testing.T) {
@@ -195,7 +195,7 @@ func TestClient_StatusPageIncidents(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	var err error
@@ -275,7 +275,7 @@ func TestClient_StatusPageThemes(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	var err error

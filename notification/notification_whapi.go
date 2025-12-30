@@ -13,8 +13,8 @@ type Whapi struct {
 
 // WhapiDetails contains the configuration fields for Whapi notifications.
 type WhapiDetails struct {
-	// ApiURL is the Whapi API endpoint URL.
-	ApiURL string `json:"whapiApiUrl"`
+	// APIURL is the Whapi API endpoint URL.
+	APIURL string `json:"whapiApiUrl"`
 	// AuthToken is the Whapi API authorization token.
 	AuthToken string `json:"whapiAuthToken"`
 	// Recipient is the recipient phone number.
@@ -27,7 +27,7 @@ func (w Whapi) Type() string {
 }
 
 // Type returns the notification type identifier for WhapiDetails.
-func (n WhapiDetails) Type() string {
+func (WhapiDetails) Type() string {
 	return "whapi"
 }
 

@@ -19,7 +19,9 @@ func TestNotificationFreeMobile_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Free Mobile Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Free Mobile Alert\",\"freemobileUser\":\"12345678\",\"freemobilePass\":\"abcdef123456\",\"type\":\"FreeMobile\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Free Mobile Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Free Mobile Alert\",\"freemobileUser\":\"12345678\",\"freemobilePass\":\"abcdef123456\",\"type\":\"FreeMobile\"}"}`,
+			),
 
 			want: notification.FreeMobile{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationFreeMobile_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Free Mobile","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Free Mobile\",\"freemobileUser\":\"87654321\",\"freemobilePass\":\"xyz789\",\"type\":\"FreeMobile\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Free Mobile","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Free Mobile\",\"freemobileUser\":\"87654321\",\"freemobilePass\":\"xyz789\",\"type\":\"FreeMobile\"}"}`,
+			),
 
 			want: notification.FreeMobile{
 				Base: notification.Base{
@@ -59,7 +63,9 @@ func TestNotificationFreeMobile_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different credentials",
-			data: []byte(`{"id":3,"name":"Free Mobile Secondary","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Free Mobile Secondary\",\"freemobileUser\":\"99999999\",\"freemobilePass\":\"qwerty123456789\",\"type\":\"FreeMobile\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Free Mobile Secondary","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Free Mobile Secondary\",\"freemobileUser\":\"99999999\",\"freemobilePass\":\"qwerty123456789\",\"type\":\"FreeMobile\"}"}`,
+			),
 
 			want: notification.FreeMobile{
 				Base: notification.Base{

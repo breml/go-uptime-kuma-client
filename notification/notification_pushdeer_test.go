@@ -19,7 +19,9 @@ func TestNotificationPushDeer_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with custom server",
-			data: []byte(`{"id":1,"name":"My PushDeer Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My PushDeer Alert\",\"pushdeerKey\":\"PDxxxxxxxxxxxxxx\",\"pushdeerServer\":\"https://custom.pushdeer.com\",\"type\":\"PushDeer\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My PushDeer Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My PushDeer Alert\",\"pushdeerKey\":\"PDxxxxxxxxxxxxxx\",\"pushdeerServer\":\"https://custom.pushdeer.com\",\"type\":\"PushDeer\"}"}`,
+			),
 
 			want: notification.PushDeer{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationPushDeer_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal without server",
-			data: []byte(`{"id":2,"name":"Simple PushDeer","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple PushDeer\",\"pushdeerKey\":\"PDyyyyyyyyyyyyyy\",\"pushdeerServer\":\"\",\"type\":\"PushDeer\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple PushDeer","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple PushDeer\",\"pushdeerKey\":\"PDyyyyyyyyyyyyyy\",\"pushdeerServer\":\"\",\"type\":\"PushDeer\"}"}`,
+			),
 
 			want: notification.PushDeer{
 				Base: notification.Base{

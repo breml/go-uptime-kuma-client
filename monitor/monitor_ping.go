@@ -6,30 +6,34 @@ import (
 	"strconv"
 )
 
+// Ping represents a ping monitor.
 type Ping struct {
 	Base
 	PingDetails
 }
 
+// Type returns the monitor type.
 func (p Ping) Type() string {
 	return p.PingDetails.Type()
 }
 
+// String returns a string representation of the monitor.
 func (p Ping) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(p.Base, false), formatMonitor(p.PingDetails, true))
 }
 
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (p *Ping) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := PingDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*p = Ping{
@@ -40,6 +44,7 @@ func (p *Ping) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (p Ping) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = p.ID
@@ -61,6 +66,7 @@ func (p Ping) MarshalJSON() ([]byte, error) {
 	for _, id := range p.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current Ping-specific field values.
@@ -73,14 +79,21 @@ func (p Ping) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
+// PingDetails contains ping-specific monitor configuration.
 type PingDetails struct {
 	Hostname   string `json:"hostname"`
 	PacketSize int    `json:"packetSize"`
 }
 
-func (p PingDetails) Type() string {
+// Type returns the monitor type.
+func (PingDetails) Type() string {
 	return "ping"
 }

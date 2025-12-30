@@ -19,7 +19,9 @@ func TestNotificationBrevo_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Brevo Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Brevo Alert\",\"brevoApiKey\":\"test-api-key\",\"brevoToEmail\":\"recipient@example.com\",\"brevoFromEmail\":\"sender@example.com\",\"brevoFromName\":\"Uptime Kuma\",\"brevoSubject\":\"Alert Notification\",\"brevoCcEmail\":\"cc@example.com\",\"brevoBccEmail\":\"bcc@example.com\",\"type\":\"brevo\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Brevo Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Brevo Alert\",\"brevoApiKey\":\"test-api-key\",\"brevoToEmail\":\"recipient@example.com\",\"brevoFromEmail\":\"sender@example.com\",\"brevoFromName\":\"Uptime Kuma\",\"brevoSubject\":\"Alert Notification\",\"brevoCcEmail\":\"cc@example.com\",\"brevoBccEmail\":\"bcc@example.com\",\"type\":\"brevo\"}"}`,
+			),
 
 			want: notification.Brevo{
 				Base: notification.Base{
@@ -44,7 +46,9 @@ func TestNotificationBrevo_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Brevo","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Brevo\",\"brevoApiKey\":\"minimal-key\",\"brevoToEmail\":\"to@example.com\",\"brevoFromEmail\":\"from@example.com\",\"type\":\"brevo\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Brevo","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Brevo\",\"brevoApiKey\":\"minimal-key\",\"brevoToEmail\":\"to@example.com\",\"brevoFromEmail\":\"from@example.com\",\"type\":\"brevo\"}"}`,
+			),
 
 			want: notification.Brevo{
 				Base: notification.Base{
@@ -65,7 +69,9 @@ func TestNotificationBrevo_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with multiple CC and BCC recipients",
-			data: []byte(`{"id":3,"name":"Brevo Multi CC","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Brevo Multi CC\",\"brevoApiKey\":\"api-key\",\"brevoToEmail\":\"main@example.com\",\"brevoFromEmail\":\"sender@example.com\",\"brevoFromName\":\"Alert System\",\"brevoSubject\":\"System Alert\",\"brevoCcEmail\":\"cc1@example.com, cc2@example.com\",\"brevoBccEmail\":\"bcc1@example.com, bcc2@example.com\",\"type\":\"brevo\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Brevo Multi CC","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Brevo Multi CC\",\"brevoApiKey\":\"api-key\",\"brevoToEmail\":\"main@example.com\",\"brevoFromEmail\":\"sender@example.com\",\"brevoFromName\":\"Alert System\",\"brevoSubject\":\"System Alert\",\"brevoCcEmail\":\"cc1@example.com, cc2@example.com\",\"brevoBccEmail\":\"bcc1@example.com, bcc2@example.com\",\"type\":\"brevo\"}"}`,
+			),
 
 			want: notification.Brevo{
 				Base: notification.Base{

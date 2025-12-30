@@ -19,7 +19,9 @@ func TestNotificationTeams_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Teams Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Teams Alert\",\"webhookUrl\":\"https://outlook.office.com/webhook/xxx\",\"type\":\"teams\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Teams Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Teams Alert\",\"webhookUrl\":\"https://outlook.office.com/webhook/xxx\",\"type\":\"teams\"}"}`,
+			),
 
 			want: notification.Teams{
 				Base: notification.Base{

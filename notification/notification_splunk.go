@@ -29,7 +29,7 @@ func (s Splunk) Type() string {
 }
 
 // Type returns the notification type identifier for SplunkDetails.
-func (n SplunkDetails) Type() string {
+func (SplunkDetails) Type() string {
 	return "Splunk"
 }
 

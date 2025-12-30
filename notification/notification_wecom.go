@@ -22,7 +22,7 @@ func (w WeCom) Type() string {
 }
 
 // Type returns the notification type identifier for WeCom details.
-func (d WeComDetails) Type() string {
+func (WeComDetails) Type() string {
 	return "WeCom"
 }
 

@@ -19,7 +19,9 @@ func TestNotificationPushbullet_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Pushbullet Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Pushbullet Alert\",\"pushbulletAccessToken\":\"o.example_token_12345\",\"type\":\"pushbullet\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Pushbullet Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Pushbullet Alert\",\"pushbulletAccessToken\":\"o.example_token_12345\",\"type\":\"pushbullet\"}"}`,
+			),
 
 			want: notification.Pushbullet{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationPushbullet_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Pushbullet","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Pushbullet\",\"pushbulletAccessToken\":\"o.token123\",\"type\":\"pushbullet\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Pushbullet","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Pushbullet\",\"pushbulletAccessToken\":\"o.token123\",\"type\":\"pushbullet\"}"}`,
+			),
 
 			want: notification.Pushbullet{
 				Base: notification.Base{

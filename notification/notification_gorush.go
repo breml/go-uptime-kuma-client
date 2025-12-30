@@ -35,7 +35,7 @@ func (g Gorush) Type() string {
 }
 
 // Type returns the notification type identifier for GorushDetails.
-func (n GorushDetails) Type() string {
+func (GorushDetails) Type() string {
 	return "gorush"
 }
 

@@ -19,7 +19,9 @@ func TestNotificationSendGrid_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My SendGrid Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SendGrid Alert\",\"sendgridApiKey\":\"SG.xxxxxxxxxxxxxxxx\",\"sendgridToEmail\":\"alerts@example.com\",\"sendgridFromEmail\":\"noreply@example.com\",\"sendgridSubject\":\"Uptime Alert\",\"sendgridCcEmail\":\"cc@example.com\",\"sendgridBccEmail\":\"bcc@example.com\",\"type\":\"SendGrid\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My SendGrid Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SendGrid Alert\",\"sendgridApiKey\":\"SG.xxxxxxxxxxxxxxxx\",\"sendgridToEmail\":\"alerts@example.com\",\"sendgridFromEmail\":\"noreply@example.com\",\"sendgridSubject\":\"Uptime Alert\",\"sendgridCcEmail\":\"cc@example.com\",\"sendgridBccEmail\":\"bcc@example.com\",\"type\":\"SendGrid\"}"}`,
+			),
 
 			want: notification.SendGrid{
 				Base: notification.Base{
@@ -43,7 +45,9 @@ func TestNotificationSendGrid_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal without CC and BCC",
-			data: []byte(`{"id":2,"name":"Simple SendGrid","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SendGrid\",\"sendgridApiKey\":\"SG.yyyyyyyyyyyyyyyy\",\"sendgridToEmail\":\"user@example.com\",\"sendgridFromEmail\":\"sender@example.com\",\"sendgridSubject\":\"\",\"sendgridCcEmail\":\"\",\"sendgridBccEmail\":\"\",\"type\":\"SendGrid\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple SendGrid","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SendGrid\",\"sendgridApiKey\":\"SG.yyyyyyyyyyyyyyyy\",\"sendgridToEmail\":\"user@example.com\",\"sendgridFromEmail\":\"sender@example.com\",\"sendgridSubject\":\"\",\"sendgridCcEmail\":\"\",\"sendgridBccEmail\":\"\",\"type\":\"SendGrid\"}"}`,
+			),
 
 			want: notification.SendGrid{
 				Base: notification.Base{

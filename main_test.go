@@ -17,26 +17,37 @@ import (
 	kuma "github.com/breml/go-uptime-kuma-client"
 )
 
+//nolint:gochecknoglobals // client is used across multiple tests.
 var client *kuma.Client
 
 func TestMain(m *testing.M) {
+	code, err := testMainSetup(m)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Test setup failed: %v\n", err)
+		//revive:disable:redundant-test-main-exit
+		os.Exit(code)
+		//revive:enable:redundant-test-main-exit
+	}
+}
+
+func testMainSetup(m *testing.M) (int, error) {
 	dockerTimeout := uint(60)
 
 	e2eTest, _ := strconv.ParseBool(os.Getenv("E2E_TEST"))
 	if e2eTest {
-		dockerTimeout = 120
+		dockerTimeout = 600
 	}
 
 	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
 	pool, err := dockertest.NewPool("")
 	if err != nil {
-		log.Fatalf("Could not construct pool: %v", err)
+		return 1, fmt.Errorf("could not construct pool: %w", err)
 	}
 
 	// uses pool to try to connect to Docker
 	err = pool.Client.Ping()
 	if err != nil {
-		log.Fatalf("Could not connect to Docker: %v", err)
+		return 1, fmt.Errorf("could not connect to Docker: %w", err)
 	}
 
 	// pulls an image, creates a container based on it and runs it
@@ -53,19 +64,29 @@ func TestMain(m *testing.M) {
 		}
 	})
 	if err != nil {
-		log.Fatalf("Could not start resource: %v", err)
+		return 1, fmt.Errorf("could not start resource: %w", err)
 	}
 
 	err = resource.Expire(dockerTimeout)
 	if err != nil {
-		log.Fatalf("Could not connect to Docker: %v", err)
+		return 1, fmt.Errorf("could not set resource expiry: %w", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Setup client disconnect defer before attempting connection
+	defer func() {
+		if client != nil {
+			err := client.Disconnect()
+			if err != nil {
+				log.Printf("Failed to disconnect from uptime kuma: %v", err)
+			}
+		}
+	}()
+
 	// exponential backoff-retry, because the application in the container might not be ready to accept connections yet
-	if err := pool.Retry(func() error {
+	retryErr := pool.Retry(func() error {
 		var err error
 		client, err = kuma.New(
 			ctx,
@@ -80,25 +101,20 @@ func TestMain(m *testing.M) {
 		}
 
 		return nil
-	}); err != nil {
-		log.Fatalf("Could not connect to uptime kuma: %v", err)
+	})
+	if retryErr != nil {
+		return 1, fmt.Errorf("could not connect to uptime kuma: %w", retryErr)
 	}
-
-	defer func() {
-		err = client.Disconnect()
-		if err != nil {
-			log.Fatalf("Failed to connect to uptime kuma: %v", err)
-		}
-	}()
 
 	// as of go1.15 testing.M returns the exit code of m.Run(), so it is safe to use defer here
 	defer func() {
-		if err := pool.Purge(resource); err != nil {
-			log.Fatalf("Could not purge resource: %v", err)
+		err := pool.Purge(resource)
+		if err != nil {
+			log.Printf("Could not purge resource: %v", err)
 		}
 	}()
 
-	m.Run()
+	return m.Run(), nil
 }
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

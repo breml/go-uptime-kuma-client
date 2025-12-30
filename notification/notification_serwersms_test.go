@@ -19,7 +19,9 @@ func TestNotificationSerwerSMS_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My SerwerSMS Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SerwerSMS Alert\",\"serwersmsUsername\":\"testuser\",\"serwersmsPassword\":\"testpass\",\"serwersmsPhoneNumber\":\"48123456789\",\"serwersmsSenderName\":\"Uptime\",\"type\":\"serwersms\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My SerwerSMS Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SerwerSMS Alert\",\"serwersmsUsername\":\"testuser\",\"serwersmsPassword\":\"testpass\",\"serwersmsPhoneNumber\":\"48123456789\",\"serwersmsSenderName\":\"Uptime\",\"type\":\"serwersms\"}"}`,
+			),
 
 			want: notification.SerwerSMS{
 				Base: notification.Base{
@@ -41,7 +43,9 @@ func TestNotificationSerwerSMS_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple SerwerSMS","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SerwerSMS\",\"serwersmsUsername\":\"user\",\"serwersmsPassword\":\"pass\",\"serwersmsPhoneNumber\":\"48999999999\",\"serwersmsSenderName\":\"Alert\",\"type\":\"serwersms\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple SerwerSMS","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SerwerSMS\",\"serwersmsUsername\":\"user\",\"serwersmsPassword\":\"pass\",\"serwersmsPhoneNumber\":\"48999999999\",\"serwersmsSenderName\":\"Alert\",\"type\":\"serwersms\"}"}`,
+			),
 
 			want: notification.SerwerSMS{
 				Base: notification.Base{
@@ -63,7 +67,9 @@ func TestNotificationSerwerSMS_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different phone number",
-			data: []byte(`{"id":3,"name":"SerwerSMS International","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SerwerSMS International\",\"serwersmsUsername\":\"intluser\",\"serwersmsPassword\":\"intlpass\",\"serwersmsPhoneNumber\":\"358501234567\",\"serwersmsSenderName\":\"GlobalAlert\",\"type\":\"serwersms\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"SerwerSMS International","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SerwerSMS International\",\"serwersmsUsername\":\"intluser\",\"serwersmsPassword\":\"intlpass\",\"serwersmsPhoneNumber\":\"358501234567\",\"serwersmsSenderName\":\"GlobalAlert\",\"type\":\"serwersms\"}"}`,
+			),
 
 			want: notification.SerwerSMS{
 				Base: notification.Base{

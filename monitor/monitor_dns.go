@@ -6,30 +6,34 @@ import (
 	"strconv"
 )
 
+// DNS represents a DNS monitor.
 type DNS struct {
 	Base
 	DNSDetails
 }
 
+// Type returns the monitor type.
 func (d DNS) Type() string {
 	return d.DNSDetails.Type()
 }
 
+// String returns a string representation of the DNS monitor.
 func (d DNS) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(d.Base, false), formatMonitor(d.DNSDetails, true))
 }
 
+// UnmarshalJSON unmarshals a JSON byte slice into a DNS monitor.
 func (d *DNS) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := DNSDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*d = DNS{
@@ -40,6 +44,7 @@ func (d *DNS) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a DNS monitor into a JSON byte slice.
 func (d DNS) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = d.ID
@@ -61,6 +66,7 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 	for _, id := range d.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current DNS-specific field values.
@@ -75,9 +81,15 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
+// DNSDetails contains DNS-specific monitor configuration.
 type DNSDetails struct {
 	Hostname       string         `json:"hostname"`
 	ResolverServer string         `json:"dns_resolve_server"`
@@ -85,14 +97,15 @@ type DNSDetails struct {
 	Port           int            `json:"port"`
 }
 
-func (d DNSDetails) Type() string {
+// Type returns the monitor type.
+func (DNSDetails) Type() string {
 	return "dns"
 }
 
-// DNSResolveType represents the DNS record type to resolve
+// DNSResolveType represents the DNS record type to resolve.
 type DNSResolveType string
 
-// DNS resolve types
+// DNS resolve types.
 const (
 	DNSResolveTypeA     DNSResolveType = "A"
 	DNSResolveTypeAAAA  DNSResolveType = "AAAA"

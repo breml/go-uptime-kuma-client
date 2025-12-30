@@ -25,7 +25,7 @@ func (k Keep) Type() string {
 }
 
 // Type returns the notification type identifier for KeepDetails.
-func (n KeepDetails) Type() string {
+func (KeepDetails) Type() string {
 	return "Keep"
 }
 

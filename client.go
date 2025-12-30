@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,8 +26,10 @@ import (
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
 
-var ErrNotFound = fmt.Errorf("not found")
+// ErrNotFound is returned when a requested resource is not found.
+var ErrNotFound = errors.New("not found")
 
+// Log level constants for configuring socket.io client logging verbosity.
 const (
 	LogLevelDebug = utils.DEBUG
 	LogLevelInfo  = utils.INFO
@@ -35,21 +38,27 @@ const (
 	LogLevelNone  = utils.NONE
 )
 
+// LogLevel converts a string log level to its corresponding integer constant.
 func LogLevel(level string) int {
 	switch strings.ToUpper(level) {
 	case "DEBUG":
 		return LogLevelDebug
+
 	case "INFO":
 		return LogLevelInfo
+
 	case "WARN":
 		return LogLevelWarn
+
 	case "ERROR":
 		return LogLevelError
+
 	default:
 		return LogLevelNone
 	}
 }
 
+//nolint:gochecknoglobals // empty is used as a placeholder value in maps to represent set membership.
 var empty = struct{}{}
 
 type entryPageResponse struct {
@@ -77,6 +86,7 @@ type state struct {
 	dockerHosts   []dockerhost.DockerHost
 }
 
+// Client represents a connection to an Uptime Kuma server.
 type Client struct {
 	socketioClient               *socketio.Client
 	socketioClientConnectTimeout time.Duration
@@ -88,14 +98,17 @@ type Client struct {
 	state   state
 }
 
+// Option is a functional option for configuring a Client.
 type Option func(c *Client)
 
+// WithAutosetup enables automatic server setup during client connection.
 func WithAutosetup() Option {
 	return func(c *Client) {
 		c.autosetup = true
 	}
 }
 
+// WithLogLevel sets the socket.io client logging level.
 func WithLogLevel(level int) Option {
 	return func(c *Client) {
 		if level >= utils.DEBUG && level <= utils.NONE {
@@ -104,6 +117,7 @@ func WithLogLevel(level int) Option {
 	}
 }
 
+// WithConnectTimeout sets the socket.io client connection timeout.
 func WithConnectTimeout(timeout time.Duration) Option {
 	return func(c *Client) {
 		c.socketioClientConnectTimeout = timeout
@@ -113,6 +127,8 @@ func WithConnectTimeout(timeout time.Duration) Option {
 // setupDatabase handles the database setup phase for Uptime Kuma v2.
 // It checks if database setup is needed and configures SQLite if required.
 // The function will wait for the server to restart after database configuration.
+//
+//nolint:revive // Complexity is necessary for complete database setup logic
 func setupDatabase(ctx context.Context, baseURL string) error {
 	// Convert socket.io URL to HTTP URL
 	httpURL := strings.Replace(baseURL, "ws://", "http://", 1)
@@ -126,7 +142,8 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	// Check if parent context is already cancelled
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("context cancelled: %w", ctx.Err())
+
 	default:
 	}
 
@@ -135,7 +152,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	httpCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(httpCtx, "GET", entryPageURL, nil)
+	req, err := http.NewRequestWithContext(httpCtx, http.MethodGet, entryPageURL, http.NoBody)
 	if err != nil {
 		return fmt.Errorf("create entry-page request: %w", err)
 	}
@@ -143,7 +160,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		// Return connection errors as-is so caller can retry
-		return err
+		return fmt.Errorf("entry-page request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -156,7 +173,8 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 		return fmt.Errorf("read entry-page response: %w", err)
 	}
 
-	if err := json.Unmarshal(body, &entryPage); err != nil {
+	err = json.Unmarshal(body, &entryPage)
+	if err != nil {
 		return fmt.Errorf("parse entry-page response: %w", err)
 	}
 
@@ -181,10 +199,11 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	httpCtx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	req, err = http.NewRequestWithContext(httpCtx, "POST", setupDBURL, bytes.NewReader(reqBody))
+	req, err = http.NewRequestWithContext(httpCtx, http.MethodPost, setupDBURL, bytes.NewReader(reqBody))
 	if err != nil {
 		return fmt.Errorf("create setup-database request: %w", err)
 	}
+
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err = http.DefaultClient.Do(req)
@@ -203,12 +222,13 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	}
 
 	var setupResp setupDatabaseResponse
-	if err := json.Unmarshal(body, &setupResp); err != nil {
+	err = json.Unmarshal(body, &setupResp)
+	if err != nil {
 		return fmt.Errorf("parse setup-database response: %w", err)
 	}
 
 	if !setupResp.OK {
-		return fmt.Errorf("setup-database failed")
+		return errors.New("setup-database failed")
 	}
 
 	// Wait for server to restart by polling entry-page until it changes
@@ -222,32 +242,35 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("wait for server restart: %w", ctx.Err())
+
 		case <-timeout:
-			return fmt.Errorf("timeout waiting for server restart")
+			return errors.New("timeout waiting for server restart")
+
 		case <-ticker.C:
 			// Use a short timeout for each poll attempt
 			pollCtx, pollCancel := context.WithTimeout(context.Background(), 2*time.Second)
-			req, err := http.NewRequestWithContext(pollCtx, "GET", entryPageURL, nil)
+			pollReq, err := http.NewRequestWithContext(pollCtx, http.MethodGet, entryPageURL, http.NoBody)
 			if err != nil {
 				pollCancel()
 				continue
 			}
 
-			resp, err := http.DefaultClient.Do(req)
+			pollResp, err := http.DefaultClient.Do(pollReq)
 			if err != nil {
 				pollCancel()
 				continue
 			}
 
-			body, err := io.ReadAll(resp.Body)
-			_ = resp.Body.Close()
+			pollBody, err := io.ReadAll(pollResp.Body)
+			_ = pollResp.Body.Close()
 			pollCancel()
 			if err != nil {
 				continue
 			}
 
 			var checkEntryPage entryPageResponse
-			if err := json.Unmarshal(body, &checkEntryPage); err != nil {
+			err = json.Unmarshal(pollBody, &checkEntryPage)
+			if err != nil {
 				continue
 			}
 
@@ -259,6 +282,9 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	}
 }
 
+// New creates a new Client connected to an Uptime Kuma server.
+//
+//nolint:revive // Complexity is necessary for complete client initialization and event setup
 func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
 	c := &Client{
 		socketioLogger: &utils.DefaultLogger{Level: utils.NONE},
@@ -280,7 +306,8 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	// Handle database setup for Uptime Kuma v2 if autosetup is enabled
 	if c.autosetup {
-		if err := setupDatabase(ctxWithConnectTimeout, baseURL); err != nil {
+		err := setupDatabase(ctxWithConnectTimeout, baseURL)
+		if err != nil {
 			return nil, fmt.Errorf("database setup: %w", err)
 		}
 	}
@@ -290,7 +317,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		socketio.WithLogger(c.socketioLogger),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("create socketio client: %v", err)
+		return nil, fmt.Errorf("create socketio client: %w", err)
 	}
 
 	c.socketioClient = client
@@ -314,7 +341,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	})
 	defer closeReady()
 
-	c.updates.AddListener(func(ctx context.Context, s string) {
+	c.updates.AddListener(func(_ context.Context, s string) {
 		updateSeenMu.Lock()
 		defer updateSeenMu.Unlock()
 
@@ -343,6 +370,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		for _, monitor := range monitorMap {
 			monitors = append(monitors, monitor)
 		}
+
 		c.state.monitors = monitors
 
 		c.updates.Emit(context.Background(), "monitorList")
@@ -363,6 +391,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 					break
 				}
 			}
+
 			if !found {
 				c.state.monitors = append(c.state.monitors, updatedMonitor)
 			}
@@ -404,6 +433,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		for _, m := range maintenanceMap {
 			maintenances = append(maintenances, m)
 		}
+
 		c.state.maintenances = maintenances
 
 		c.updates.Emit(context.Background(), "maintenanceList")
@@ -449,25 +479,31 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		})
 	}
 
-	client.OnAny(func(s string, i []any) {
-		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" && s != "proxyList" && s != "dockerHostList" {
+	client.OnAny(func(s string, _ []any) {
+		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" &&
+			s != "proxyList" &&
+			s != "dockerHostList" {
 			c.updates.Emit(context.Background(), s)
 		}
 	})
 
 	err = client.Connect(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("connect to server: %v", err)
+		return nil, fmt.Errorf("connect to server: %w", err)
 	}
 
 	select {
 	case <-connect:
 	case <-ctx.Done():
-		return nil, fmt.Errorf("connect to server: %v", ctx.Err())
+		return nil, fmt.Errorf("connect to server: %w", ctx.Err())
 	}
 
 	if username != "" && password != "" {
-		_, err = c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": ""})
+		_, err = c.syncEmit(
+			ctxWithConnectTimeout,
+			"login",
+			map[string]any{"username": username, "password": password, "token": ""},
+		)
 		if err != nil {
 			// Ensure we had the time to receive a potential setup event.
 			time.Sleep(10 * time.Millisecond)
@@ -476,11 +512,13 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			select {
 			case <-setupRequired:
 				wantSetup = true
+
 			default:
 			}
 
-			if (!strings.Contains(err.Error(), "Incorrect username or password") && !strings.Contains(err.Error(), "authIncorrectCreds")) || !wantSetup {
-				return nil, fmt.Errorf("login: %v", err)
+			if (!strings.Contains(err.Error(), "Incorrect username or password") && !strings.Contains(err.Error(), "authIncorrectCreds")) ||
+				!wantSetup {
+				return nil, fmt.Errorf("login: %w", err)
 			}
 		}
 	}
@@ -494,27 +532,37 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			setupRequired = nil
 
 			if !c.autosetup {
-				return nil, fmt.Errorf("server does require setup, but autosetup is disabled")
+				return nil, errors.New("server does require setup, but autosetup is disabled")
 			}
 
 			_, err := c.syncEmit(ctxWithConnectTimeout, "setup", username, password)
 			if err != nil {
-				return nil, fmt.Errorf("setup: %v", err)
+				return nil, fmt.Errorf("setup: %w", err)
 			}
 
-			_, err = c.syncEmit(ctxWithConnectTimeout, "login", map[string]any{"username": username, "password": password, "token": ""})
+			_, err = c.syncEmit(
+				ctxWithConnectTimeout,
+				"login",
+				map[string]any{"username": username, "password": password, "token": ""},
+			)
 			if err != nil {
-				return nil, fmt.Errorf("login: %v", err)
+				return nil, fmt.Errorf("login: %w", err)
 			}
 
 		case <-ctx.Done():
-			return nil, fmt.Errorf("wait for ready: %v", ctx.Err())
+			return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
 		}
 	}
 }
 
+// Disconnect closes the connection to the Uptime Kuma server.
 func (c *Client) Disconnect() error {
-	return c.socketioClient.Close()
+	err := c.socketioClient.Close()
+	if err != nil {
+		return fmt.Errorf("close socket.io client: %w", err)
+	}
+
+	return nil
 }
 
 type ackResponse struct {
@@ -540,12 +588,16 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 	defer close(res)
 
 	args = append(args, emit.WithAck(func(response ackResponse) {
+		if ctx.Err() != nil {
+			return
+		}
+
 		res <- response
 	}))
 
 	err := c.socketioClient.Emit(command, args...)
 	if err != nil {
-		return ackResponse{}, fmt.Errorf("%s: %v", command, err)
+		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
 
 	select {
@@ -555,12 +607,18 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 		}
 
 		return response, nil
+
 	case <-ctx.Done():
-		return ackResponse{}, fmt.Errorf("%s: %v", command, ctx.Err())
+		return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
 	}
 }
 
-func (c *Client) syncEmitWithUpdateEvent(ctx context.Context, command string, updateEvent string, args ...any) (ackResponse, error) {
+func (c *Client) syncEmitWithUpdateEvent(
+	ctx context.Context,
+	command string,
+	updateEvent string,
+	args ...any,
+) (ackResponse, error) {
 	done := make(chan struct{})
 	closeDone := sync.OnceFunc(func() {
 		close(done)
@@ -570,7 +628,7 @@ func (c *Client) syncEmitWithUpdateEvent(ctx context.Context, command string, up
 	// Register listener for notifications updates.
 	// Signal done, if update is received and remove listener.
 	listenerID := uuid.New()
-	c.updates.AddListener(func(ctx context.Context, update string) {
+	c.updates.AddListener(func(_ context.Context, update string) {
 		if update == updateEvent {
 			c.updates.RemoveListener(listenerID.String())
 			closeDone()
@@ -581,11 +639,15 @@ func (c *Client) syncEmitWithUpdateEvent(ctx context.Context, command string, up
 	defer close(res)
 
 	args = append(args, emit.WithAck(func(response ackResponse) {
+		if ctx.Err() != nil {
+			return
+		}
+
 		res <- response
 	}))
 	err := c.socketioClient.Emit(command, args...)
 	if err != nil {
-		return ackResponse{}, fmt.Errorf("%s: %v", command, err)
+		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
 
 	var response ackResponse
@@ -596,14 +658,16 @@ func (c *Client) syncEmitWithUpdateEvent(ctx context.Context, command string, up
 		select {
 		case <-done:
 			done = nil
+
 		case response = <-res:
 			if !response.OK {
 				return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
 			}
 
 			res = nil
+
 		case <-ctx.Done():
-			return ackResponse{}, fmt.Errorf("%s: %v", command, ctx.Err())
+			return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
 		}
 	}
 

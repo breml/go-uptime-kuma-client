@@ -19,7 +19,9 @@ func TestNotificationOneChat_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"Test OneChat","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"OneChat\",\"accessToken\":\"test-token\",\"recieverId\":\"user123\",\"botId\":\"bot456\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"Test OneChat","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"OneChat\",\"accessToken\":\"test-token\",\"recieverId\":\"user123\",\"botId\":\"bot456\"}"}`,
+			),
 
 			want: notification.OneChat{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationOneChat_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with group receiver",
-			data: []byte(`{"id":2,"name":"Test OneChat Group","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"OneChat\",\"accessToken\":\"secret-token\",\"recieverId\":\"group789\",\"botId\":\"botgroup\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Test OneChat Group","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"OneChat\",\"accessToken\":\"secret-token\",\"recieverId\":\"group789\",\"botId\":\"botgroup\"}"}`,
+			),
 
 			want: notification.OneChat{
 				Base: notification.Base{
@@ -60,7 +64,9 @@ func TestNotificationOneChat_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":3,"name":"Test OneChat Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"OneChat\",\"accessToken\":\"\",\"recieverId\":\"\",\"botId\":\"\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Test OneChat Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"OneChat\",\"accessToken\":\"\",\"recieverId\":\"\",\"botId\":\"\"}"}`,
+			),
 
 			want: notification.OneChat{
 				Base: notification.Base{

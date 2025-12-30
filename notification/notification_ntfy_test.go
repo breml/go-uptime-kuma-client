@@ -19,7 +19,9 @@ func TestNotificationNtfy_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Ntfy Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Ntfy Alert\",\"ntfyAuthenticationMethod\":\"usernamePassword\",\"ntfyIcon\":\"http://symbol.url\",\"ntfyPriority\":5,\"ntfypassword\":\"password\",\"ntfyserverurl\":\"https://ntfy.sh\",\"ntfytopic\":\"topic\",\"ntfyusername\":\"user\",\"type\":\"ntfy\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Ntfy Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Ntfy Alert\",\"ntfyAuthenticationMethod\":\"usernamePassword\",\"ntfyIcon\":\"http://symbol.url\",\"ntfyPriority\":5,\"ntfypassword\":\"password\",\"ntfyserverurl\":\"https://ntfy.sh\",\"ntfytopic\":\"topic\",\"ntfyusername\":\"user\",\"type\":\"ntfy\"}"}`,
+			),
 
 			want: notification.Ntfy{
 				Base: notification.Base{

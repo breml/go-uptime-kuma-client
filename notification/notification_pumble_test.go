@@ -19,7 +19,9 @@ func TestNotificationPumble_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Pumble Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Pumble Alert\",\"webhookURL\":\"https://pumble.com/webhook/xxx\",\"type\":\"Pumble\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Pumble Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Pumble Alert\",\"webhookURL\":\"https://pumble.com/webhook/xxx\",\"type\":\"Pumble\"}"}`,
+			),
 
 			want: notification.Pumble{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationPumble_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Pumble","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Pumble\",\"webhookURL\":\"https://pumble.com/webhook/yyy\",\"type\":\"Pumble\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Pumble","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Pumble\",\"webhookURL\":\"https://pumble.com/webhook/yyy\",\"type\":\"Pumble\"}"}`,
+			),
 
 			want: notification.Pumble{
 				Base: notification.Base{

@@ -48,7 +48,7 @@ func TestDockerHost_MarshalJSON(t *testing.T) {
 	err = json.Unmarshal(data, &result)
 	require.NoError(t, err)
 
-	require.Equal(t, float64(1), result["id"])
+	require.InEpsilon(t, float64(1), result["id"], 0)
 	require.Equal(t, "unix:///var/run/docker.sock", result["dockerDaemon"])
 }
 

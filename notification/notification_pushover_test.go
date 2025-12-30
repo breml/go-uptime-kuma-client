@@ -19,7 +19,9 @@ func TestNotificationPushover_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Pushover Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Pushover Alert\",\"pushoveruserkey\":\"userkey123\",\"pushoverapptoken\":\"apptoken456\",\"pushoversounds\":\"echo\",\"pushoversounds_up\":\"cashregister\",\"pushoverpriority\":\"1\",\"pushovertitle\":\"Uptime Kuma Alert\",\"pushoverdevice\":\"iphone\",\"pushoverttl\":\"3600\",\"type\":\"pushover\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Pushover Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Pushover Alert\",\"pushoveruserkey\":\"userkey123\",\"pushoverapptoken\":\"apptoken456\",\"pushoversounds\":\"echo\",\"pushoversounds_up\":\"cashregister\",\"pushoverpriority\":\"1\",\"pushovertitle\":\"Uptime Kuma Alert\",\"pushoverdevice\":\"iphone\",\"pushoverttl\":\"3600\",\"type\":\"pushover\"}"}`,
+			),
 
 			want: notification.Pushover{
 				Base: notification.Base{
@@ -45,7 +47,9 @@ func TestNotificationPushover_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Pushover","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Pushover\",\"pushoveruserkey\":\"user456\",\"pushoverapptoken\":\"app789\",\"type\":\"pushover\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Pushover","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Pushover\",\"pushoveruserkey\":\"user456\",\"pushoverapptoken\":\"app789\",\"type\":\"pushover\"}"}`,
+			),
 
 			want: notification.Pushover{
 				Base: notification.Base{
@@ -65,7 +69,9 @@ func TestNotificationPushover_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with optional fields",
-			data: []byte(`{"id":3,"name":"Pushover Full","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Pushover Full\",\"pushoveruserkey\":\"userkey789\",\"pushoverapptoken\":\"apptoken012\",\"pushoversounds\":\"siren\",\"pushoversounds_up\":\"bike\",\"pushoverpriority\":\"2\",\"pushovertitle\":\"Server Alert\",\"pushoverdevice\":\"android\",\"pushoverttl\":\"7200\",\"type\":\"pushover\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Pushover Full","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Pushover Full\",\"pushoveruserkey\":\"userkey789\",\"pushoverapptoken\":\"apptoken012\",\"pushoversounds\":\"siren\",\"pushoversounds_up\":\"bike\",\"pushoverpriority\":\"2\",\"pushovertitle\":\"Server Alert\",\"pushoverdevice\":\"android\",\"pushoverttl\":\"7200\",\"type\":\"pushover\"}"}`,
+			),
 
 			want: notification.Pushover{
 				Base: notification.Base{

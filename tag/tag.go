@@ -2,6 +2,7 @@ package tag
 
 import "fmt"
 
+// Tag represents a tag that can be applied to monitors.
 type Tag struct {
 	ID    int64  `json:"id,omitzero"`
 	Name  string `json:"name"`
@@ -12,6 +13,7 @@ func (t Tag) String() string {
 	return fmt.Sprintf("Tag{ID: %d, Name: %s, Color: %s}", t.ID, t.Name, t.Color)
 }
 
+// GetID returns the tag's unique identifier.
 func (t Tag) GetID() int64 {
 	return t.ID
 }
@@ -32,10 +34,15 @@ func (mt MonitorTag) String() string {
 }
 
 // TagWithMonitors extends Tag with monitor associations.
+//
+//revive:disable:exported
 type TagWithMonitors struct {
 	Tag
+
 	Monitors []int64 `json:"monitors"` // List of associated monitor IDs
 }
+
+//revive:enable:exported
 
 // MonitorTags represents all tags for a specific monitor.
 type MonitorTags struct {

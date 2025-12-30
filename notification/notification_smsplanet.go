@@ -27,7 +27,7 @@ func (s SMSPlanet) Type() string {
 }
 
 // Type returns the notification type identifier for SMSPlanetDetails.
-func (n SMSPlanetDetails) Type() string {
+func (SMSPlanetDetails) Type() string {
 	return "SMSPlanet"
 }
 

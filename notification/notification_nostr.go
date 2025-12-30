@@ -27,7 +27,7 @@ func (n Nostr) Type() string {
 }
 
 // Type returns the notification type identifier for NostrDetails.
-func (n NostrDetails) Type() string {
+func (NostrDetails) Type() string {
 	return "nostr"
 }
 

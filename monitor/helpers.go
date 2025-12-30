@@ -9,11 +9,15 @@ import (
 	"strings"
 )
 
-func formatMonitor(s any, withType bool) string {
+// formatMonitor formats a monitor instance as a string representation.
+// If includeType is true, it includes the monitor type in the output.
+//
+//nolint:revive // includeType is not a control coupling flag, it's a meaningful parameter
+func formatMonitor(s any, includeType bool) string {
 	buf := strings.Builder{}
 
 	first := true
-	if withType {
+	if includeType {
 		typer, ok := s.(interface{ Type() string })
 		if ok {
 			buf.WriteString("type: " + typer.Type())
@@ -30,7 +34,7 @@ func formatMonitor(s any, withType bool) string {
 		typ = typ.Elem()
 	}
 
-	for i := 0; i < val.NumField(); i++ {
+	for i := range val.NumField() {
 		field := typ.Field(i)
 		value := val.Field(i)
 
@@ -63,6 +67,8 @@ func formatMonitor(s any, withType bool) string {
 	return buf.String()
 }
 
+// orderedByKey returns an iterator over a map's key-value pairs in sorted order.
+// Keys must be of a comparable ordered type.
 func orderedByKey[K cmp.Ordered, E any](m map[K]E) iter.Seq2[K, E] {
 	return func(yield func(K, E) bool) {
 		keys := make([]K, 0, len(m))

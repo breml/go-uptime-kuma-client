@@ -31,7 +31,7 @@ func (t TechulusPush) Type() string {
 }
 
 // Type returns the notification type identifier for TechulusPushDetails.
-func (n TechulusPushDetails) Type() string {
+func (TechulusPushDetails) Type() string {
 	return "PushByTechulus"
 }
 

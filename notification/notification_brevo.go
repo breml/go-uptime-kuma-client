@@ -35,7 +35,7 @@ func (b Brevo) Type() string {
 }
 
 // Type returns the notification type identifier for BrevoDetails.
-func (n BrevoDetails) Type() string {
+func (BrevoDetails) Type() string {
 	return "brevo"
 }
 

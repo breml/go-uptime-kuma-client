@@ -46,7 +46,7 @@ type Maintenance struct {
 	// DaysOfMonth specifies which days of the month the maintenance occurs.
 	// Can be integers 1-31 or special strings "lastDay1"-"lastDay4".
 	// Only used when Strategy is "recurring-day-of-month".
-	DaysOfMonth []interface{} `json:"daysOfMonth,omitempty"`
+	DaysOfMonth []any `json:"daysOfMonth,omitempty"`
 
 	// Cron is a cron expression for cron-based scheduling.
 	// Only used when Strategy is "cron".

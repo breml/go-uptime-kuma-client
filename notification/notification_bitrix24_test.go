@@ -19,7 +19,9 @@ func TestNotificationBitrix24_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Bitrix24 Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Bitrix24 Alert\",\"bitrix24WebhookURL\":\"https://bitrix24.example.com/rest/1/webhook/\",\"bitrix24UserID\":\"user123\",\"type\":\"Bitrix24\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Bitrix24 Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Bitrix24 Alert\",\"bitrix24WebhookURL\":\"https://bitrix24.example.com/rest/1/webhook/\",\"bitrix24UserID\":\"user123\",\"type\":\"Bitrix24\"}"}`,
+			),
 
 			want: notification.Bitrix24{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationBitrix24_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Bitrix24","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Bitrix24\",\"bitrix24WebhookURL\":\"https://bitrix24.example.com/rest/1/webhook/\",\"type\":\"Bitrix24\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Bitrix24","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Bitrix24\",\"bitrix24WebhookURL\":\"https://bitrix24.example.com/rest/1/webhook/\",\"type\":\"Bitrix24\"}"}`,
+			),
 
 			want: notification.Bitrix24{
 				Base: notification.Base{
@@ -58,7 +62,9 @@ func TestNotificationBitrix24_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "inactive notification",
-			data: []byte(`{"id":3,"name":"Inactive Bitrix24","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Inactive Bitrix24\",\"bitrix24WebhookURL\":\"https://bitrix24.example.com/rest/1/webhook/\",\"bitrix24UserID\":\"admin\",\"type\":\"Bitrix24\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Inactive Bitrix24","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Inactive Bitrix24\",\"bitrix24WebhookURL\":\"https://bitrix24.example.com/rest/1/webhook/\",\"bitrix24UserID\":\"admin\",\"type\":\"Bitrix24\"}"}`,
+			),
 
 			want: notification.Bitrix24{
 				Base: notification.Base{

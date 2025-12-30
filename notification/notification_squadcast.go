@@ -23,7 +23,7 @@ func (s Squadcast) Type() string {
 }
 
 // Type returns the notification type identifier for SquadcastDetails.
-func (n SquadcastDetails) Type() string {
+func (SquadcastDetails) Type() string {
 	return "squadcast"
 }
 

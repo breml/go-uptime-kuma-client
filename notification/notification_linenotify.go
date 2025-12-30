@@ -23,7 +23,7 @@ func (l LineNotify) Type() string {
 }
 
 // Type returns the notification type identifier for LineNotifyDetails.
-func (n LineNotifyDetails) Type() string {
+func (LineNotifyDetails) Type() string {
 	return "LineNotify"
 }
 

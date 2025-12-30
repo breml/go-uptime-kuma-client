@@ -19,7 +19,9 @@ func TestNotificationSpugPush_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with template key",
-			data: []byte(`{"id":1,"name":"My SpugPush Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SpugPush Alert\",\"templateKey\":\"test-template-key\",\"type\":\"SpugPush\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My SpugPush Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SpugPush Alert\",\"templateKey\":\"test-template-key\",\"type\":\"SpugPush\"}"}`,
+			),
 
 			want: notification.SpugPush{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationSpugPush_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple SpugPush","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SpugPush\",\"templateKey\":\"simple-key\",\"type\":\"SpugPush\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple SpugPush","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SpugPush\",\"templateKey\":\"simple-key\",\"type\":\"SpugPush\"}"}`,
+			),
 
 			want: notification.SpugPush{
 				Base: notification.Base{
@@ -57,7 +61,9 @@ func TestNotificationSpugPush_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with complex template key",
-			data: []byte(`{"id":3,"name":"SpugPush Complex","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SpugPush Complex\",\"templateKey\":\"complex-template-abc123-xyz\",\"type\":\"SpugPush\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"SpugPush Complex","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SpugPush Complex\",\"templateKey\":\"complex-template-abc123-xyz\",\"type\":\"SpugPush\"}"}`,
+			),
 
 			want: notification.SpugPush{
 				Base: notification.Base{

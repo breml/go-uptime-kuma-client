@@ -18,7 +18,9 @@ func TestNotificationZohoCliq_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with webhook URL",
-			data: []byte(`{"id":1,"name":"My ZohoCliq Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My ZohoCliq Alert\",\"webhookUrl\":\"https://zoho-cliq.example.com/webhook/abc123\",\"type\":\"ZohoCliq\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My ZohoCliq Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My ZohoCliq Alert\",\"webhookUrl\":\"https://zoho-cliq.example.com/webhook/abc123\",\"type\":\"ZohoCliq\"}"}`,
+			),
 
 			want: notification.ZohoCliq{
 				Base: notification.Base{
@@ -37,7 +39,9 @@ func TestNotificationZohoCliq_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple ZohoCliq","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple ZohoCliq\",\"webhookUrl\":\"https://zoho.example.com/webhook\",\"type\":\"ZohoCliq\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple ZohoCliq","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple ZohoCliq\",\"webhookUrl\":\"https://zoho.example.com/webhook\",\"type\":\"ZohoCliq\"}"}`,
+			),
 
 			want: notification.ZohoCliq{
 				Base: notification.Base{
@@ -56,7 +60,9 @@ func TestNotificationZohoCliq_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "inactive notification",
-			data: []byte(`{"id":3,"name":"Inactive ZohoCliq","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Inactive ZohoCliq\",\"webhookUrl\":\"https://example.com/cliq/webhook/xyz789\",\"type\":\"ZohoCliq\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Inactive ZohoCliq","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Inactive ZohoCliq\",\"webhookUrl\":\"https://example.com/cliq/webhook/xyz789\",\"type\":\"ZohoCliq\"}"}`,
+			),
 
 			want: notification.ZohoCliq{
 				Base: notification.Base{

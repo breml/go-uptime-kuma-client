@@ -11,14 +11,14 @@ import (
 func (c *Client) GetTags(ctx context.Context) ([]tag.Tag, error) {
 	response, err := c.syncEmit(ctx, "getTags")
 	if err != nil {
-		return nil, fmt.Errorf("get tags: %v", err)
+		return nil, fmt.Errorf("get tags: %w", err)
 	}
 
 	// Convert to []tag.Tag
 	var tags []tag.Tag
 	err = convertToStruct(response.Tags, &tags)
 	if err != nil {
-		return nil, fmt.Errorf("get tags: %v", err)
+		return nil, fmt.Errorf("get tags: %w", err)
 	}
 
 	return tags, nil
@@ -44,19 +44,19 @@ func (c *Client) GetTag(ctx context.Context, tagID int64) (tag.Tag, error) {
 func (c *Client) CreateTag(ctx context.Context, t tag.Tag) (int64, error) {
 	tagData, err := structToMap(t)
 	if err != nil {
-		return 0, fmt.Errorf("create tag: %v", err)
+		return 0, fmt.Errorf("create tag: %w", err)
 	}
 
 	response, err := c.syncEmit(ctx, "addTag", tagData)
 	if err != nil {
-		return 0, fmt.Errorf("create tag: %v", err)
+		return 0, fmt.Errorf("create tag: %w", err)
 	}
 
 	// The response contains the created tag with ID.
 	var createdTag tag.Tag
 	err = convertToStruct(response.Tag, &createdTag)
 	if err != nil {
-		return 0, fmt.Errorf("create tag: %v", err)
+		return 0, fmt.Errorf("create tag: %w", err)
 	}
 
 	return createdTag.ID, nil
@@ -66,12 +66,12 @@ func (c *Client) CreateTag(ctx context.Context, t tag.Tag) (int64, error) {
 func (c *Client) UpdateTag(ctx context.Context, t tag.Tag) error {
 	tagData, err := structToMap(t)
 	if err != nil {
-		return fmt.Errorf("update tag: %v", err)
+		return fmt.Errorf("update tag: %w", err)
 	}
 
 	_, err = c.syncEmit(ctx, "editTag", tagData)
 	if err != nil {
-		return fmt.Errorf("update tag %d: %v", t.ID, err)
+		return fmt.Errorf("update tag %d: %w", t.ID, err)
 	}
 
 	return nil
@@ -82,7 +82,7 @@ func (c *Client) UpdateTag(ctx context.Context, t tag.Tag) error {
 func (c *Client) DeleteTag(ctx context.Context, tagID int64) error {
 	_, err := c.syncEmit(ctx, "deleteTag", tagID)
 	if err != nil {
-		return fmt.Errorf("delete tag %d: %v", tagID, err)
+		return fmt.Errorf("delete tag %d: %w", tagID, err)
 	}
 
 	// Manually remove this tag from all monitors in the cache
@@ -95,8 +95,10 @@ func (c *Client) DeleteTag(ctx context.Context, tagID int64) error {
 				filteredTags = append(filteredTags, t)
 			}
 		}
+
 		c.state.monitors[i].Tags = filteredTags
 	}
+
 	c.mu.Unlock()
 
 	return nil
@@ -129,10 +131,15 @@ func (c *Client) refreshMonitorInCache(ctx context.Context, monitorID int64) err
 }
 
 // AddMonitorTag adds a tag to a monitor with an optional value.
-func (c *Client) AddMonitorTag(ctx context.Context, tagID int64, monitorID int64, value string) (*tag.MonitorTag, error) {
+func (c *Client) AddMonitorTag(
+	ctx context.Context,
+	tagID int64,
+	monitorID int64,
+	value string,
+) (*tag.MonitorTag, error) {
 	response, err := c.syncEmit(ctx, "addMonitorTag", tagID, monitorID, value)
 	if err != nil {
-		return nil, fmt.Errorf("add monitor tag (tag %d, monitor %d): %v", tagID, monitorID, err)
+		return nil, fmt.Errorf("add monitor tag (tag %d, monitor %d): %w", tagID, monitorID, err)
 	}
 
 	if !response.OK {
@@ -140,8 +147,14 @@ func (c *Client) AddMonitorTag(ctx context.Context, tagID int64, monitorID int64
 	}
 
 	// Refresh the monitor in cache to get the updated tags
-	if err := c.refreshMonitorInCache(ctx, monitorID); err != nil {
-		return nil, fmt.Errorf("add monitor tag (tag %d, monitor %d): failed to refresh cache: %v", tagID, monitorID, err)
+	err = c.refreshMonitorInCache(ctx, monitorID)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"add monitor tag (tag %d, monitor %d): failed to refresh cache: %w",
+			tagID,
+			monitorID,
+			err,
+		)
 	}
 
 	// Find the tag we just added from the cache
@@ -155,18 +168,23 @@ func (c *Client) AddMonitorTag(ctx context.Context, tagID int64, monitorID int64
 					return &t, nil
 				}
 			}
+
 			break
 		}
 	}
 
-	return nil, fmt.Errorf("add monitor tag (tag %d, monitor %d): tag added but not found in monitor tags", tagID, monitorID)
+	return nil, fmt.Errorf(
+		"add monitor tag (tag %d, monitor %d): tag added but not found in monitor tags",
+		tagID,
+		monitorID,
+	)
 }
 
 // UpdateMonitorTag updates the value of a monitor-tag association.
 func (c *Client) UpdateMonitorTag(ctx context.Context, tagID int64, monitorID int64, value string) error {
 	response, err := c.syncEmit(ctx, "editMonitorTag", tagID, monitorID, value)
 	if err != nil {
-		return fmt.Errorf("update monitor tag (tag %d, monitor %d): %v", tagID, monitorID, err)
+		return fmt.Errorf("update monitor tag (tag %d, monitor %d): %w", tagID, monitorID, err)
 	}
 
 	if !response.OK {
@@ -174,8 +192,9 @@ func (c *Client) UpdateMonitorTag(ctx context.Context, tagID int64, monitorID in
 	}
 
 	// Refresh the monitor in cache to get the updated tags
-	if err := c.refreshMonitorInCache(ctx, monitorID); err != nil {
-		return fmt.Errorf("update monitor tag (tag %d, monitor %d): failed to refresh cache: %v", tagID, monitorID, err)
+	err = c.refreshMonitorInCache(ctx, monitorID)
+	if err != nil {
+		return fmt.Errorf("update monitor tag (tag %d, monitor %d): failed to refresh cache: %w", tagID, monitorID, err)
 	}
 
 	return nil
@@ -185,16 +204,35 @@ func (c *Client) UpdateMonitorTag(ctx context.Context, tagID int64, monitorID in
 func (c *Client) DeleteMonitorTagWithValue(ctx context.Context, tagID int64, monitorID int64, value string) error {
 	response, err := c.syncEmit(ctx, "deleteMonitorTag", tagID, monitorID, value)
 	if err != nil {
-		return fmt.Errorf("delete monitor tag with value (tag %d, monitor %d, value %q): %v", tagID, monitorID, value, err)
+		return fmt.Errorf(
+			"delete monitor tag with value (tag %d, monitor %d, value %q): %w",
+			tagID,
+			monitorID,
+			value,
+			err,
+		)
 	}
 
 	if !response.OK {
-		return fmt.Errorf("delete monitor tag with value (tag %d, monitor %d, value %q): %s", tagID, monitorID, value, response.Msg)
+		return fmt.Errorf(
+			"delete monitor tag with value (tag %d, monitor %d, value %q): %s",
+			tagID,
+			monitorID,
+			value,
+			response.Msg,
+		)
 	}
 
 	// Refresh the monitor in cache to get the updated tags
-	if err := c.refreshMonitorInCache(ctx, monitorID); err != nil {
-		return fmt.Errorf("delete monitor tag with value (tag %d, monitor %d, value %q): failed to refresh cache: %v", tagID, monitorID, value, err)
+	err = c.refreshMonitorInCache(ctx, monitorID)
+	if err != nil {
+		return fmt.Errorf(
+			"delete monitor tag with value (tag %d, monitor %d, value %q): failed to refresh cache: %w",
+			tagID,
+			monitorID,
+			value,
+			err,
+		)
 	}
 
 	return nil
@@ -205,7 +243,7 @@ func (c *Client) DeleteMonitorTag(ctx context.Context, tagID int64, monitorID in
 	// Get all tags for the monitor
 	tags, err := c.GetMonitorTags(ctx, monitorID)
 	if err != nil {
-		return fmt.Errorf("delete monitor tag (tag %d, monitor %d): failed to fetch tags: %v", tagID, monitorID, err)
+		return fmt.Errorf("delete monitor tag (tag %d, monitor %d): failed to fetch tags: %w", tagID, monitorID, err)
 	}
 
 	// Delete all associations with the given tagID
@@ -213,7 +251,7 @@ func (c *Client) DeleteMonitorTag(ctx context.Context, tagID int64, monitorID in
 		if t.TagID == tagID {
 			err := c.DeleteMonitorTagWithValue(ctx, tagID, monitorID, t.Value)
 			if err != nil {
-				return fmt.Errorf("delete monitor tag (tag %d, monitor %d): %v", tagID, monitorID, err)
+				return fmt.Errorf("delete monitor tag (tag %d, monitor %d): %w", tagID, monitorID, err)
 			}
 		}
 	}
@@ -225,7 +263,7 @@ func (c *Client) DeleteMonitorTag(ctx context.Context, tagID int64, monitorID in
 // This method uses the client's local state cache, which is kept synchronized
 // via socket.io events. The cache is automatically updated by monitorList,
 // updateMonitorIntoList, and deleteMonitorFromList events.
-func (c *Client) GetMonitorTags(ctx context.Context, monitorID int64) ([]tag.MonitorTag, error) {
+func (c *Client) GetMonitorTags(_ context.Context, monitorID int64) ([]tag.MonitorTag, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -242,7 +280,7 @@ func (c *Client) GetMonitorTags(ctx context.Context, monitorID int64) ([]tag.Mon
 // This method uses the client's local state cache, which is kept synchronized
 // via socket.io events. The cache is automatically updated by monitorList,
 // updateMonitorIntoList, and deleteMonitorFromList events.
-func (c *Client) GetTagMonitors(ctx context.Context, tagID int64) ([]int64, error) {
+func (c *Client) GetTagMonitors(_ context.Context, tagID int64) ([]int64, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

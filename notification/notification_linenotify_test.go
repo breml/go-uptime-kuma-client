@@ -18,7 +18,9 @@ func TestNotificationLineNotify_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My LINE Notify Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My LINE Notify Alert\",\"lineNotifyAccessToken\":\"access-token-123\",\"type\":\"LineNotify\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My LINE Notify Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My LINE Notify Alert\",\"lineNotifyAccessToken\":\"access-token-123\",\"type\":\"LineNotify\"}"}`,
+			),
 
 			want: notification.LineNotify{
 				Base: notification.Base{
@@ -37,7 +39,9 @@ func TestNotificationLineNotify_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple LINE Notify","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple LINE Notify\",\"lineNotifyAccessToken\":\"token-abc\",\"type\":\"LineNotify\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple LINE Notify","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple LINE Notify\",\"lineNotifyAccessToken\":\"token-abc\",\"type\":\"LineNotify\"}"}`,
+			),
 
 			want: notification.LineNotify{
 				Base: notification.Base{
@@ -56,7 +60,9 @@ func TestNotificationLineNotify_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different token",
-			data: []byte(`{"id":3,"name":"LINE Notify Production","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"LINE Notify Production\",\"lineNotifyAccessToken\":\"prod-token-xyz\",\"type\":\"LineNotify\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"LINE Notify Production","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"LINE Notify Production\",\"lineNotifyAccessToken\":\"prod-token-xyz\",\"type\":\"LineNotify\"}"}`,
+			),
 
 			want: notification.LineNotify{
 				Base: notification.Base{

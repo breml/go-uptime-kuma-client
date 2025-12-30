@@ -16,7 +16,7 @@ func TestClient_MaintenanceCRUD(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	var err error
@@ -37,7 +37,7 @@ func TestClient_MaintenanceCRUD(t *testing.T) {
 		created, err := client.CreateMaintenance(ctx, m)
 		require.NoError(t, err)
 		require.NotNil(t, created)
-		require.Greater(t, created.ID, int64(0))
+		require.Positive(t, created.ID)
 		require.Equal(t, "Server Upgrade", created.Title)
 		require.Equal(t, "Planned server upgrade", created.Description)
 		require.Equal(t, "single", created.Strategy)
@@ -105,7 +105,7 @@ func TestClient_MaintenanceStrategies(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 
 	t.Run("recurring_weekday_maintenance", func(t *testing.T) {
@@ -159,7 +159,7 @@ func TestClient_MaintenanceStrategies(t *testing.T) {
 		m := maintenance.NewRecurringDayOfMonthMaintenance(
 			"Monthly Maintenance",
 			"Monthly system maintenance",
-			[]interface{}{1, 15},
+			[]any{1, 15},
 			[]maintenance.TimeOfDay{
 				{Hours: 0, Minutes: 0, Seconds: 0},
 				{Hours: 2, Minutes: 0, Seconds: 0},
@@ -219,7 +219,7 @@ func TestClient_MaintenanceWithMonitors(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 
 	var err error
@@ -249,9 +249,9 @@ func TestClient_MaintenanceWithMonitors(t *testing.T) {
 			},
 		}
 
-		monitor1ID, err = client.CreateMonitor(ctx, httpMonitor1)
+		monitor1ID, err = client.CreateMonitor(ctx, &httpMonitor1)
 		require.NoError(t, err)
-		require.Greater(t, monitor1ID, int64(0))
+		require.Positive(t, monitor1ID)
 
 		httpMonitor2 := monitor.HTTP{
 			Base: monitor.Base{
@@ -275,9 +275,9 @@ func TestClient_MaintenanceWithMonitors(t *testing.T) {
 			},
 		}
 
-		monitor2ID, err = client.CreateMonitor(ctx, httpMonitor2)
+		monitor2ID, err = client.CreateMonitor(ctx, &httpMonitor2)
 		require.NoError(t, err)
-		require.Greater(t, monitor2ID, int64(0))
+		require.Positive(t, monitor2ID)
 	})
 
 	t.Run("create_maintenance", func(t *testing.T) {
@@ -350,7 +350,7 @@ func TestClient_MaintenanceWithStatusPages(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 
 	var err error
@@ -371,7 +371,7 @@ func TestClient_MaintenanceWithStatusPages(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, sp)
 		statusPageID = sp.ID
-		require.Greater(t, statusPageID, int64(0))
+		require.Positive(t, statusPageID)
 	})
 
 	t.Run("create_maintenance", func(t *testing.T) {
@@ -429,7 +429,7 @@ func TestClient_MaintenanceTimezones(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	t.Run("maintenance_with_utc_timezone", func(t *testing.T) {
@@ -480,7 +480,7 @@ func TestClient_MaintenanceEdgeCases(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	t.Run("maintenance_with_last_day_of_month", func(t *testing.T) {
@@ -488,7 +488,7 @@ func TestClient_MaintenanceEdgeCases(t *testing.T) {
 		m := maintenance.NewRecurringDayOfMonthMaintenance(
 			"End of Month Maintenance",
 			"Maintenance on last days of month",
-			[]interface{}{"lastDay1", "lastDay2"},
+			[]any{"lastDay1", "lastDay2"},
 			[]maintenance.TimeOfDay{
 				{Hours: 23, Minutes: 0, Seconds: 0},
 				{Hours: 23, Minutes: 59, Seconds: 59},

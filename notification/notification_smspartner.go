@@ -27,7 +27,7 @@ func (s SMSPartner) Type() string {
 }
 
 // Type returns the notification type identifier for SMSPartnerDetails.
-func (n SMSPartnerDetails) Type() string {
+func (SMSPartnerDetails) Type() string {
 	return "SMSPartner"
 }
 

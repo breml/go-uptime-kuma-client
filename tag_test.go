@@ -17,7 +17,7 @@ func TestClient_TagCRUD(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	var err error
@@ -42,12 +42,12 @@ func TestClient_TagCRUD(t *testing.T) {
 		// Test CreateTag
 		tagID, err = client.CreateTag(ctx, testTag)
 		require.NoError(t, err)
-		require.Greater(t, tagID, int64(0))
+		require.Positive(t, tagID)
 
 		// Test GetTags after creation
 		tags, err := client.GetTags(ctx)
 		require.NoError(t, err)
-		require.Equal(t, initialCount+1, len(tags))
+		require.Len(t, tags, initialCount+1)
 
 		// Test GetTag
 		tagRetrieved, err = client.GetTag(ctx, tagID)
@@ -79,7 +79,7 @@ func TestClient_TagCRUD(t *testing.T) {
 		// Verify deletion
 		tags, err := client.GetTags(ctx)
 		require.NoError(t, err)
-		require.Equal(t, initialCount, len(tags))
+		require.Len(t, tags, initialCount)
 
 		// Verify tag is not found
 		_, err = client.GetTag(ctx, tagID)
@@ -93,7 +93,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 
 	// Create test tags
@@ -110,7 +110,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 	defer func() { _ = client.DeleteTag(ctx, tag3ID) }()
 
 	// Create test monitors
-	monitorID1, err := client.CreateMonitor(ctx, monitor.HTTP{
+	monitorID1, err := client.CreateMonitor(ctx, &monitor.HTTP{
 		Base: monitor.Base{
 			Name:           "Test Monitor 1",
 			Interval:       60,
@@ -134,7 +134,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = client.DeleteMonitor(ctx, monitorID1) }()
 
-	monitorID2, err := client.CreateMonitor(ctx, monitor.HTTP{
+	monitorID2, err := client.CreateMonitor(ctx, &monitor.HTTP{
 		Base: monitor.Base{
 			Name:           "Test Monitor 2",
 			Interval:       60,
@@ -194,14 +194,14 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 		require.Len(t, tags, 3)
 
 		// Check each tag
-		tagsByID := make(map[int64]tag.MonitorTag)
+		tagsByID := map[int64]tag.MonitorTag{}
 		for _, mt := range tags {
 			tagsByID[mt.TagID] = mt
 		}
 
 		require.Equal(t, "production", tagsByID[tag1ID].Value)
 		require.Equal(t, "high", tagsByID[tag2ID].Value)
-		require.Equal(t, "", tagsByID[tag3ID].Value)
+		require.Empty(t, tagsByID[tag3ID].Value)
 	})
 
 	t.Run("add_same_tag_with_different_values", func(t *testing.T) {
@@ -220,6 +220,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 				envTags++
 			}
 		}
+
 		require.Equal(t, 2, envTags, "Should have 2 Environment tags with different values")
 	})
 
@@ -240,6 +241,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 				break
 			}
 		}
+
 		require.True(t, found, "Updated tag not found")
 	})
 
@@ -286,6 +288,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 				require.Equal(t, "production", mt.Value)
 			}
 		}
+
 		require.Equal(t, 1, envTags, "Should have only 1 Environment tag after deleting staging")
 	})
 
@@ -313,6 +316,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 				break
 			}
 		}
+
 		require.True(t, found, "tag1 should still exist on monitor2")
 	})
 
@@ -321,19 +325,22 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 		mon, err := client.GetMonitor(ctx, monitorID2)
 		require.NoError(t, err)
 		require.NotNil(t, mon.Tags)
-		require.Greater(t, len(mon.Tags), 0)
+		require.NotEmpty(t, mon.Tags)
 
 		// Verify tag details
 		found := false
 		for _, mt := range mon.Tags {
-			if mt.TagID == tag1ID {
-				require.Equal(t, "development", mt.Value)
-				require.Equal(t, "Environment", mt.Name)
-				require.Equal(t, "#FF0000", mt.Color)
-				found = true
-				break
+			if mt.TagID != tag1ID {
+				continue
 			}
+
+			require.Equal(t, "development", mt.Value)
+			require.Equal(t, "Environment", mt.Name)
+			require.Equal(t, "#FF0000", mt.Color)
+			found = true
+			break
 		}
+
 		require.True(t, found, "tag1 should be present in monitor2 tags")
 	})
 
@@ -356,6 +363,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 				break
 			}
 		}
+
 		require.True(t, found, "temp tag should be on monitor")
 
 		// Delete the tag

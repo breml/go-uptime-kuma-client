@@ -2,6 +2,7 @@ package kuma
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/breml/go-uptime-kuma-client/proxy"
@@ -45,7 +46,7 @@ func (c *Client) CreateProxy(ctx context.Context, config proxy.Config) (int64, e
 // UpdateProxy updates an existing proxy.
 func (c *Client) UpdateProxy(ctx context.Context, config proxy.Config) error {
 	if config.ID == 0 {
-		return fmt.Errorf("update proxy: config must have ID set")
+		return errors.New("update proxy: config must have ID set")
 	}
 
 	_, err := c.syncEmitWithUpdateEvent(ctx, "addProxy", "proxyList", config, config.ID)

@@ -2,6 +2,7 @@ package dockerhost
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 // DockerHost represents a Docker host configuration in Uptime Kuma.
@@ -14,6 +15,7 @@ type DockerHost struct {
 	Name         string `json:"name"`         // Human-readable name
 }
 
+// GetID returns the Docker host's unique identifier.
 func (d DockerHost) GetID() int64 {
 	return d.ID
 }
@@ -44,20 +46,23 @@ func (t *TestResult) UnmarshalJSON(data []byte) error {
 	// First try to unmarshal directly
 	type Alias TestResult
 	aux := &struct {
-		Version any `json:"version"`
 		*Alias
+
+		Version any `json:"version"`
 	}{
 		Alias: (*Alias)(t),
 	}
 
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
+	err := json.Unmarshal(data, &aux)
+	if err != nil {
+		return fmt.Errorf("unmarshal test result: %w", err)
 	}
 
 	// Handle version field which might be a string or an object
 	switch v := aux.Version.(type) {
 	case string:
 		t.Version = v
+
 	case map[string]any:
 		// If version is an object, try to extract Version field
 		if version, ok := v["Version"].(string); ok {

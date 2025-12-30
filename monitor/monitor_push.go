@@ -6,30 +6,34 @@ import (
 	"strconv"
 )
 
+// Push represents a push monitor.
 type Push struct {
 	Base
 	PushDetails
 }
 
+// Type returns the monitor type.
 func (p Push) Type() string {
 	return p.PushDetails.Type()
 }
 
+// String returns a string representation of the monitor.
 func (p Push) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(p.Base, false), formatMonitor(p.PushDetails, true))
 }
 
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (p *Push) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := PushDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*p = Push{
@@ -40,6 +44,7 @@ func (p *Push) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (p Push) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = p.ID
@@ -61,6 +66,7 @@ func (p Push) MarshalJSON() ([]byte, error) {
 	for _, id := range p.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current Push-specific field values.
@@ -72,13 +78,20 @@ func (p Push) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
+// PushDetails contains push-specific monitor configuration.
 type PushDetails struct {
 	PushToken string `json:"pushToken"`
 }
 
-func (p PushDetails) Type() string {
+// Type returns the monitor type.
+func (PushDetails) Type() string {
 	return "push"
 }

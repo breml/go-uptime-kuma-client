@@ -19,7 +19,9 @@ func TestNotificationNotifery_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"Test Notifery","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"notifery\",\"notiferyApiKey\":\"test-api-key\",\"notiferyTitle\":\"Alert\",\"notiferyGroup\":\"monitoring\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"Test Notifery","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"notifery\",\"notiferyApiKey\":\"test-api-key\",\"notiferyTitle\":\"Alert\",\"notiferyGroup\":\"monitoring\"}"}`,
+			),
 
 			want: notification.Notifery{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationNotifery_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with default title",
-			data: []byte(`{"id":2,"name":"Test Notifery Default","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"notifery\",\"notiferyApiKey\":\"secret-key\",\"notiferyTitle\":\"Uptime Kuma Alert\",\"notiferyGroup\":\"\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Test Notifery Default","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"notifery\",\"notiferyApiKey\":\"secret-key\",\"notiferyTitle\":\"Uptime Kuma Alert\",\"notiferyGroup\":\"\"}"}`,
+			),
 
 			want: notification.Notifery{
 				Base: notification.Base{
@@ -60,7 +64,9 @@ func TestNotificationNotifery_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":3,"name":"Test Notifery Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"notifery\",\"notiferyApiKey\":\"\",\"notiferyTitle\":\"\",\"notiferyGroup\":\"\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Test Notifery Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"notifery\",\"notiferyApiKey\":\"\",\"notiferyTitle\":\"\",\"notiferyGroup\":\"\"}"}`,
+			),
 
 			want: notification.Notifery{
 				Base: notification.Base{

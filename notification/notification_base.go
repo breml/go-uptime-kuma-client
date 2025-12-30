@@ -2,15 +2,21 @@ package notification
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
+// Notification is the interface that all notification types must implement.
 type Notification interface {
+	// GetID returns the notification's unique identifier.
 	GetID() int64
+	// Type returns the notification's type name.
 	Type() string
+	// As converts the notification to the given target type.
 	As(any) error
 }
 
+// Base contains the common fields for all notification types.
 type Base struct {
 	ID            int64  `json:"id,omitzero"`
 	Name          string `json:"name"`
@@ -28,6 +34,7 @@ func (b Base) String() string {
 	return formatNotification(b, true)
 }
 
+// UnmarshalJSON unmarshals a notification from JSON data.
 func (b *Base) UnmarshalJSON(data []byte) error {
 	raw := struct {
 		ID        int64  `json:"id"`
@@ -40,24 +47,24 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 
 	err := json.Unmarshal(data, &raw)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal notification base: %w", err)
 	}
 
 	config := map[string]any{}
 
 	err = json.Unmarshal([]byte(raw.ConfigStr), &config)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal notification config: %w", err)
 	}
 
 	notificationTypeAny, ok := config["type"]
 	if !ok {
-		return fmt.Errorf(`invalid notification, attribute "type" missing`)
+		return errors.New(`invalid notification, attribute "type" missing`)
 	}
 
 	notificationType, ok := notificationTypeAny.(string)
 	if !ok {
-		return fmt.Errorf(`invalid notification, attribute "type" is not string`)
+		return errors.New(`invalid notification, attribute "type" is not string`)
 	}
 
 	var applyExisting bool
@@ -65,7 +72,7 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 	if ok {
 		applyExisting, ok = applyExistingAny.(bool)
 		if !ok {
-			return fmt.Errorf(`invalid notification, attribute "applyExisting" is not bool`)
+			return errors.New(`invalid notification, attribute "applyExisting" is not bool`)
 		}
 	}
 
@@ -85,9 +92,10 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a notification to JSON data.
 func (b Base) MarshalJSON() ([]byte, error) {
 	if b.configStr == "" {
-		return nil, fmt.Errorf("not unmarshaled notification, unable to marshal")
+		return nil, errors.New("not unmarshaled notification, unable to marshal")
 	}
 
 	genericDetails := GenericDetails{}
@@ -99,14 +107,17 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	return marshalJSON(b, genericDetails)
 }
 
+// GetID returns the notification's unique identifier.
 func (b Base) GetID() int64 {
 	return b.ID
 }
 
+// Type returns the notification's type name.
 func (b Base) Type() string {
 	return b.typeFromConfigStr
 }
 
+// As converts the notification to the given target type.
 func (b Base) As(target any) error {
 	if b.raw == nil {
 		return fmt.Errorf("not unmarshaled notification, cannot convert to %T", target)

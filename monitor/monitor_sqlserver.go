@@ -27,13 +27,13 @@ func (s *SQLServer) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := SQLServerDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*s = SQLServer{
@@ -66,6 +66,7 @@ func (s SQLServer) MarshalJSON() ([]byte, error) {
 	for _, id := range s.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current SQL Server-specific field values.
@@ -78,7 +79,12 @@ func (s SQLServer) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
 // SQLServerDetails contains SQL Server-specific monitor configuration.
@@ -90,6 +96,6 @@ type SQLServerDetails struct {
 }
 
 // Type returns the monitor type.
-func (s SQLServerDetails) Type() string {
+func (SQLServerDetails) Type() string {
 	return "sqlserver"
 }

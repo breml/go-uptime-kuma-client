@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -21,6 +22,7 @@ type Proxy struct {
 	CreatedDate time.Time `json:"-"`
 }
 
+// GetID returns the proxy's unique identifier.
 func (p Proxy) GetID() int64 {
 	return p.ID
 }
@@ -29,6 +31,7 @@ func (p Proxy) String() string {
 	return formatProxy(p)
 }
 
+// UnmarshalJSON unmarshals a proxy from JSON data.
 func (p *Proxy) UnmarshalJSON(data []byte) error {
 	aux := &struct {
 		ID          int64  `json:"id"`
@@ -44,8 +47,9 @@ func (p *Proxy) UnmarshalJSON(data []byte) error {
 		CreatedDate string `json:"createdDate"`
 	}{}
 
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
+	err := json.Unmarshal(data, &aux)
+	if err != nil {
+		return fmt.Errorf("unmarshal proxy: %w", err)
 	}
 
 	p.ID = aux.ID
@@ -74,23 +78,28 @@ func (p *Proxy) UnmarshalJSON(data []byte) error {
 				p.CreatedDate = t
 				return nil
 			}
+
 			parseErr = err
 		}
+
 		return parseErr
 	}
 
 	return nil
 }
 
+// MarshalJSON marshals a proxy to JSON data.
 func (p Proxy) MarshalJSON() ([]byte, error) {
 	auth := 0
 	if p.Auth {
 		auth = 1
 	}
+
 	active := 0
 	if p.Active {
 		active = 1
 	}
+
 	defaultVal := 0
 	if p.Default {
 		defaultVal = 1
@@ -101,7 +110,7 @@ func (p Proxy) MarshalJSON() ([]byte, error) {
 		createdDate = p.CreatedDate.Format(time.RFC3339)
 	}
 
-	return json.Marshal(&struct {
+	data, err := json.Marshal(&struct {
 		ID          int64  `json:"id"`
 		UserID      int64  `json:"userId"`
 		Protocol    string `json:"protocol"`
@@ -126,6 +135,11 @@ func (p Proxy) MarshalJSON() ([]byte, error) {
 		Default:     defaultVal,
 		CreatedDate: createdDate,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("marshal proxy: %w", err)
+	}
+
+	return data, nil
 }
 
 // Config represents the configuration for creating or updating a proxy.

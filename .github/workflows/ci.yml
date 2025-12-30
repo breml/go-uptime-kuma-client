@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.24.5'
+          go-version: 'stable'
           cache: true
 
       - name: Install Task
@@ -39,7 +39,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.24.5'
+          go-version: 'stable'
           cache: true
 
       - name: Install Task
@@ -61,7 +61,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.24.5'
+          go-version: 'stable'
           cache: true
 
       - name: Run golangci-lint

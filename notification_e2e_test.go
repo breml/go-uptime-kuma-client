@@ -42,7 +42,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 	}
 
 	// Use a 60-second timeout to fit within the 120-second container expiration.
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 
 	// Track webhook calls.
@@ -63,7 +63,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 	// Check 1: Success (200) - establish UP state.
 	// Check 2: Failure (503) - trigger DOWN notification.
 	// Check 3+: Success (200) - trigger recovery notification.
-	mux.HandleFunc("/monitored-endpoint", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/monitored-endpoint", func(w http.ResponseWriter, _ *http.Request) {
 		endpointMu.Lock()
 		checkCount++
 		currentCheck := checkCount
@@ -127,6 +127,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 			case failureNotificationReceived <- struct{}{}:
 			default:
 			}
+
 		case 1:
 			// Status 1 = UP (recovery notification)
 			t.Log("Recovery notification received (status=1)")
@@ -134,6 +135,9 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 			case recoveryNotificationReceived <- struct{}{}:
 			default:
 			}
+
+		default:
+			// Ignore unknown status codes
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -165,7 +169,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 		gatewayIP = gw
 	}
 
-	dockerAccessibleURL := fmt.Sprintf("http://%s:%d", gatewayIP, serverPort)
+	dockerAccessibleURL := "http://" + net.JoinHostPort(gatewayIP, strconv.Itoa(serverPort))
 	t.Logf("Docker-accessible URL: %s", dockerAccessibleURL)
 
 	// Create webhook notification.
@@ -184,11 +188,12 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 
 	notificationID, err := client.CreateNotification(ctx, webhookNotification)
 	require.NoError(t, err)
-	require.Greater(t, notificationID, int64(0))
+	require.Positive(t, notificationID)
 	t.Logf("Created notification with ID: %d", notificationID)
 
 	// Cleanup notification
 	t.Cleanup(func() {
+		//nolint:usetesting // t.Context() cannot be used in cleanup, since it is already done.
 		err := client.DeleteNotification(context.Background(), notificationID)
 		if err != nil {
 			t.Logf("Failed to delete notification: %v", err)
@@ -221,9 +226,9 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 		},
 	}
 
-	monitorID, err := client.CreateMonitor(ctx, httpMonitor)
+	monitorID, err := client.CreateMonitor(ctx, &httpMonitor)
 	require.NoError(t, err)
-	require.Greater(t, monitorID, int64(0))
+	require.Positive(t, monitorID)
 	t.Logf("Created monitor with ID: %d", monitorID)
 
 	// Verify the monitor was created with the correct configuration.
@@ -235,6 +240,7 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 
 	// Cleanup monitor.
 	t.Cleanup(func() {
+		//nolint:usetesting // t.Context() cannot be used in cleanup, since it is already done.
 		err := client.DeleteMonitor(context.Background(), monitorID)
 		if err != nil {
 			t.Logf("Failed to delete monitor: %v", err)
@@ -249,8 +255,10 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 	select {
 	case <-firstCheckReceived:
 		t.Log("First successful check received - monitor is UP")
+
 	case <-time.After(30 * time.Second):
 		t.Fatal("Timeout waiting for first successful check")
+
 	case <-ctx.Done():
 		t.Fatal("Context cancelled while waiting for first check")
 	}
@@ -264,8 +272,10 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 	select {
 	case <-failureNotificationReceived:
 		t.Log("Failure notification received!")
+
 	case <-time.After(25 * time.Second):
 		t.Fatal("Timeout waiting for failure notification")
+
 	case <-ctx.Done():
 		t.Fatal("Context cancelled while waiting for failure notification")
 	}
@@ -292,8 +302,10 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 	select {
 	case <-recoveryNotificationReceived:
 		t.Log("Recovery notification received!")
+
 	case <-time.After(25 * time.Second):
 		t.Fatal("Timeout waiting for recovery notification")
+
 	case <-ctx.Done():
 		t.Fatal("Context cancelled while waiting for recovery notification")
 	}
@@ -341,7 +353,7 @@ type MonitorInfo struct {
 	Type     string `json:"type"`
 }
 
-// getDockerGatewayIP attempts to detect the Docker bridge gateway IP
+// getDockerGatewayIP attempts to detect the Docker bridge gateway IP.
 func getDockerGatewayIP(t *testing.T) string {
 	t.Helper()
 

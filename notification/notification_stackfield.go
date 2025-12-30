@@ -23,7 +23,7 @@ func (s Stackfield) Type() string {
 }
 
 // Type returns the notification type identifier for StackfieldDetails.
-func (n StackfieldDetails) Type() string {
+func (StackfieldDetails) Type() string {
 	return "stackfield"
 }
 

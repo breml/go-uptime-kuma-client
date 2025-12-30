@@ -31,7 +31,7 @@ func (s SMSC) Type() string {
 }
 
 // Type returns the notification type identifier for SMSCDetails.
-func (s SMSCDetails) Type() string {
+func (SMSCDetails) Type() string {
 	return "smsc"
 }
 

@@ -19,7 +19,9 @@ func TestNotificationFeishu_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Feishu Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Feishu Alert\",\"feishuWebHookUrl\":\"https://open.feishu.cn/open-apis/bot/v2/hook/xxx\",\"type\":\"Feishu\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Feishu Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Feishu Alert\",\"feishuWebHookUrl\":\"https://open.feishu.cn/open-apis/bot/v2/hook/xxx\",\"type\":\"Feishu\"}"}`,
+			),
 
 			want: notification.Feishu{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationFeishu_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Feishu","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Feishu\",\"feishuWebHookUrl\":\"https://open.feishu.cn/open-apis/bot/v2/hook/yyy\",\"type\":\"Feishu\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Feishu","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Feishu\",\"feishuWebHookUrl\":\"https://open.feishu.cn/open-apis/bot/v2/hook/yyy\",\"type\":\"Feishu\"}"}`,
+			),
 
 			want: notification.Feishu{
 				Base: notification.Base{

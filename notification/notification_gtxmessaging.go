@@ -13,8 +13,8 @@ type GTXMessaging struct {
 
 // GTXMessagingDetails contains the configuration fields for GTX Messaging SMS notifications.
 type GTXMessagingDetails struct {
-	// ApiKey is the GTX Messaging API key.
-	ApiKey string `json:"gtxMessagingApiKey"`
+	// APIKey is the GTX Messaging API key.
+	APIKey string `json:"gtxMessagingApiKey"`
 	// From is the sender ID.
 	From string `json:"gtxMessagingFrom"`
 	// To is the recipient phone number.
@@ -27,7 +27,7 @@ func (g GTXMessaging) Type() string {
 }
 
 // Type returns the notification type identifier for GTXMessagingDetails.
-func (n GTXMessagingDetails) Type() string {
+func (GTXMessagingDetails) Type() string {
 	return "gtxmessaging"
 }
 

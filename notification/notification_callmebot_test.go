@@ -19,7 +19,9 @@ func TestNotificationCallMeBot_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with endpoint",
-			data: []byte(`{"id":1,"name":"My CallMeBot Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My CallMeBot Alert\",\"callMeBotEndpoint\":\"https://api.callmebot.com/start\",\"type\":\"CallMeBot\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My CallMeBot Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My CallMeBot Alert\",\"callMeBotEndpoint\":\"https://api.callmebot.com/start\",\"type\":\"CallMeBot\"}"}`,
+			),
 
 			want: notification.CallMeBot{
 				Base: notification.Base{
@@ -38,7 +40,9 @@ func TestNotificationCallMeBot_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple CallMeBot","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple CallMeBot\",\"callMeBotEndpoint\":\"https://api.callmebot.com/start\",\"type\":\"CallMeBot\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple CallMeBot","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple CallMeBot\",\"callMeBotEndpoint\":\"https://api.callmebot.com/start\",\"type\":\"CallMeBot\"}"}`,
+			),
 
 			want: notification.CallMeBot{
 				Base: notification.Base{
@@ -57,7 +61,9 @@ func TestNotificationCallMeBot_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different endpoint",
-			data: []byte(`{"id":3,"name":"Custom Endpoint","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Custom Endpoint\",\"callMeBotEndpoint\":\"https://custom.endpoint.com/webhook\",\"type\":\"CallMeBot\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Custom Endpoint","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Custom Endpoint\",\"callMeBotEndpoint\":\"https://custom.endpoint.com/webhook\",\"type\":\"CallMeBot\"}"}`,
+			),
 
 			want: notification.CallMeBot{
 				Base: notification.Base{

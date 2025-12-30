@@ -6,30 +6,34 @@ import (
 	"strconv"
 )
 
+// HTTP represents a http monitor.
 type HTTP struct {
 	Base
 	HTTPDetails
 }
 
+// Type returns the monitor type.
 func (h HTTP) Type() string {
 	return h.HTTPDetails.Type()
 }
 
+// String returns a string representation of the monitor.
 func (h HTTP) String() string {
 	return fmt.Sprintf("%s, %s", formatMonitor(h.Base, false), formatMonitor(h.HTTPDetails, true))
 }
 
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
 func (h *HTTP) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := HTTPDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*h = HTTP{
@@ -40,6 +44,7 @@ func (h *HTTP) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals a monitor into a JSON byte slice.
 func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw := map[string]any{}
 	raw["id"] = h.ID
@@ -61,6 +66,7 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	for _, id := range h.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current HTTP-specific field values.
@@ -93,9 +99,15 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
+// HTTPDetails contains http-specific monitor configuration.
 type HTTPDetails struct {
 	URL                 string     `json:"url"`
 	Timeout             int64      `json:"timeout"`
@@ -123,14 +135,15 @@ type HTTPDetails struct {
 	CacheBust           bool       `json:"cacheBust"`
 }
 
-func (h HTTPDetails) Type() string {
+// Type returns the monitor type.
+func (HTTPDetails) Type() string {
 	return "http"
 }
 
-// AuthMethod represents the authentication method for monitors
+// AuthMethod represents the authentication method for monitors.
 type AuthMethod string
 
-// Auth methods
+// Auth methods.
 const (
 	AuthMethodNone     AuthMethod = ""
 	AuthMethodBasic    AuthMethod = "basic"

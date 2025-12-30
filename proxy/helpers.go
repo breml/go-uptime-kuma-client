@@ -6,14 +6,17 @@ import (
 	"strings"
 )
 
+// formatProxy formats a Proxy instance as a string representation.
+// It masks the password field for security purposes before including in the output.
+// The function uses reflection to iterate through exported fields and builds a string representation.
 func formatProxy(p Proxy) string {
 	buf := strings.Builder{}
 
 	val := reflect.ValueOf(p)
-	typ := reflect.TypeOf(p)
+	typ := reflect.TypeFor[Proxy]()
 
 	first := true
-	for i := 0; i < val.NumField(); i++ {
+	for i := range val.NumField() {
 		field := typ.Field(i)
 		value := val.Field(i)
 
@@ -24,11 +27,14 @@ func formatProxy(p Proxy) string {
 		name := strings.Split(field.Tag.Get("json"), ",")[0]
 
 		var valueStr string
-		if field.Name == "Password" && value.Kind() == reflect.String && value.String() != "" {
+		switch {
+		case field.Name == "Password" && value.Kind() == reflect.String && value.String() != "":
 			valueStr = "\"***\""
-		} else if value.Kind() == reflect.String {
+
+		case value.Kind() == reflect.String:
 			valueStr = fmt.Sprintf("%q", value.String())
-		} else {
+
+		default:
 			valueStr = fmt.Sprintf("%v", value.Interface())
 		}
 

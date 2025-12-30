@@ -18,7 +18,9 @@ func TestNotificationSMSPartner_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My SMSPartner Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMSPartner Alert\",\"smspartnerApikey\":\"test-api-key\",\"smspartnerPhoneNumber\":\"33612345678\",\"smspartnerSenderName\":\"Uptime\",\"type\":\"SMSPartner\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My SMSPartner Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMSPartner Alert\",\"smspartnerApikey\":\"test-api-key\",\"smspartnerPhoneNumber\":\"33612345678\",\"smspartnerSenderName\":\"Uptime\",\"type\":\"SMSPartner\"}"}`,
+			),
 
 			want: notification.SMSPartner{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationSMSPartner_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple SMSPartner","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SMSPartner\",\"smspartnerApikey\":\"minimal-key\",\"smspartnerPhoneNumber\":\"33687654321\",\"smspartnerSenderName\":\"Alert\",\"type\":\"SMSPartner\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple SMSPartner","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SMSPartner\",\"smspartnerApikey\":\"minimal-key\",\"smspartnerPhoneNumber\":\"33687654321\",\"smspartnerSenderName\":\"Alert\",\"type\":\"SMSPartner\"}"}`,
+			),
 
 			want: notification.SMSPartner{
 				Base: notification.Base{
@@ -60,7 +64,9 @@ func TestNotificationSMSPartner_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different phone number",
-			data: []byte(`{"id":3,"name":"SMSPartner France","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMSPartner France\",\"smspartnerApikey\":\"api-key-fr\",\"smspartnerPhoneNumber\":\"33698765432\",\"smspartnerSenderName\":\"Monitor\",\"type\":\"SMSPartner\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"SMSPartner France","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMSPartner France\",\"smspartnerApikey\":\"api-key-fr\",\"smspartnerPhoneNumber\":\"33698765432\",\"smspartnerSenderName\":\"Monitor\",\"type\":\"SMSPartner\"}"}`,
+			),
 
 			want: notification.SMSPartner{
 				Base: notification.Base{

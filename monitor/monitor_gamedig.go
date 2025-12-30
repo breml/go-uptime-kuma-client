@@ -27,13 +27,13 @@ func (g *GameDig) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := GameDigDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*g = GameDig{
@@ -66,6 +66,7 @@ func (g GameDig) MarshalJSON() ([]byte, error) {
 	for _, id := range g.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current GameDig-specific field values.
@@ -80,7 +81,12 @@ func (g GameDig) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
 // GameDigDetails contains GameDig monitor specific fields.
@@ -96,6 +102,6 @@ type GameDigDetails struct {
 }
 
 // Type returns the monitor type string.
-func (g GameDigDetails) Type() string {
+func (GameDigDetails) Type() string {
 	return "gamedig"
 }

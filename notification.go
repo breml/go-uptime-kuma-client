@@ -23,9 +23,9 @@ func (c *Client) GetNotification(_ context.Context, id int64) (notification.Base
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	for _, notification := range c.state.notifications {
-		if notification.GetID() == id {
-			return notification, nil
+	for _, notif := range c.state.notifications {
+		if notif.GetID() == id {
+			return notif, nil
 		}
 	}
 
@@ -34,22 +34,22 @@ func (c *Client) GetNotification(_ context.Context, id int64) (notification.Base
 
 // GetNotificationAs returns a specific notification by ID and coverts it to the target type.
 func (c *Client) GetNotificationAs(ctx context.Context, id int64, target any) error {
-	notification, err := c.GetNotification(ctx, id)
+	notif, err := c.GetNotification(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	err = notification.As(target)
+	err = notif.As(target)
 	if err != nil {
-		return fmt.Errorf("get monitor %d as %t: %v", id, target, err)
+		return fmt.Errorf("get monitor %d as %t: %w", id, target, err)
 	}
 
 	return nil
 }
 
 // CreateNotification creates a new notification.
-func (c *Client) CreateNotification(ctx context.Context, notification notification.Notification) (int64, error) {
-	response, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notification, nil)
+func (c *Client) CreateNotification(ctx context.Context, notif notification.Notification) (int64, error) {
+	response, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notif, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -58,8 +58,8 @@ func (c *Client) CreateNotification(ctx context.Context, notification notificati
 }
 
 // UpdateNotification updates an existing notification.
-func (c *Client) UpdateNotification(ctx context.Context, notification notification.Notification) error {
-	_, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notification, notification.GetID())
+func (c *Client) UpdateNotification(ctx context.Context, notif notification.Notification) error {
+	_, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notif, notif.GetID())
 	return err
 }
 

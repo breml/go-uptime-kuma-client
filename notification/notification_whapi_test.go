@@ -18,7 +18,9 @@ func TestNotificationWhapi_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Whapi Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Whapi Alert\",\"whapiApiUrl\":\"https://gate.whapi.cloud\",\"whapiAuthToken\":\"test-auth-token\",\"whapiRecipient\":\"5511999999999\",\"type\":\"whapi\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Whapi Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Whapi Alert\",\"whapiApiUrl\":\"https://gate.whapi.cloud\",\"whapiAuthToken\":\"test-auth-token\",\"whapiRecipient\":\"5511999999999\",\"type\":\"whapi\"}"}`,
+			),
 
 			want: notification.Whapi{
 				Base: notification.Base{
@@ -30,7 +32,7 @@ func TestNotificationWhapi_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				WhapiDetails: notification.WhapiDetails{
-					ApiURL:    "https://gate.whapi.cloud",
+					APIURL:    "https://gate.whapi.cloud",
 					AuthToken: "test-auth-token",
 					Recipient: "5511999999999",
 				},
@@ -39,7 +41,9 @@ func TestNotificationWhapi_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration with default API URL",
-			data: []byte(`{"id":2,"name":"Simple Whapi","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Whapi\",\"whapiAuthToken\":\"simple-token\",\"whapiRecipient\":\"+5511987654321\",\"type\":\"whapi\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Whapi","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Whapi\",\"whapiAuthToken\":\"simple-token\",\"whapiRecipient\":\"+5511987654321\",\"type\":\"whapi\"}"}`,
+			),
 
 			want: notification.Whapi{
 				Base: notification.Base{
@@ -51,7 +55,7 @@ func TestNotificationWhapi_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				WhapiDetails: notification.WhapiDetails{
-					ApiURL:    "",
+					APIURL:    "",
 					AuthToken: "simple-token",
 					Recipient: "+5511987654321",
 				},
@@ -60,7 +64,9 @@ func TestNotificationWhapi_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with custom API URL",
-			data: []byte(`{"id":3,"name":"Whapi Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Whapi Custom\",\"whapiApiUrl\":\"https://custom.whapi.io/\",\"whapiAuthToken\":\"custom-token-123\",\"whapiRecipient\":\"12025551234\",\"type\":\"whapi\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Whapi Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Whapi Custom\",\"whapiApiUrl\":\"https://custom.whapi.io/\",\"whapiAuthToken\":\"custom-token-123\",\"whapiRecipient\":\"12025551234\",\"type\":\"whapi\"}"}`,
+			),
 
 			want: notification.Whapi{
 				Base: notification.Base{
@@ -72,7 +78,7 @@ func TestNotificationWhapi_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				WhapiDetails: notification.WhapiDetails{
-					ApiURL:    "https://custom.whapi.io/",
+					APIURL:    "https://custom.whapi.io/",
 					AuthToken: "custom-token-123",
 					Recipient: "12025551234",
 				},

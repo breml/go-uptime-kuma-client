@@ -27,7 +27,7 @@ func (o OneChat) Type() string {
 }
 
 // Type returns the notification type identifier for OneChatDetails.
-func (o OneChatDetails) Type() string {
+func (OneChatDetails) Type() string {
 	return "OneChat"
 }
 

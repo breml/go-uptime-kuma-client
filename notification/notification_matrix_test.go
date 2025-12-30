@@ -19,7 +19,9 @@ func TestNotificationMatrix_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"My Matrix Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Matrix Alert\",\"matrixHomeserverUrl\":\"https://matrix.example.com\",\"matrixInternalRoomId\":\"!roomid:example.com\",\"matrixAccessToken\":\"syt_token_example\",\"type\":\"matrix\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Matrix Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Matrix Alert\",\"matrixHomeserverUrl\":\"https://matrix.example.com\",\"matrixInternalRoomId\":\"!roomid:example.com\",\"matrixAccessToken\":\"syt_token_example\",\"type\":\"matrix\"}"}`,
+			),
 
 			want: notification.Matrix{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationMatrix_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":2,"name":"Simple Matrix","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Matrix\",\"matrixHomeserverUrl\":\"https://matrix.org\",\"matrixInternalRoomId\":\"!room:matrix.org\",\"matrixAccessToken\":\"token\",\"type\":\"matrix\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Matrix","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Matrix\",\"matrixHomeserverUrl\":\"https://matrix.org\",\"matrixInternalRoomId\":\"!room:matrix.org\",\"matrixAccessToken\":\"token\",\"type\":\"matrix\"}"}`,
+			),
 
 			want: notification.Matrix{
 				Base: notification.Base{

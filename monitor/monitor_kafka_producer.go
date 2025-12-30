@@ -27,13 +27,13 @@ func (k *KafkaProducer) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	details := KafkaProducerDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	*k = KafkaProducer{
@@ -66,6 +66,7 @@ func (k KafkaProducer) MarshalJSON() ([]byte, error) {
 	for _, id := range k.NotificationIDs {
 		ids[strconv.FormatInt(id, 10)] = true
 	}
+
 	raw["notificationIDList"] = ids
 
 	// Always override with current KafkaProducer-specific field values.
@@ -82,7 +83,12 @@ func (k KafkaProducer) MarshalJSON() ([]byte, error) {
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
-	return json.Marshal(raw)
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
 // KafkaProducerDetails contains Kafka Producer-specific monitor configuration.
@@ -102,6 +108,6 @@ type KafkaProducerDetails struct {
 }
 
 // Type returns the monitor type.
-func (k KafkaProducerDetails) Type() string {
+func (KafkaProducerDetails) Type() string {
 	return "kafka-producer"
 }

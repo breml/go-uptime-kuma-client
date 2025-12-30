@@ -19,7 +19,9 @@ func TestNotificationOneBot_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success",
-			data: []byte(`{"id":1,"name":"Test OneBot Group","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"OneBot\",\"httpAddr\":\"http://localhost:5700\",\"accessToken\":\"test-token\",\"msgType\":\"group\",\"recieverId\":\"123456789\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"Test OneBot Group","active":true,"userId":42,"isDefault":false,"config":"{\"type\":\"OneBot\",\"httpAddr\":\"http://localhost:5700\",\"accessToken\":\"test-token\",\"msgType\":\"group\",\"recieverId\":\"123456789\"}"}`,
+			),
 
 			want: notification.OneBot{
 				Base: notification.Base{
@@ -40,7 +42,9 @@ func TestNotificationOneBot_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "private message",
-			data: []byte(`{"id":2,"name":"Test OneBot Private","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"OneBot\",\"httpAddr\":\"http://bot.example.com\",\"accessToken\":\"secret-token\",\"msgType\":\"private\",\"recieverId\":\"987654321\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Test OneBot Private","active":true,"userId":42,"isDefault":true,"config":"{\"type\":\"OneBot\",\"httpAddr\":\"http://bot.example.com\",\"accessToken\":\"secret-token\",\"msgType\":\"private\",\"recieverId\":\"987654321\"}"}`,
+			),
 
 			want: notification.OneBot{
 				Base: notification.Base{
@@ -62,7 +66,9 @@ func TestNotificationOneBot_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal",
-			data: []byte(`{"id":3,"name":"Test OneBot Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"OneBot\",\"httpAddr\":\"localhost:5700\",\"accessToken\":\"\",\"msgType\":\"group\",\"recieverId\":\"\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Test OneBot Minimal","active":false,"userId":10,"isDefault":false,"config":"{\"type\":\"OneBot\",\"httpAddr\":\"localhost:5700\",\"accessToken\":\"\",\"msgType\":\"group\",\"recieverId\":\"\"}"}`,
+			),
 
 			want: notification.OneBot{
 				Base: notification.Base{

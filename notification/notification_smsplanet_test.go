@@ -18,7 +18,9 @@ func TestNotificationSMSPlanet_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My SMS Planet Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMS Planet Alert\",\"smsplanetApiToken\":\"test-token-123\",\"smsplanetPhoneNumbers\":\"48123456789\",\"smsplanetSenderName\":\"Uptime Kuma\",\"type\":\"SMSPlanet\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My SMS Planet Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My SMS Planet Alert\",\"smsplanetApiToken\":\"test-token-123\",\"smsplanetPhoneNumbers\":\"48123456789\",\"smsplanetSenderName\":\"Uptime Kuma\",\"type\":\"SMSPlanet\"}"}`,
+			),
 
 			want: notification.SMSPlanet{
 				Base: notification.Base{
@@ -39,7 +41,9 @@ func TestNotificationSMSPlanet_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple SMS Planet","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SMS Planet\",\"smsplanetApiToken\":\"minimal-token\",\"smsplanetPhoneNumbers\":\"48987654321\",\"smsplanetSenderName\":\"Alert\",\"type\":\"SMSPlanet\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple SMS Planet","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple SMS Planet\",\"smsplanetApiToken\":\"minimal-token\",\"smsplanetPhoneNumbers\":\"48987654321\",\"smsplanetSenderName\":\"Alert\",\"type\":\"SMSPlanet\"}"}`,
+			),
 
 			want: notification.SMSPlanet{
 				Base: notification.Base{
@@ -60,7 +64,9 @@ func TestNotificationSMSPlanet_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with multiple phone numbers",
-			data: []byte(`{"id":3,"name":"SMS Planet Multi","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMS Planet Multi\",\"smsplanetApiToken\":\"multi-token\",\"smsplanetPhoneNumbers\":\"48111111111,48222222222\",\"smsplanetSenderName\":\"Monitor\",\"type\":\"SMSPlanet\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"SMS Planet Multi","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMS Planet Multi\",\"smsplanetApiToken\":\"multi-token\",\"smsplanetPhoneNumbers\":\"48111111111,48222222222\",\"smsplanetSenderName\":\"Monitor\",\"type\":\"SMSPlanet\"}"}`,
+			),
 
 			want: notification.SMSPlanet{
 				Base: notification.Base{

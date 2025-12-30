@@ -24,7 +24,7 @@ func (d DingDing) Type() string {
 }
 
 // Type returns the notification type identifier for DingDing details.
-func (d DingDingDetails) Type() string {
+func (DingDingDetails) Type() string {
 	return "DingDing"
 }
 

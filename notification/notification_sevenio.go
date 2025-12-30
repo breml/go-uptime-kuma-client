@@ -27,7 +27,7 @@ func (s SevenIO) Type() string {
 }
 
 // Type returns the notification type identifier for SevenIODetails.
-func (n SevenIODetails) Type() string {
+func (SevenIODetails) Type() string {
 	return "sevenio"
 }
 

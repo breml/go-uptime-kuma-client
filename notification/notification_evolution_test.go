@@ -19,7 +19,9 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 	}{
 		{
 			name: "success with all fields",
-			data: []byte(`{"id":1,"name":"My Evolution Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Evolution Alert\",\"evolutionApiUrl\":\"https://evolapicloud.com\",\"evolutionInstanceName\":\"myinstance\",\"evolutionAuthToken\":\"token123\",\"evolutionRecipient\":\"5511999999999\",\"type\":\"EvolutionApi\"}"}`),
+			data: []byte(
+				`{"id":1,"name":"My Evolution Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Evolution Alert\",\"evolutionApiUrl\":\"https://evolapicloud.com\",\"evolutionInstanceName\":\"myinstance\",\"evolutionAuthToken\":\"token123\",\"evolutionRecipient\":\"5511999999999\",\"type\":\"EvolutionApi\"}"}`,
+			),
 
 			want: notification.Evolution{
 				Base: notification.Base{
@@ -31,7 +33,7 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				EvolutionDetails: notification.EvolutionDetails{
-					ApiUrl:       "https://evolapicloud.com",
+					APIURL:       "https://evolapicloud.com",
 					InstanceName: "myinstance",
 					AuthToken:    "token123",
 					Recipient:    "5511999999999",
@@ -41,7 +43,9 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "minimal configuration",
-			data: []byte(`{"id":2,"name":"Simple Evolution","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Evolution\",\"evolutionApiUrl\":\"https://api.example.com\",\"evolutionInstanceName\":\"instance1\",\"evolutionAuthToken\":\"key\",\"evolutionRecipient\":\"551187654321\",\"type\":\"EvolutionApi\"}"}`),
+			data: []byte(
+				`{"id":2,"name":"Simple Evolution","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Evolution\",\"evolutionApiUrl\":\"https://api.example.com\",\"evolutionInstanceName\":\"instance1\",\"evolutionAuthToken\":\"key\",\"evolutionRecipient\":\"551187654321\",\"type\":\"EvolutionApi\"}"}`,
+			),
 
 			want: notification.Evolution{
 				Base: notification.Base{
@@ -53,7 +57,7 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				EvolutionDetails: notification.EvolutionDetails{
-					ApiUrl:       "https://api.example.com",
+					APIURL:       "https://api.example.com",
 					InstanceName: "instance1",
 					AuthToken:    "key",
 					Recipient:    "551187654321",
@@ -63,7 +67,9 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 		},
 		{
 			name: "with different recipient",
-			data: []byte(`{"id":3,"name":"Evolution US","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Evolution US\",\"evolutionApiUrl\":\"https://custom.api.com\",\"evolutionInstanceName\":\"usinstance\",\"evolutionAuthToken\":\"ustoken\",\"evolutionRecipient\":\"12025551234\",\"type\":\"EvolutionApi\"}"}`),
+			data: []byte(
+				`{"id":3,"name":"Evolution US","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Evolution US\",\"evolutionApiUrl\":\"https://custom.api.com\",\"evolutionInstanceName\":\"usinstance\",\"evolutionAuthToken\":\"ustoken\",\"evolutionRecipient\":\"12025551234\",\"type\":\"EvolutionApi\"}"}`,
+			),
 
 			want: notification.Evolution{
 				Base: notification.Base{
@@ -75,7 +81,7 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					ApplyExisting: false,
 				},
 				EvolutionDetails: notification.EvolutionDetails{
-					ApiUrl:       "https://custom.api.com",
+					APIURL:       "https://custom.api.com",
 					InstanceName: "usinstance",
 					AuthToken:    "ustoken",
 					Recipient:    "12025551234",
