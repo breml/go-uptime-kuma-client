@@ -10,12 +10,13 @@ import (
 )
 
 // formatMonitor formats a monitor instance as a string representation.
-// If withType is true, it includes the monitor type in the output.
-func formatMonitor(s any, withType bool) string {
+// If includeType is true, it includes the monitor type in the output.
+//nolint:revive // includeType is not a control coupling flag, it's a meaningful parameter
+func formatMonitor(s any, includeType bool) string {
 	buf := strings.Builder{}
 
 	first := true
-	if withType {
+	if includeType {
 		typer, ok := s.(interface{ Type() string })
 		if ok {
 			buf.WriteString("type: " + typer.Type())

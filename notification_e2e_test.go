@@ -135,6 +135,8 @@ func TestEndToEndMonitorFailureNotification(t *testing.T) {
 			case recoveryNotificationReceived <- struct{}{}:
 			default:
 			}
+		default:
+			// Ignore unknown status codes
 		}
 
 		w.WriteHeader(http.StatusOK)

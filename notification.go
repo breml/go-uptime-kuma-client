@@ -23,9 +23,9 @@ func (c *Client) GetNotification(_ context.Context, id int64) (notification.Base
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	for _, notification := range c.state.notifications {
-		if notification.GetID() == id {
-			return notification, nil
+	for _, notif := range c.state.notifications {
+		if notif.GetID() == id {
+			return notif, nil
 		}
 	}
 

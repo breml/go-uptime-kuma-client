@@ -194,7 +194,7 @@ func TestClient_MonitorTagAssociations(t *testing.T) {
 		require.Len(t, tags, 3)
 
 		// Check each tag
-		tagsByID := make(map[int64]tag.MonitorTag)
+		tagsByID := map[int64]tag.MonitorTag{}
 		for _, mt := range tags {
 			tagsByID[mt.TagID] = mt
 		}
