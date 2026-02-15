@@ -12,9 +12,9 @@ type Matrix struct {
 
 // MatrixDetails contains matrix-specific notification configuration.
 type MatrixDetails struct {
-	HomeserverURL  string `json:"matrixHomeserverUrl"`
-	InternalRoomID string `json:"matrixInternalRoomId"`
-	AccessToken    string `json:"matrixAccessToken"`
+	HomeserverURL  string `json:"homeserverUrl"`
+	InternalRoomID string `json:"internalRoomId"`
+	AccessToken    string `json:"accessToken"`
 }
 
 // Type returns the notification type.
