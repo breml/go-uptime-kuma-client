@@ -23,7 +23,7 @@ func (n Generic) Type() string {
 // String returns a string representation of the notification.
 func (n Generic) String() string {
 	buf := strings.Builder{}
-	buf.WriteString(fmt.Sprintf("%s: %q", "type", n.TypeName))
+	fmt.Fprintf(&buf, "%s: %q", "type", n.TypeName)
 
 	for k, v := range orderedByKey(n.GenericDetails) {
 		if k == "type" {
@@ -34,9 +34,9 @@ func (n Generic) String() string {
 
 		str, ok := v.(string)
 		if ok {
-			buf.WriteString(fmt.Sprintf("%s: %q", k, str))
+			fmt.Fprintf(&buf, "%s: %q", k, str)
 		} else {
-			buf.WriteString(fmt.Sprintf("%s: %v", k, v))
+			fmt.Fprintf(&buf, "%s: %v", k, v)
 		}
 	}
 
