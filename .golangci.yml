@@ -224,6 +224,12 @@ linters:
         # https://github.com/godoc-lint/godoc-lint?tab=readme-ov-file#no-unused-link
         - no-unused-link
 
+    # Does not work, because the new issue ID are not in the jsonschema of golangci-lint.
+    # gosec:
+    #   excludes:
+    #     - G117
+    #     - G704 # Currently broken, see https://github.com/securego/gosec/issues/1497 and https://github.com/securego/gosec/issues/1500
+
     govet:
       # Enable all analyzers.
       # Default: false
@@ -743,3 +749,11 @@ linters:
         linters:
           - dupl
           - recvcheck
+
+      # Workaround for gosec false positives, exclude rules does not work due to
+      # golangci-lint jsonschema not being up to date.
+      - linters:
+          - gosec
+        # G704 currently broken, see https://github.com/securego/gosec/issues/1497 and https://github.com/securego/gosec/issues/1500
+        text: '^(G704|G117):'
+

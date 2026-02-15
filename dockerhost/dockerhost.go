@@ -68,6 +68,8 @@ func (t *TestResult) UnmarshalJSON(data []byte) error {
 		if version, ok := v["Version"].(string); ok {
 			t.Version = version
 		}
+
+	default:
 	}
 
 	return nil

@@ -218,9 +218,10 @@ func TestProxyWithMonitor(t *testing.T) {
 	t.Run("create_monitor_with_proxy", func(t *testing.T) {
 		httpMonitor := monitor.HTTP{
 			Base: monitor.Base{
-				Name:     "Test Monitor with Proxy",
-				Interval: 60,
-				ProxyID:  &proxyID,
+				Name:          "Test Monitor with Proxy",
+				Interval:      60,
+				ProxyID:       &proxyID,
+				RetryInterval: 60,
 			},
 			HTTPDetails: monitor.HTTPDetails{
 				URL:                 "https://example.com",
@@ -306,8 +307,9 @@ func TestProxyApplyExisting(t *testing.T) {
 	t.Run("create_monitors_without_proxy", func(t *testing.T) {
 		httpMonitor1 := monitor.HTTP{
 			Base: monitor.Base{
-				Name:     "Test Monitor 1 for ApplyExisting",
-				Interval: 60,
+				Name:          "Test Monitor 1 for ApplyExisting",
+				Interval:      60,
+				RetryInterval: 60,
 			},
 			HTTPDetails: monitor.HTTPDetails{
 				URL:                 "https://example1.com",
@@ -322,8 +324,9 @@ func TestProxyApplyExisting(t *testing.T) {
 
 		httpMonitor2 := monitor.HTTP{
 			Base: monitor.Base{
-				Name:     "Test Monitor 2 for ApplyExisting",
-				Interval: 60,
+				Name:          "Test Monitor 2 for ApplyExisting",
+				Interval:      60,
+				RetryInterval: 60,
 			},
 			HTTPDetails: monitor.HTTPDetails{
 				URL:                 "https://example2.com",

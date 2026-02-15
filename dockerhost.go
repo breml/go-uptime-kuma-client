@@ -90,6 +90,8 @@ func (c *Client) TestDockerHost(ctx context.Context, config dockerhost.Config) (
 			if ver, versionOk := v["Version"].(string); versionOk {
 				result.Version = ver
 			}
+
+		default:
 		}
 	}
 

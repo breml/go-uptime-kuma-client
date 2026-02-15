@@ -44,7 +44,7 @@ func formatProxy(p Proxy) string {
 
 		first = false
 
-		_, _ = buf.WriteString(fmt.Sprintf("%s: %s", name, valueStr))
+		_, _ = fmt.Fprintf(&buf, "%s: %s", name, valueStr)
 	}
 
 	return buf.String()
