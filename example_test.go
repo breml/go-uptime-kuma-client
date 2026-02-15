@@ -52,6 +52,7 @@ func Example() {
 			Name:            "Example Website",
 			Interval:        60,
 			NotificationIDs: []int64{notificationID},
+			RetryInterval:   60,
 		},
 		HTTPDetails: monitor.HTTPDetails{
 			URL:                 "https://example.com",
