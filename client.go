@@ -17,6 +17,7 @@ import (
 	"github.com/maldikhan/go.socket.io/socket.io/v5/client/emit"
 	"github.com/maldikhan/go.socket.io/utils"
 	"github.com/maniartech/signals"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/breml/go-uptime-kuma-client/dockerhost"
 	"github.com/breml/go-uptime-kuma-client/maintenance"
@@ -491,10 +492,10 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		}
 	})
 
-	err = client.Connect(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("connect to server: %w", err)
-	}
+	errgrp := errgroup.Group{}
+	errgrp.Go(func() error {
+		return client.Connect(ctx)
+	})
 
 	select {
 	case <-connect:
@@ -503,6 +504,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	case <-ctxWithConnectTimeout.Done():
 		return nil, fmt.Errorf("connect to server: %w", ctxWithConnectTimeout.Err())
+	}
+
+	err = errgrp.Wait()
+	if err != nil {
+		return nil, fmt.Errorf("connect to server: %w", err)
 	}
 
 	if username != "" && password != "" {
