@@ -118,6 +118,10 @@ func WithLogLevel(level int) Option {
 }
 
 // WithConnectTimeout sets the socket.io client connection timeout.
+// This timeout defines the overall duration, with is allowed for establishing
+// the connection to Uptime Kuma.
+// In the case of autosetup with an uninitialized Uptime Kuma this timeout
+// also includes the time required for the initial setup.
 func WithConnectTimeout(timeout time.Duration) Option {
 	return func(c *Client) {
 		c.socketioClientConnectTimeout = timeout
@@ -496,6 +500,9 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	case <-connect:
 	case <-ctx.Done():
 		return nil, fmt.Errorf("connect to server: %w", ctx.Err())
+
+	case <-ctxWithConnectTimeout.Done():
+		return nil, fmt.Errorf("connect to server: %w", ctxWithConnectTimeout.Err())
 	}
 
 	if username != "" && password != "" {
