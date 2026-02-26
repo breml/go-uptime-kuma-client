@@ -14,7 +14,3 @@ type Settings struct {
 	SteamAPIKey         string `json:"steamAPIKey"`
 	ChromeExecutable    string `json:"chromeExecutable"`
 }
-
-func (s Settings) String() string {
-	return formatSettings(s)
-}

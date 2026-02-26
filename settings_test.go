@@ -103,13 +103,4 @@ func TestSettingsGetAndSet(t *testing.T) {
 		err = client.SetSettings(ctx, *original, "")
 		require.NoError(t, err)
 	})
-
-	t.Run("settings_string", func(t *testing.T) {
-		s, err := client.GetSettings(ctx)
-		require.NoError(t, err)
-
-		str := s.String()
-		require.NotEmpty(t, str)
-		t.Logf("Settings string: %s", str)
-	})
 }

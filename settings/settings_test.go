@@ -100,30 +100,3 @@ func TestSettings_RoundTrip(t *testing.T) {
 
 	require.Equal(t, original, roundTripped)
 }
-
-func TestSettings_String(t *testing.T) {
-	s := settings.Settings{
-		ServerTimezone:      "UTC",
-		KeepDataPeriodDays:  180,
-		CheckUpdate:         true,
-		EntryPage:           "dashboard",
-		TLSExpiryNotifyDays: []int{7, 14, 21},
-		SteamAPIKey:         "secret",
-	}
-
-	str := s.String()
-	require.Contains(t, str, `serverTimezone: "UTC"`)
-	require.Contains(t, str, "keepDataPeriodDays: 180")
-	require.Contains(t, str, `entryPage: "dashboard"`)
-	require.Contains(t, str, `steamAPIKey: "***"`)
-	require.NotContains(t, str, "secret")
-}
-
-func TestSettings_String_EmptySteamAPIKey(t *testing.T) {
-	s := settings.Settings{
-		SteamAPIKey: "",
-	}
-
-	str := s.String()
-	require.Contains(t, str, `steamAPIKey: ""`)
-}

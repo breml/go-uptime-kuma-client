@@ -11,7 +11,7 @@ import (
 func (c *Client) GetSettings(ctx context.Context) (*settings.Settings, error) {
 	resp, err := c.syncEmit(ctx, "getSettings")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get settings: %w", err)
 	}
 
 	var s settings.Settings
@@ -31,5 +31,9 @@ func (c *Client) SetSettings(ctx context.Context, s settings.Settings, password 
 	}
 
 	_, err = c.syncEmit(ctx, "setSettings", settingsMap, password)
-	return err
+	if err != nil {
+		return fmt.Errorf("set settings: %w", err)
+	}
+
+	return nil
 }
