@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
 
@@ -29,7 +30,9 @@ func TestStatusPage_MarshalUnmarshal(t *testing.T) {
 				Published:             true,
 				ShowTags:              true,
 				DomainNameList:        []string{"status.example.com"},
-				GoogleAnalyticsID:     "UA-123456-1",
+				AnalyticsType:         ptr.To("google"),
+				AnalyticsID:           "UA-123456-1",
+				AnalyticsScriptURL:    "",
 				CustomCSS:             "body { background: #fff; }",
 				FooterText:            "© 2024 Example Inc.",
 				ShowPoweredBy:         false,
