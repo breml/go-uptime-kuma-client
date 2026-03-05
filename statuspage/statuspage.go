@@ -11,7 +11,9 @@ type StatusPage struct {
 	Published             bool          `json:"published"`
 	ShowTags              bool          `json:"showTags"`
 	DomainNameList        []string      `json:"domainNameList"`
-	GoogleAnalyticsID     string        `json:"googleAnalyticsId"`
+	AnalyticsType         *string       `json:"analyticsType"`
+	AnalyticsID           string        `json:"analyticsId"`
+	AnalyticsScriptURL    string        `json:"analyticsScriptUrl"`
 	CustomCSS             string        `json:"customCSS"`
 	FooterText            string        `json:"footerText"`
 	ShowPoweredBy         bool          `json:"showPoweredBy"`

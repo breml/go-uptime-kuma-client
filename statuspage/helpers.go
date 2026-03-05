@@ -9,6 +9,11 @@ const (
 	styleWarning = "warning"
 	styleDanger  = "danger"
 	stylePrimary = "primary"
+
+	analyticsTypeGoogle    = "google"
+	analyticsTypeUmami     = "umami"
+	analyticsTypePlausible = "plausible"
+	analyticsTypeMatomo    = "matomo"
 )
 
 // ThemeLight returns the "light" theme identifier.
@@ -54,4 +59,31 @@ func StylePrimary() string {
 // ValidIncidentStyle checks if the provided incident style is valid.
 func ValidIncidentStyle(style string) bool {
 	return style == styleInfo || style == styleWarning || style == styleDanger || style == stylePrimary
+}
+
+// AnalyticsTypeGoogle returns the "google" analytics type identifier.
+func AnalyticsTypeGoogle() string {
+	return analyticsTypeGoogle
+}
+
+// AnalyticsTypeUmami returns the "umami" analytics type identifier.
+func AnalyticsTypeUmami() string {
+	return analyticsTypeUmami
+}
+
+// AnalyticsTypePlausible returns the "plausible" analytics type identifier.
+func AnalyticsTypePlausible() string {
+	return analyticsTypePlausible
+}
+
+// AnalyticsTypeMatomo returns the "matomo" analytics type identifier.
+func AnalyticsTypeMatomo() string {
+	return analyticsTypeMatomo
+}
+
+// ValidAnalyticsType checks if the provided analytics type is valid.
+func ValidAnalyticsType(analyticsType string) bool {
+	return analyticsType == analyticsTypeGoogle || analyticsType == analyticsTypeUmami ||
+		analyticsType == analyticsTypePlausible ||
+		analyticsType == analyticsTypeMatomo
 }
