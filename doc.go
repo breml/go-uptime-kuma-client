@@ -20,7 +20,7 @@
 // # Basic Usage
 //
 //	ctx := context.Background()
-//	client, err := kuma.New(ctx, "http://localhost:3001", "username", "password")
+//	client, err := kuma.New(ctx, "http://localhost:3001", kuma.WithCredentials("username", "password"))
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
