@@ -82,8 +82,14 @@ func AnalyticsTypeMatomo() string {
 }
 
 // ValidAnalyticsType checks if the provided analytics type is valid.
-func ValidAnalyticsType(analyticsType string) bool {
-	return analyticsType == analyticsTypeGoogle || analyticsType == analyticsTypeUmami ||
-		analyticsType == analyticsTypePlausible ||
-		analyticsType == analyticsTypeMatomo
+// A nil value is considered valid, as Uptime Kuma accepts null for this field.
+func ValidAnalyticsType(analyticsType *string) bool {
+	if analyticsType == nil {
+		return true
+	}
+
+	at := *analyticsType
+	return at == analyticsTypeGoogle || at == analyticsTypeUmami ||
+		at == analyticsTypePlausible ||
+		at == analyticsTypeMatomo
 }

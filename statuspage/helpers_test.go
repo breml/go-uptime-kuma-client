@@ -3,6 +3,7 @@ package statuspage_test
 import (
 	"testing"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
 
@@ -159,6 +160,95 @@ func TestValidIncidentStyle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := statuspage.ValidIncidentStyle(tt.style); got != tt.want {
 				t.Errorf("ValidIncidentStyle(%q) = %v, want %v", tt.style, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAnalyticsTypeHelpers(t *testing.T) {
+	tests := []struct {
+		name          string
+		analyticsType string
+		wantFunc      func() string
+	}{
+		{
+			name:          "google analytics type",
+			analyticsType: "google",
+			wantFunc:      statuspage.AnalyticsTypeGoogle,
+		},
+		{
+			name:          "umami analytics type",
+			analyticsType: "umami",
+			wantFunc:      statuspage.AnalyticsTypeUmami,
+		},
+		{
+			name:          "plausible analytics type",
+			analyticsType: "plausible",
+			wantFunc:      statuspage.AnalyticsTypePlausible,
+		},
+		{
+			name:          "matomo analytics type",
+			analyticsType: "matomo",
+			wantFunc:      statuspage.AnalyticsTypeMatomo,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.wantFunc(); got != tt.analyticsType {
+				t.Errorf("analytics type helper returned %q, want %q", got, tt.analyticsType)
+			}
+		})
+	}
+}
+
+func TestValidAnalyticsType(t *testing.T) {
+	tests := []struct {
+		name          string
+		analyticsType *string
+		want          bool
+	}{
+		{
+			name:          "nil is valid",
+			analyticsType: nil,
+			want:          true,
+		},
+		{
+			name:          "google is valid",
+			analyticsType: ptr.To("google"),
+			want:          true,
+		},
+		{
+			name:          "umami is valid",
+			analyticsType: ptr.To("umami"),
+			want:          true,
+		},
+		{
+			name:          "plausible is valid",
+			analyticsType: ptr.To("plausible"),
+			want:          true,
+		},
+		{
+			name:          "matomo is valid",
+			analyticsType: ptr.To("matomo"),
+			want:          true,
+		},
+		{
+			name:          "invalid analytics type",
+			analyticsType: ptr.To("invalid"),
+			want:          false,
+		},
+		{
+			name:          "empty string is invalid",
+			analyticsType: ptr.To(""),
+			want:          false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := statuspage.ValidAnalyticsType(tt.analyticsType); got != tt.want {
+				t.Errorf("ValidAnalyticsType(%v) = %v, want %v", tt.analyticsType, got, tt.want)
 			}
 		})
 	}
