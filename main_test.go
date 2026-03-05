@@ -91,7 +91,7 @@ func testMainSetup(m *testing.M) (int, error) {
 		client, err = kuma.New(
 			ctx,
 			fmt.Sprintf("http://localhost:%s", resource.GetPort("3001/tcp")),
-			"admin", "admin1",
+			kuma.WithCredentials("admin", "admin1"),
 			kuma.WithAutosetup(),
 			kuma.WithLogLevel(kuma.LogLevel(os.Getenv("SOCKETIO_LOG_LEVEL"))),
 			kuma.WithConnectTimeout(10*time.Second),
