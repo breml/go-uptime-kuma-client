@@ -5,7 +5,7 @@ go 1.25.2
 require (
 	github.com/maldikhan/go.socket.io v0.1.1
 	github.com/ory/dockertest/v3 v3.12.0
-	golang.org/x/sync v0.19.0
+	golang.org/x/sync v0.20.0
 )
 
 require (
