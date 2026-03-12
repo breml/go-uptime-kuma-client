@@ -15,7 +15,7 @@ func Example() {
 	// Using pre-initialized client from main_test.go connecting to Uptime
 	// Kuma running in Docker container.
 	//
-	// client, err := kuma.New(ctx, "http://localhost:3001", "admin", "password")
+	// client, err := kuma.New(ctx, "http://localhost:3001", kuma.WithCredentials("admin", "password"))
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }

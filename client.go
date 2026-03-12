@@ -94,6 +94,9 @@ type Client struct {
 	socketioLogger               socketio.Logger
 	autosetup                    bool
 
+	username string
+	password string
+
 	mu      *sync.Mutex
 	updates signals.Signal[string]
 	state   state
@@ -115,6 +118,23 @@ func WithLogLevel(level int) Option {
 		if level >= utils.DEBUG && level <= utils.NONE {
 			c.socketioLogger = &utils.DefaultLogger{Level: level}
 		}
+	}
+}
+
+// WithCredentials sets the username and password used to authenticate with the Uptime Kuma server.
+func WithCredentials(username string, password string) Option {
+	return func(c *Client) {
+		c.username = username
+		c.password = password
+	}
+}
+
+// WithAPIKey sets the API key used to authenticate with the Uptime Kuma server.
+// This is the recommended authentication method when 2FA is enabled.
+func WithAPIKey(key string) Option {
+	return func(c *Client) {
+		c.username = ""
+		c.password = key
 	}
 }
 
@@ -290,7 +310,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 // New creates a new Client connected to an Uptime Kuma server.
 //
 //nolint:revive // Complexity is necessary for complete client initialization and event setup
-func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
+func New(ctx context.Context, baseURL string, opts ...Option) (*Client, error) {
 	c := &Client{
 		socketioLogger: &utils.DefaultLogger{Level: utils.NONE},
 
@@ -511,11 +531,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		return nil, fmt.Errorf("connect to server: %w", err)
 	}
 
-	if username != "" && password != "" {
+	if c.password != "" {
 		_, err = c.syncEmit(
 			ctxWithConnectTimeout,
 			"login",
-			map[string]any{"username": username, "password": password, "token": ""},
+			map[string]any{"username": c.username, "password": c.password, "token": ""},
 		)
 		if err != nil {
 			// Ensure we had the time to receive a potential setup event.
@@ -548,7 +568,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 				return nil, errors.New("server does require setup, but autosetup is disabled")
 			}
 
-			_, err := c.syncEmit(ctxWithConnectTimeout, "setup", username, password)
+			_, err := c.syncEmit(ctxWithConnectTimeout, "setup", c.username, c.password)
 			if err != nil {
 				return nil, fmt.Errorf("setup: %w", err)
 			}
@@ -556,7 +576,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			_, err = c.syncEmit(
 				ctxWithConnectTimeout,
 				"login",
-				map[string]any{"username": username, "password": password, "token": ""},
+				map[string]any{"username": c.username, "password": c.password, "token": ""},
 			)
 			if err != nil {
 				return nil, fmt.Errorf("login: %w", err)
