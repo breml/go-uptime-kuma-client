@@ -10,12 +10,16 @@ pre-commit:
         jobs:
           - name: Run gofumpt
             run: bin/gofumpt -l -w .
+            stage_fixed: true
           - name: Run newline-after-block linter
             run: bin/newline-after-block --fix --exclude '^internal/gointernal' ./...
+            stage_fixed: true
           - name: Run golangci-lint
             run: bin/golangci-lint run --fix ./...
+            stage_fixed: true
     - name: Lint markdown files
       run: markdownlint-cli2 --fix --files '**/*.md' '!.scratch/**'
+      stage_fixed: true
 
 pre-push:
   # Since some jobs might update files (e.g., go mod tidy), we cannot run them in parallel
@@ -25,12 +29,14 @@ pre-push:
       run: go mod tidy && git diff --exit-code go.mod go.sum
     - name: Check go generate
       run: go generate ./... && git diff --exit-code -- '**/*_gen.go' '**/*_gen_test.go'
-    - group:
-        jobs:
-          - name: Build all hooks
-            run: go build -v -o bin/commit-msg-lint github.com/breml/githooks/cmd/commit-msg-lint
-          - name: Run all hooks
-            run: bin/commit-msg-lint
-            use_stdin: true
+      stage_fixed: true
     - name: Run tests
       run: go test -v ./...
+
+commit-msg:
+  jobs:
+    - name: Build all hooks
+      run: go build -v -o bin/commit-msg-lint github.com/breml/githooks/cmd/commit-msg-lint
+    - name: Run all hooks
+      run: bin/commit-msg-lint
+      use_stdin: true
