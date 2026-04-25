@@ -72,6 +72,7 @@ func (p Ping) MarshalJSON() ([]byte, error) {
 	// Always override with current Ping-specific field values.
 	raw["hostname"] = p.Hostname
 	raw["packetSize"] = p.PacketSize
+	raw["timeout"] = p.Timeout
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -91,6 +92,8 @@ func (p Ping) MarshalJSON() ([]byte, error) {
 type PingDetails struct {
 	Hostname   string `json:"hostname"`
 	PacketSize int    `json:"packetSize"`
+	// Timeout is an optional request timeout in seconds.
+	Timeout *int64 `json:"timeout"`
 }
 
 // Type returns the monitor type.

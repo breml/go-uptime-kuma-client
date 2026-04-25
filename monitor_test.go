@@ -147,6 +147,7 @@ func TestMonitorCRUD(t *testing.T) {
 				PingDetails: monitor.PingDetails{
 					Hostname:   "8.8.8.8",
 					PacketSize: 56,
+					Timeout:    ptr.To(int64(48)),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
