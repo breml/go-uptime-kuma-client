@@ -102,16 +102,24 @@ func TestNewConnectTimeoutDuringReadyWait(t *testing.T) {
 	// The fake server completes the handshake and login phases successfully, but
 	// never sends the required ready events (e.g. apiKeyList). kuma.New() must
 	// return a context.DeadlineExceeded error within the configured timeout.
+	const timeout = 500 * time.Millisecond
+
 	server := httptest.NewServer(&fakeSocketIOServer{
 		messages: make(chan []byte, 10),
 	})
 
-	// Use an explicit cancellable context so that background goroutines
-	// started by kuma.New() can be stopped before server.Close() waits
-	// for all active connections to drain.
-	ctx, cancel := context.WithCancel(t.Context())
+	// Bound the test itself so it fails fast if the regression reappears and
+	// kuma.New() blocks indefinitely rather than honouring the timeout.
+	ctx, cancel := context.WithTimeout(t.Context(), 5*timeout)
 
-	const timeout = 500 * time.Millisecond
+	// Always cancel the context and close the server, even when a require.*
+	// assertion short-circuits the test via FailNow.
+	t.Cleanup(func() {
+		cancel()
+		server.CloseClientConnections()
+		server.Close()
+	})
+
 	start := time.Now()
 
 	_, err := kuma.New(
@@ -126,11 +134,4 @@ func TestNewConnectTimeoutDuringReadyWait(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorIs(t, err, context.DeadlineExceeded, "error should wrap context.DeadlineExceeded, got: %v", err)
 	require.Less(t, elapsed, 2*timeout, "New() should return within 2x timeout, took %s", elapsed)
-
-	// Cancel the context to abort in-flight requests from background
-	// goroutines, then force-close any remaining connections so that
-	// server.Close() does not block waiting for active connections to drain.
-	cancel()
-	server.CloseClientConnections()
-	server.Close()
 }

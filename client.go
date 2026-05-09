@@ -304,10 +304,18 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	ctxWithConnectTimeout := ctx
+
+	// connectTimeoutDone is non-nil only when WithConnectTimeout is
+	// configured. Using nil keeps the ready-wait select deterministic when
+	// ctxWithConnectTimeout and ctx are the same context (no timeout set).
+	var connectTimeoutDone <-chan struct{}
+
 	if c.socketioClientConnectTimeout != 0 {
 		var cancel func()
 		ctxWithConnectTimeout, cancel = context.WithTimeout(ctx, c.socketioClientConnectTimeout)
 		defer cancel()
+
+		connectTimeoutDone = ctxWithConnectTimeout.Done()
 	}
 
 	// Handle database setup for Uptime Kuma v2 if autosetup is enabled
@@ -566,7 +574,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		case <-ctx.Done():
 			return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
 
-		case <-ctxWithConnectTimeout.Done():
+		case <-connectTimeoutDone:
 			updateSeenMu.Lock()
 			missing := make([]string, 0, len(updateSeen))
 			for event := range updateSeen {
