@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -564,6 +565,22 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 		case <-ctx.Done():
 			return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
+
+		case <-ctxWithConnectTimeout.Done():
+			updateSeenMu.Lock()
+			missing := make([]string, 0, len(updateSeen))
+			for event := range updateSeen {
+				missing = append(missing, event)
+			}
+			updateSeenMu.Unlock()
+
+			sort.Strings(missing)
+
+			return nil, fmt.Errorf(
+				"wait for ready: %w (missing events: %s)",
+				ctxWithConnectTimeout.Err(),
+				strings.Join(missing, ", "),
+			)
 		}
 	}
 }
