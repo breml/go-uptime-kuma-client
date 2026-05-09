@@ -37,17 +37,27 @@ func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			PingTimeout  int      `json:"pingTimeout"`
 			MaxPayload   int      `json:"maxPayload"`
 		}
-		data, _ := json.Marshal(engineIOHandshake{
+		data, err := json.Marshal(engineIOHandshake{
 			Sid:          "test-sid",
 			Upgrades:     []string{}, // no WebSocket upgrade keeps the client on polling
 			PingInterval: 50,
 			PingTimeout:  5000,
 			MaxPayload:   1000000,
 		})
+		if err != nil {
+			http.Error(w, "marshal handshake", http.StatusInternalServerError)
+			return
+		}
+
 		_, _ = w.Write(append([]byte("0"), data...))
 
 	case r.Method == http.MethodPost && sid != "":
-		body, _ := io.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "read body", http.StatusInternalServerError)
+			return
+		}
+
 		s.handleClientMessage(body)
 		w.WriteHeader(http.StatusOK)
 

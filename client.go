@@ -529,7 +529,12 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	closeOnErr := true
 	defer func() {
 		if closeOnErr {
-			go func() { _ = c.Disconnect() }()
+			go func() {
+				disconnectErr := c.Disconnect()
+				if disconnectErr != nil {
+					c.socketioLogger.Errorf("disconnect after New() error: %s", disconnectErr)
+				}
+			}()
 		}
 	}()
 
@@ -589,6 +594,14 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
 
 		case <-connectTimeoutDone:
+			// ctxWithConnectTimeout is derived from ctx, so its Done channel
+			// closes whenever the parent ctx is cancelled too. Prefer the
+			// parent's error in that case to avoid a misleading
+			// "missing events" message on an ordinary cancellation.
+			if ctx.Err() != nil {
+				return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
+			}
+
 			updateSeenMu.Lock()
 			missing := make([]string, 0, len(updateSeen))
 			for event := range updateSeen {
