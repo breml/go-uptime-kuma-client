@@ -522,10 +522,9 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	// The socket.io client is now connected. On any subsequent error path
 	// the caller receives no *Client handle and therefore cannot call
-	// Disconnect themselves. Trigger a non-blocking close in a separate
-	// goroutine so New() returns promptly; the goroutine will finish once
-	// the caller's ctx is cancelled.  Cleared to false on the success path
-	// so the caller takes ownership.
+	// Disconnect themselves. Trigger a best-effort async close so that
+	// goroutines and connections are eventually cleaned up.
+	// Cleared to false on the success path so the caller takes ownership.
 	closeOnErr := true
 	defer func() {
 		if closeOnErr {
@@ -600,6 +599,16 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			// "missing events" message on an ordinary cancellation.
 			if ctx.Err() != nil {
 				return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
+			}
+
+			// If all ready events arrived at the exact same instant as the
+			// timeout, prefer the success path over the error path.
+			select {
+			case <-ready:
+				closeOnErr = false
+				return c, nil
+
+			default:
 			}
 
 			updateSeenMu.Lock()
