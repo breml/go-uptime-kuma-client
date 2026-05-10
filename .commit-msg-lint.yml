@@ -48,8 +48,15 @@ rules:
   - name: no-co-authored-by-agent
     type: deny
     scope: message
-    pattern: '(?i)(?:^Co-Authored-By: (Claude|Amp|Gemini|Copilot))'
+    pattern: '(?im)(?:^Co-Authored-By: (?:Claude|Amp|Gemini|Copilot))'
     message: "Commit messages must not contain 'Co-Authored-By: ' lines from agents"
+
+  # Enforce no Amp-Thread-ID lines from agents in commit messages
+  - name: no-amp-thread-id
+    type: deny
+    scope: message
+    pattern: '(?im)(?:^Amp-Thread-ID:)'
+    message: "Commit messages must not contain 'Amp-Thread-ID:' lines from agents"
 
 # Additional example rules (uncomment to enable):
 
