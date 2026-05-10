@@ -12,13 +12,17 @@ type Discord struct {
 
 // DiscordDetails contains discord-specific notification configuration.
 type DiscordDetails struct {
-	WebhookURL    string `json:"discordWebhookUrl"`
-	Username      string `json:"discordUsername"`
-	ChannelType   string `json:"discordChannelType"`
-	ThreadID      string `json:"threadId"`
-	PostName      string `json:"postName"`
-	PrefixMessage string `json:"discordPrefixMessage"`
-	DisableURL    bool   `json:"disableUrl"`
+	WebhookURL            string `json:"discordWebhookUrl"`
+	Username              string `json:"discordUsername"`
+	ChannelType           string `json:"discordChannelType"`
+	ThreadID              string `json:"threadId"`
+	PostName              string `json:"postName"`
+	PrefixMessage         string `json:"discordPrefixMessage"`
+	DisableURL            bool   `json:"disableUrl"`
+	SuppressNotifications bool   `json:"discordSuppressNotifications,omitempty"`
+	MessageFormat         string `json:"discordMessageFormat,omitempty"`
+	MessageTemplate       string `json:"discordMessageTemplate,omitempty"`
+	UseMessageTemplate    bool   `json:"discordUseMessageTemplate,omitempty"`
 }
 
 // Type returns the notification type.
