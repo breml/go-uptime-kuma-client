@@ -158,6 +158,29 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordMessageFormat":"custom","discordMessageTemplate":"Service {{name}} is {{status}}","discordPrefixMessage":"","discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/custom/webhook","id":6,"isDefault":false,"name":"Custom Discord","postName":"","threadId":"","type":"discord","userId":1}`,
 		},
 		{
+			name: "pointer to false and empty string are serialized",
+			data: []byte(
+				`{"id":8,"name":"Explicit False Discord","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Explicit False Discord\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/explicit/webhook\",\"discordSuppressNotifications\":false,\"discordMessageFormat\":\"\",\"type\":\"discord\"}"}`,
+			),
+
+			want: notification.Discord{
+				Base: notification.Base{
+					ID:            8,
+					Name:          "Explicit False Discord",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				DiscordDetails: notification.DiscordDetails{
+					WebhookURL:            "https://discordapp.com/api/webhooks/explicit/webhook",
+					SuppressNotifications: ptr.To(false),
+					MessageFormat:         ptr.To(""),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordMessageFormat":"","discordPrefixMessage":"","discordSuppressNotifications":false,"discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/explicit/webhook","id":8,"isDefault":false,"name":"Explicit False Discord","postName":"","threadId":"","type":"discord","userId":1}`,
+		},
+		{
 			name: "with legacy use message template",
 			data: []byte(
 				`{"id":7,"name":"Legacy Template Discord","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Legacy Template Discord\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/legacy/webhook\",\"discordUseMessageTemplate\":true,\"discordMessageTemplate\":\"Alert: {{name}}\",\"type\":\"discord\"}"}`,
@@ -197,4 +220,30 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 			require.JSONEq(t, tc.wantJSON, string(data))
 		})
 	}
+}
+
+func TestNotificationDiscord_String(t *testing.T) {
+	discord := notification.Discord{
+		Base: notification.Base{
+			ID:       1,
+			Name:     "Test Discord",
+			IsActive: true,
+			UserID:   1,
+		},
+		DiscordDetails: notification.DiscordDetails{
+			WebhookURL:            "https://discordapp.com/api/webhooks/123/abc",
+			SuppressNotifications: ptr.To(true),
+			MessageFormat:         ptr.To("minimalist"),
+			MessageTemplate:       ptr.To(""),
+		},
+	}
+
+	str := discord.String()
+
+	require.Contains(t, str, "Test Discord")
+	require.Contains(t, str, "discord")
+	require.Contains(t, str, "https://discordapp.com/api/webhooks/123/abc")
+	require.Contains(t, str, "true")
+	require.Contains(t, str, `"minimalist"`)
+	require.NotContains(t, str, "0x")
 }
