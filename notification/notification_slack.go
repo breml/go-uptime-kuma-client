@@ -12,12 +12,15 @@ type Slack struct {
 
 // SlackDetails contains slack-specific notification configuration.
 type SlackDetails struct {
-	WebhookURL    string `json:"slackwebhookURL"`
-	Username      string `json:"slackusername"`
-	IconEmoji     string `json:"slackiconemo"`
-	Channel       string `json:"slackchannel"`
-	RichMessage   bool   `json:"slackrichmessage"`
-	ChannelNotify bool   `json:"slackchannelnotify"`
+	WebhookURL       string  `json:"slackwebhookURL"`
+	Username         string  `json:"slackusername"`
+	IconEmoji        string  `json:"slackiconemo"`
+	Channel          string  `json:"slackchannel"`
+	RichMessage      bool    `json:"slackrichmessage"`
+	ChannelNotify    bool    `json:"slackchannelnotify"`
+	IncludeGroupName *bool   `json:"slackIncludeGroupName,omitempty"`
+	UseTemplate      *bool   `json:"slackUseTemplate,omitempty"`
+	Template         *string `json:"slackTemplate,omitempty"`
 }
 
 // Type returns the notification type.
