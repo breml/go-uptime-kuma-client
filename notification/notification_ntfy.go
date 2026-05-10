@@ -12,19 +12,19 @@ type Ntfy struct {
 
 // NtfyDetails contains ntfy-specific notification configuration.
 type NtfyDetails struct {
-	AccessToken          string `json:"ntfyaccesstoken"`
-	AuthenticationMethod string `json:"ntfyAuthenticationMethod"`
-	Call                 string `json:"ntfyCall,omitempty"`
-	CustomMessage        string `json:"ntfyCustomMessage,omitempty"`
-	CustomTitle          string `json:"ntfyCustomTitle,omitempty"`
-	Icon                 string `json:"ntfyIcon"`
-	Password             string `json:"ntfypassword"`
-	Priority             int64  `json:"ntfyPriority"`
-	PriorityDown         int64  `json:"ntfyPriorityDown,omitempty"`
-	ServerURL            string `json:"ntfyserverurl"`
-	Topic                string `json:"ntfytopic"`
-	UseTemplate          bool   `json:"ntfyUseTemplate,omitempty"`
-	Username             string `json:"ntfyusername"`
+	AccessToken          string  `json:"ntfyaccesstoken"`
+	AuthenticationMethod string  `json:"ntfyAuthenticationMethod"`
+	Call                 *string `json:"ntfyCall,omitempty"`
+	CustomMessage        *string `json:"ntfyCustomMessage,omitempty"`
+	CustomTitle          *string `json:"ntfyCustomTitle,omitempty"`
+	Icon                 string  `json:"ntfyIcon"`
+	Password             string  `json:"ntfypassword"`
+	Priority             int64   `json:"ntfyPriority"`
+	PriorityDown         int64   `json:"ntfyPriorityDown,omitempty"`
+	ServerURL            string  `json:"ntfyserverurl"`
+	Topic                string  `json:"ntfytopic"`
+	UseTemplate          *bool   `json:"ntfyUseTemplate,omitempty"`
+	Username             string  `json:"ntfyusername"`
 }
 
 // Type returns the notification type.

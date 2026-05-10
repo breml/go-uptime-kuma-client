@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -61,13 +62,13 @@ func TestNotificationNtfy_Unmarshal(t *testing.T) {
 				},
 				NtfyDetails: notification.NtfyDetails{
 					AuthenticationMethod: "usernamePassword",
-					Call:                 "+12223334444",
-					CustomMessage:        "custom message",
-					CustomTitle:          "custom title",
+					Call:                 ptr.To("+12223334444"),
+					CustomMessage:        ptr.To("custom message"),
+					CustomTitle:          ptr.To("custom title"),
 					Icon:                 "http://symbol.url",
 					Priority:             3,
 					PriorityDown:         5,
-					UseTemplate:          true,
+					UseTemplate:          ptr.To(true),
 					Password:             "password",
 					ServerURL:            "https://ntfy.sh",
 					Topic:                "topic",
@@ -75,6 +76,34 @@ func TestNotificationNtfy_Unmarshal(t *testing.T) {
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":true,"id":2,"isDefault":true,"name":"My Ntfy Alert","ntfyAuthenticationMethod":"usernamePassword","ntfyCall":"+12223334444","ntfyCustomMessage":"custom message","ntfyCustomTitle":"custom title","ntfyIcon":"http://symbol.url","ntfyPriority":3,"ntfyPriorityDown":5,"ntfyUseTemplate":true,"ntfyaccesstoken":"","ntfypassword":"password","ntfyserverurl":"https://ntfy.sh","ntfytopic":"topic","ntfyusername":"user","type":"ntfy","userId":1}`,
+		},
+		{
+			name: "explicit empty template fields and disabled toggle",
+			data: []byte(
+				`{"id":3,"name":"My Ntfy Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Ntfy Alert\",\"ntfyAuthenticationMethod\":\"none\",\"ntfyCall\":\"\",\"ntfyCustomMessage\":\"\",\"ntfyCustomTitle\":\"\",\"ntfyIcon\":\"\",\"ntfyPriority\":5,\"ntfyUseTemplate\":false,\"ntfypassword\":\"\",\"ntfyserverurl\":\"https://ntfy.sh\",\"ntfytopic\":\"topic\",\"ntfyusername\":\"\",\"type\":\"ntfy\"}"}`,
+			),
+
+			want: notification.Ntfy{
+				Base: notification.Base{
+					ID:            3,
+					Name:          "My Ntfy Alert",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     true,
+					ApplyExisting: true,
+				},
+				NtfyDetails: notification.NtfyDetails{
+					AuthenticationMethod: "none",
+					Call:                 ptr.To(""),
+					CustomMessage:        ptr.To(""),
+					CustomTitle:          ptr.To(""),
+					Priority:             5,
+					ServerURL:            "https://ntfy.sh",
+					Topic:                "topic",
+					UseTemplate:          ptr.To(false),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":true,"id":3,"isDefault":true,"name":"My Ntfy Alert","ntfyAuthenticationMethod":"none","ntfyCall":"","ntfyCustomMessage":"","ntfyCustomTitle":"","ntfyIcon":"","ntfyPriority":5,"ntfyUseTemplate":false,"ntfyaccesstoken":"","ntfypassword":"","ntfyserverurl":"https://ntfy.sh","ntfytopic":"topic","ntfyusername":"","type":"ntfy","userId":1}`,
 		},
 	}
 
