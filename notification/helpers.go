@@ -46,9 +46,22 @@ func formatNotification(s any, includeType bool) string {
 		name := strings.Split(field.Tag.Get("json"), ",")[0]
 
 		var valueStr string
-		if value.Kind() == reflect.String {
+		switch {
+		case value.Kind() == reflect.Pointer && value.IsNil():
+			valueStr = "<nil>"
+
+		case value.Kind() == reflect.Pointer:
+			elem := value.Elem()
+			if elem.Kind() == reflect.String {
+				valueStr = fmt.Sprintf("%q", elem.String())
+			} else {
+				valueStr = fmt.Sprintf("%v", elem.Interface())
+			}
+
+		case value.Kind() == reflect.String:
 			valueStr = fmt.Sprintf("%q", value.String())
-		} else {
+
+		default:
 			valueStr = fmt.Sprintf("%v", value.Interface())
 		}
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -89,6 +90,119 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"createNewForumPost","discordPrefixMessage":"","discordUsername":"Monitor Bot","discordWebhookUrl":"https://discordapp.com/api/webhooks/forum/webhook","id":3,"isDefault":false,"name":"Discord Forum","postName":"System Alert","threadId":"","type":"discord","userId":1}`,
 		},
+		{
+			name: "with suppress notifications",
+			data: []byte(
+				`{"id":4,"name":"Silent Discord","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Silent Discord\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/silent/webhook\",\"discordSuppressNotifications\":true,\"type\":\"discord\"}"}`,
+			),
+
+			want: notification.Discord{
+				Base: notification.Base{
+					ID:            4,
+					Name:          "Silent Discord",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				DiscordDetails: notification.DiscordDetails{
+					WebhookURL:            "https://discordapp.com/api/webhooks/silent/webhook",
+					SuppressNotifications: ptr.To(true),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordPrefixMessage":"","discordSuppressNotifications":true,"discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/silent/webhook","id":4,"isDefault":false,"name":"Silent Discord","postName":"","threadId":"","type":"discord","userId":1}`,
+		},
+		{
+			name: "with minimalist message format",
+			data: []byte(
+				`{"id":5,"name":"Minimalist Discord","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Minimalist Discord\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/min/webhook\",\"discordMessageFormat\":\"minimalist\",\"type\":\"discord\"}"}`,
+			),
+
+			want: notification.Discord{
+				Base: notification.Base{
+					ID:            5,
+					Name:          "Minimalist Discord",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				DiscordDetails: notification.DiscordDetails{
+					WebhookURL:    "https://discordapp.com/api/webhooks/min/webhook",
+					MessageFormat: ptr.To("minimalist"),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordMessageFormat":"minimalist","discordPrefixMessage":"","discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/min/webhook","id":5,"isDefault":false,"name":"Minimalist Discord","postName":"","threadId":"","type":"discord","userId":1}`,
+		},
+		{
+			name: "with custom message format and template",
+			data: []byte(
+				`{"id":6,"name":"Custom Discord","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Custom Discord\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/custom/webhook\",\"discordMessageFormat\":\"custom\",\"discordMessageTemplate\":\"Service {{name}} is {{status}}\",\"type\":\"discord\"}"}`,
+			),
+
+			want: notification.Discord{
+				Base: notification.Base{
+					ID:            6,
+					Name:          "Custom Discord",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				DiscordDetails: notification.DiscordDetails{
+					WebhookURL:      "https://discordapp.com/api/webhooks/custom/webhook",
+					MessageFormat:   ptr.To("custom"),
+					MessageTemplate: ptr.To("Service {{name}} is {{status}}"),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordMessageFormat":"custom","discordMessageTemplate":"Service {{name}} is {{status}}","discordPrefixMessage":"","discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/custom/webhook","id":6,"isDefault":false,"name":"Custom Discord","postName":"","threadId":"","type":"discord","userId":1}`,
+		},
+		{
+			name: "pointer to false and empty string are serialized",
+			data: []byte(
+				`{"id":8,"name":"Explicit False Discord","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Explicit False Discord\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/explicit/webhook\",\"discordSuppressNotifications\":false,\"discordMessageFormat\":\"\",\"type\":\"discord\"}"}`,
+			),
+
+			want: notification.Discord{
+				Base: notification.Base{
+					ID:            8,
+					Name:          "Explicit False Discord",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				DiscordDetails: notification.DiscordDetails{
+					WebhookURL:            "https://discordapp.com/api/webhooks/explicit/webhook",
+					SuppressNotifications: ptr.To(false),
+					MessageFormat:         ptr.To(""),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordMessageFormat":"","discordPrefixMessage":"","discordSuppressNotifications":false,"discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/explicit/webhook","id":8,"isDefault":false,"name":"Explicit False Discord","postName":"","threadId":"","type":"discord","userId":1}`,
+		},
+		{
+			name: "with legacy use message template",
+			data: []byte(
+				`{"id":7,"name":"Legacy Template Discord","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Legacy Template Discord\",\"discordWebhookUrl\":\"https://discordapp.com/api/webhooks/legacy/webhook\",\"discordUseMessageTemplate\":true,\"discordMessageTemplate\":\"Alert: {{name}}\",\"type\":\"discord\"}"}`,
+			),
+
+			want: notification.Discord{
+				Base: notification.Base{
+					ID:            7,
+					Name:          "Legacy Template Discord",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				DiscordDetails: notification.DiscordDetails{
+					WebhookURL:         "https://discordapp.com/api/webhooks/legacy/webhook",
+					UseMessageTemplate: ptr.To(true),
+					MessageTemplate:    ptr.To("Alert: {{name}}"),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordMessageTemplate":"Alert: {{name}}","discordPrefixMessage":"","discordUseMessageTemplate":true,"discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/legacy/webhook","id":7,"isDefault":false,"name":"Legacy Template Discord","postName":"","threadId":"","type":"discord","userId":1}`,
+		},
 	}
 
 	for _, tc := range tests {
@@ -106,4 +220,30 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 			require.JSONEq(t, tc.wantJSON, string(data))
 		})
 	}
+}
+
+func TestNotificationDiscord_String(t *testing.T) {
+	discord := notification.Discord{
+		Base: notification.Base{
+			ID:       1,
+			Name:     "Test Discord",
+			IsActive: true,
+			UserID:   1,
+		},
+		DiscordDetails: notification.DiscordDetails{
+			WebhookURL:            "https://discordapp.com/api/webhooks/123/abc",
+			SuppressNotifications: ptr.To(true),
+			MessageFormat:         ptr.To("minimalist"),
+			MessageTemplate:       ptr.To(""),
+		},
+	}
+
+	str := discord.String()
+
+	require.Contains(t, str, "Test Discord")
+	require.Contains(t, str, "discord")
+	require.Contains(t, str, "https://discordapp.com/api/webhooks/123/abc")
+	require.Contains(t, str, "true")
+	require.Contains(t, str, `"minimalist"`)
+	require.NotContains(t, str, "0x")
 }
