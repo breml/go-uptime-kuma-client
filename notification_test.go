@@ -1100,7 +1100,8 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test WeCom Created",
 				},
 				WeComDetails: notification.WeComDetails{
-					BotKey: "xxxx",
+					BotKey:              "xxxx",
+					MentionedMobileList: "13800001111,13900002222",
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -1111,6 +1112,7 @@ func TestNotificationCRUD(t *testing.T) {
 
 				wecom.Name = "Test WeCom Updated"
 				wecom.BotKey = "yyyy"
+				wecom.MentionedMobileList = "13911112222,@all"
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
 				t.Helper()

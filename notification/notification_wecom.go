@@ -13,7 +13,8 @@ type WeCom struct {
 
 // WeComDetails contains the WeCom-specific configuration.
 type WeComDetails struct {
-	BotKey string `json:"weComBotKey"`
+	BotKey              string `json:"weComBotKey"`
+	MentionedMobileList string `json:"weComMentionedMobileList,omitempty"`
 }
 
 // Type returns the notification type identifier for WeCom.
