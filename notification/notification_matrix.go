@@ -15,6 +15,8 @@ type MatrixDetails struct {
 	HomeserverURL  string `json:"homeserverUrl"`
 	InternalRoomID string `json:"internalRoomId"`
 	AccessToken    string `json:"accessToken"`
+	UseTemplate    bool   `json:"matrixUseTemplate"`
+	Template       string `json:"matrixTemplate"`
 }
 
 // Type returns the notification type.
