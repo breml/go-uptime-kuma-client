@@ -20,7 +20,7 @@ func TestNotificationWeCom_Unmarshal(t *testing.T) {
 		{
 			name: "success",
 			data: []byte(
-				`{"id":1,"name":"My WeCom Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My WeCom Alert\",\"weComBotKey\":\"abc123def456\",\"type\":\"WeCom\"}"}`,
+				`{"id":1,"name":"My WeCom Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My WeCom Alert\",\"weComBotKey\":\"abc123def456\",\"weComMentionedMobileList\":\"13800001111,13900002222,@all\",\"type\":\"WeCom\"}"}`,
 			),
 
 			want: notification.WeCom{
@@ -33,10 +33,11 @@ func TestNotificationWeCom_Unmarshal(t *testing.T) {
 					ApplyExisting: true,
 				},
 				WeComDetails: notification.WeComDetails{
-					BotKey: "abc123def456",
+					BotKey:              "abc123def456",
+					MentionedMobileList: "13800001111,13900002222,@all",
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My WeCom Alert","type":"WeCom","userId":1,"weComBotKey":"abc123def456"}`,
+			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My WeCom Alert","type":"WeCom","userId":1,"weComBotKey":"abc123def456","weComMentionedMobileList":"13800001111,13900002222,@all"}`,
 		},
 		{
 			name: "minimal",
