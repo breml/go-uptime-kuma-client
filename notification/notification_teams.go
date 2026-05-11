@@ -13,6 +13,7 @@ type Teams struct {
 // TeamsDetails contains teams-specific notification configuration.
 type TeamsDetails struct {
 	WebhookURL string `json:"webhookUrl"`
+	EnableTags *bool  `json:"teamsEnableTags,omitempty"`
 }
 
 // Type returns the notification type.
