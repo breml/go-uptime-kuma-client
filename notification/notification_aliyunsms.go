@@ -12,11 +12,12 @@ type AliyunSMS struct {
 
 // AliyunSMSDetails contains the configuration fields for Aliyun SMS notifications.
 type AliyunSMSDetails struct {
-	AccessKeyID     string `json:"accessKeyId"`
-	SecretAccessKey string `json:"secretAccessKey"`
-	PhoneNumber     string `json:"phonenumber"`
-	SignName        string `json:"signName"`
-	TemplateCode    string `json:"templateCode"`
+	AccessKeyID        string `json:"accessKeyId"`
+	SecretAccessKey    string `json:"secretAccessKey"`
+	PhoneNumber        string `json:"phonenumber"`
+	SignName           string `json:"signName"`
+	TemplateCode       string `json:"templateCode"`
+	OptionalParameters *bool  `json:"optionalParameters,omitempty"`
 }
 
 // Type returns the notification type identifier.
