@@ -993,6 +993,8 @@ func TestNotificationCRUD(t *testing.T) {
 					HomeserverURL:  "https://matrix.example.com",
 					InternalRoomID: "!roomid:example.com",
 					AccessToken:    "test_access_token",
+					UseTemplate:    false,
+					Template:       "",
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -1003,6 +1005,8 @@ func TestNotificationCRUD(t *testing.T) {
 
 				matrix.Name = "Test Matrix Updated"
 				matrix.InternalRoomID = "!newroomid:example.com"
+				matrix.UseTemplate = true
+				matrix.Template = "Monitor: {{ monitorJSON.name }}\nStatus: {{ status }}"
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
 				t.Helper()
