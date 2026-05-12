@@ -21,6 +21,10 @@ type EvolutionDetails struct {
 	AuthToken string `json:"evolutionAuthToken"`
 	// Recipient is the recipient phone number for WhatsApp messages.
 	Recipient string `json:"evolutionRecipient"`
+	// UseCustomMessage enables the use of a custom message template.
+	UseCustomMessage *bool `json:"evolutionUseCustomMessage,omitempty"`
+	// CustomMessage is the custom message template used when UseCustomMessage is enabled.
+	CustomMessage *string `json:"evolutionCustomMessage,omitempty"`
 }
 
 // Type returns the notification type identifier for Evolution.

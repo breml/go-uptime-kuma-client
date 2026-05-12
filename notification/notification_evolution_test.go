@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -88,6 +89,58 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 				},
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"evolutionApiUrl":"https://custom.api.com","evolutionAuthToken":"ustoken","evolutionInstanceName":"usinstance","evolutionRecipient":"12025551234","id":3,"isDefault":false,"name":"Evolution US","type":"EvolutionApi","userId":1}`,
+		},
+		{
+			name: "with custom message template",
+			data: []byte(
+				`{"id":4,"name":"Evolution Template","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Evolution Template\",\"evolutionApiUrl\":\"https://evolapicloud.com\",\"evolutionInstanceName\":\"myinstance\",\"evolutionAuthToken\":\"token123\",\"evolutionRecipient\":\"5511999999999\",\"evolutionUseCustomMessage\":true,\"evolutionCustomMessage\":\"Alert: {{ msg }}\",\"type\":\"EvolutionApi\"}"}`,
+			),
+
+			want: notification.Evolution{
+				Base: notification.Base{
+					ID:            4,
+					Name:          "Evolution Template",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				EvolutionDetails: notification.EvolutionDetails{
+					APIURL:           "https://evolapicloud.com",
+					InstanceName:     "myinstance",
+					AuthToken:        "token123",
+					Recipient:        "5511999999999",
+					UseCustomMessage: ptr.To(true),
+					CustomMessage:    ptr.To("Alert: {{ msg }}"),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"evolutionApiUrl":"https://evolapicloud.com","evolutionAuthToken":"token123","evolutionCustomMessage":"Alert: {{ msg }}","evolutionInstanceName":"myinstance","evolutionRecipient":"5511999999999","evolutionUseCustomMessage":true,"id":4,"isDefault":false,"name":"Evolution Template","type":"EvolutionApi","userId":1}`,
+		},
+		{
+			name: "pointer to false and empty string are serialized",
+			data: []byte(
+				`{"id":5,"name":"Evolution Explicit False","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Evolution Explicit False\",\"evolutionApiUrl\":\"https://evolapicloud.com\",\"evolutionInstanceName\":\"myinstance\",\"evolutionAuthToken\":\"token123\",\"evolutionRecipient\":\"5511999999999\",\"evolutionUseCustomMessage\":false,\"evolutionCustomMessage\":\"\",\"type\":\"EvolutionApi\"}"}`,
+			),
+
+			want: notification.Evolution{
+				Base: notification.Base{
+					ID:            5,
+					Name:          "Evolution Explicit False",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				EvolutionDetails: notification.EvolutionDetails{
+					APIURL:           "https://evolapicloud.com",
+					InstanceName:     "myinstance",
+					AuthToken:        "token123",
+					Recipient:        "5511999999999",
+					UseCustomMessage: ptr.To(false),
+					CustomMessage:    ptr.To(""),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"evolutionApiUrl":"https://evolapicloud.com","evolutionAuthToken":"token123","evolutionCustomMessage":"","evolutionInstanceName":"myinstance","evolutionRecipient":"5511999999999","evolutionUseCustomMessage":false,"id":5,"isDefault":false,"name":"Evolution Explicit False","type":"EvolutionApi","userId":1}`,
 		},
 	}
 

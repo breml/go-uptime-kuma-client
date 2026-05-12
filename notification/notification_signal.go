@@ -12,9 +12,11 @@ type Signal struct {
 
 // SignalDetails contains signal-specific notification configuration.
 type SignalDetails struct {
-	URL        string `json:"signalURL"`
-	Number     string `json:"signalNumber"`
-	Recipients string `json:"signalRecipients"`
+	URL         string  `json:"signalURL"`
+	Number      string  `json:"signalNumber"`
+	Recipients  string  `json:"signalRecipients"`
+	UseTemplate *bool   `json:"signalUseTemplate,omitempty"`
+	Template    *string `json:"signalTemplate,omitempty"`
 }
 
 // Type returns the notification type.

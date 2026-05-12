@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -84,6 +85,56 @@ func TestNotificationSignal_Unmarshal(t *testing.T) {
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":3,"isDefault":false,"name":"Signal Multi","signalURL":"http://signal-api:9998","signalNumber":"+5555555555","signalRecipients":"+1111111111,+2222222222,+3333333333","type":"signal","userId":1}`,
+		},
+		{
+			name: "with template",
+			data: []byte(
+				`{"id":4,"name":"Signal Template","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Signal Template\",\"signalURL\":\"http://localhost:9998\",\"signalNumber\":\"+1234567890\",\"signalRecipients\":\"+9876543210\",\"signalUseTemplate\":true,\"signalTemplate\":\"Alert: {{ msg }}\",\"type\":\"signal\"}"}`,
+			),
+
+			want: notification.Signal{
+				Base: notification.Base{
+					ID:            4,
+					Name:          "Signal Template",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				SignalDetails: notification.SignalDetails{
+					URL:         "http://localhost:9998",
+					Number:      "+1234567890",
+					Recipients:  "+9876543210",
+					UseTemplate: ptr.To(true),
+					Template:    ptr.To("Alert: {{ msg }}"),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":4,"isDefault":false,"name":"Signal Template","signalURL":"http://localhost:9998","signalNumber":"+1234567890","signalRecipients":"+9876543210","signalUseTemplate":true,"signalTemplate":"Alert: {{ msg }}","type":"signal","userId":1}`,
+		},
+		{
+			name: "pointer to false and empty string are serialized",
+			data: []byte(
+				`{"id":5,"name":"Signal Explicit False","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Signal Explicit False\",\"signalURL\":\"http://localhost:9998\",\"signalNumber\":\"+1234567890\",\"signalRecipients\":\"+9876543210\",\"signalUseTemplate\":false,\"signalTemplate\":\"\",\"type\":\"signal\"}"}`,
+			),
+
+			want: notification.Signal{
+				Base: notification.Base{
+					ID:            5,
+					Name:          "Signal Explicit False",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				SignalDetails: notification.SignalDetails{
+					URL:         "http://localhost:9998",
+					Number:      "+1234567890",
+					Recipients:  "+9876543210",
+					UseTemplate: ptr.To(false),
+					Template:    ptr.To(""),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":5,"isDefault":false,"name":"Signal Explicit False","signalURL":"http://localhost:9998","signalNumber":"+1234567890","signalRecipients":"+9876543210","signalUseTemplate":false,"signalTemplate":"","type":"signal","userId":1}`,
 		},
 	}
 
