@@ -21,7 +21,7 @@ type Monitor interface {
 	GetNotificationIDs() []int64
 }
 
-type Conditions struct {
+type Condition struct {
 	Type     string `json:"type"`
 	AndOr    string `json:"andOr"`
 	Variable string `json:"variable"`
@@ -45,7 +45,7 @@ type Base struct {
 	NotificationIDs []int64          `json:"-"`
 	Tags            []tag.MonitorTag `json:"tags"`
 	IsActive        bool             `json:"active"`
-	Conditions      []Conditions     `json:"conditions"`
+	Conditions      []Condition     `json:"conditions"`
 
 	internalType string
 	raw          []byte
