@@ -78,8 +78,7 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
 
-	// Uptime Kuma v2 requires conditions field (empty array by default)
-	raw["conditions"] = []any{}
+	raw["conditions"] = d.Conditions
 
 	data, err := json.Marshal(raw)
 	if err != nil {
