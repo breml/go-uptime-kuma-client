@@ -7,6 +7,44 @@ import (
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
+// Outbound notification proxy environment variables.
+//
+// Since Uptime Kuma v2 (upstream PR louislam/uptime-kuma#7088), all built-in
+// notification providers route their outbound HTTP(S) requests through an
+// optional proxy. The proxy is configured globally on the Uptime Kuma server
+// process via the [NotificationProxyEnvVar] or [NotificationProxyEnvVarUpper]
+// environment variable (the lowercase variant takes precedence).
+//
+// The value must be a URL. The supported URL schemes are:
+//
+//   - http://      - HTTP proxy
+//   - https://     - HTTPS proxy
+//   - socks://     - SOCKS proxy (alias for socks5://)
+//   - socks4://    - SOCKS4 proxy
+//   - socks5://    - SOCKS5 proxy
+//   - socks5h://   - SOCKS5 proxy with remote DNS resolution
+//
+// Because the proxy is configured on the Uptime Kuma server itself (and not
+// per notification or via the settings store exposed by the API), there is
+// no corresponding field on the notification types in this client. To enable
+// the proxy, set the environment variable on the Uptime Kuma server before
+// starting it, for example:
+//
+//	NOTIFICATION_PROXY=socks5h://proxy.example.com:1080 npm run start-server
+const (
+	// NotificationProxyEnvVar is the lowercase environment variable name
+	// read by the Uptime Kuma server to configure the proxy used for
+	// outbound notification requests. It takes precedence over
+	// [NotificationProxyEnvVarUpper].
+	NotificationProxyEnvVar = "notification_proxy"
+
+	// NotificationProxyEnvVarUpper is the uppercase environment variable
+	// name read by the Uptime Kuma server to configure the proxy used for
+	// outbound notification requests. It is only consulted if
+	// [NotificationProxyEnvVar] is not set.
+	NotificationProxyEnvVarUpper = "NOTIFICATION_PROXY"
+)
+
 // GetNotifications returns all notifications for the authenticated user.
 func (c *Client) GetNotifications(_ context.Context) []notification.Base {
 	c.mu.Lock()
