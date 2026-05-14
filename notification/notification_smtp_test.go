@@ -44,7 +44,7 @@ func TestNotificationSMTP_Unmarshal(t *testing.T) {
 					HTMLBody:       true,
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":true,"customBody":"Status: {{ msg }}","customSubject":"Alert: {{ monitorJSON['name'] }}","htmlBody":true,"id":1,"isDefault":true,"name":"My SMTP Alert","smtpCC":"","smtpBCC":"","smtpDkimDomain":"","smtpDkimHashAlgo":"","smtpDkimKeySelector":"","smtpDkimPrivateKey":"","smtpDkimheaderFieldNames":"","smtpDkimskipFields":"","smtpFrom":"noreply@example.com","smtpHost":"smtp.gmail.com","smtpIgnoreTLSError":false,"smtpPassword":"","smtpPort":587,"smtpSecure":false,"smtpTo":"alerts@example.com","smtpUsername":"","type":"smtp","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":true,"customBody":"Status: {{ msg }}","customSubject":"Alert: {{ monitorJSON['name'] }}","htmlBody":true,"id":1,"isDefault":true,"name":"My SMTP Alert","smtpCC":"","smtpBCC":"","smtpDkimDomain":"","smtpDkimHashAlgo":"","smtpDkimKeySelector":"","smtpDkimPrivateKey":"","smtpDkimheaderFieldNames":"","smtpDkimskipFields":"","smtpFrom":"noreply@example.com","smtpHost":"smtp.gmail.com","smtpIgnoreSTARTTLS":false,"smtpIgnoreTLSError":false,"smtpPassword":"","smtpPort":587,"smtpSecure":false,"smtpTo":"alerts@example.com","smtpUsername":"","type":"smtp","userId":1}`,
 		},
 		{
 			name: "with authentication and DKIM",
@@ -79,7 +79,35 @@ func TestNotificationSMTP_Unmarshal(t *testing.T) {
 					HTMLBody:        false,
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":false,"customBody":"","customSubject":"","htmlBody":false,"id":2,"isDefault":false,"name":"SMTP with Auth","smtpBCC":"bcc@example.com","smtpCC":"cc@example.com","smtpDkimDomain":"example.com","smtpDkimHashAlgo":"sha256","smtpDkimKeySelector":"default","smtpDkimPrivateKey":"-----BEGIN RSA PRIVATE KEY-----\n...","smtpDkimheaderFieldNames":"","smtpDkimskipFields":"","smtpFrom":"sender@example.com","smtpHost":"smtp.example.com","smtpIgnoreTLSError":true,"smtpPassword":"secret","smtpPort":587,"smtpSecure":true,"smtpTo":"recipient@example.com","smtpUsername":"user@example.com","type":"smtp","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":false,"customBody":"","customSubject":"","htmlBody":false,"id":2,"isDefault":false,"name":"SMTP with Auth","smtpBCC":"bcc@example.com","smtpCC":"cc@example.com","smtpDkimDomain":"example.com","smtpDkimHashAlgo":"sha256","smtpDkimKeySelector":"default","smtpDkimPrivateKey":"-----BEGIN RSA PRIVATE KEY-----\n...","smtpDkimheaderFieldNames":"","smtpDkimskipFields":"","smtpFrom":"sender@example.com","smtpHost":"smtp.example.com","smtpIgnoreSTARTTLS":false,"smtpIgnoreTLSError":true,"smtpPassword":"secret","smtpPort":587,"smtpSecure":true,"smtpTo":"recipient@example.com","smtpUsername":"user@example.com","type":"smtp","userId":1}`,
+		},
+		{
+			name: "with STARTTLS disabled",
+			data: []byte(
+				`{"id":3,"name":"SMTP No STARTTLS","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMTP No STARTTLS\",\"smtpHost\":\"legacy.example.com\",\"smtpPort\":25,\"smtpSecure\":false,\"smtpIgnoreSTARTTLS\":true,\"smtpIgnoreTLSError\":false,\"smtpFrom\":\"sender@example.com\",\"smtpTo\":\"recipient@example.com\",\"htmlBody\":false,\"type\":\"smtp\"}"}`,
+			),
+
+			want: notification.SMTP{
+				Base: notification.Base{
+					ID:            3,
+					Name:          "SMTP No STARTTLS",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				SMTPDetails: notification.SMTPDetails{
+					Host:           "legacy.example.com",
+					Port:           25,
+					Secure:         false,
+					IgnoreSTARTTLS: true,
+					IgnoreTLSError: false,
+					From:           "sender@example.com",
+					To:             "recipient@example.com",
+					HTMLBody:       false,
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"customBody":"","customSubject":"","htmlBody":false,"id":3,"isDefault":false,"name":"SMTP No STARTTLS","smtpBCC":"","smtpCC":"","smtpDkimDomain":"","smtpDkimHashAlgo":"","smtpDkimKeySelector":"","smtpDkimPrivateKey":"","smtpDkimheaderFieldNames":"","smtpDkimskipFields":"","smtpFrom":"sender@example.com","smtpHost":"legacy.example.com","smtpIgnoreSTARTTLS":true,"smtpIgnoreTLSError":false,"smtpPassword":"","smtpPort":25,"smtpSecure":false,"smtpTo":"recipient@example.com","smtpUsername":"","type":"smtp","userId":1}`,
 		},
 	}
 
