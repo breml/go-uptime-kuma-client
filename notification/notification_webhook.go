@@ -15,6 +15,7 @@ type Webhook struct {
 // WebhookDetails contains the webhook-specific configuration.
 type WebhookDetails struct {
 	WebhookURL               string                   `json:"webhookURL"`
+	HTTPMethod               string                   `json:"httpMethod,omitempty"`
 	WebhookContentType       string                   `json:"webhookContentType"`
 	WebhookCustomBody        string                   `json:"webhookCustomBody,omitempty"`
 	WebhookAdditionalHeaders WebhookAdditionalHeaders `json:"webhookAdditionalHeaders,omitempty"`
