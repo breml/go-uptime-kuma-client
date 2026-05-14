@@ -15,6 +15,7 @@ type SMTPDetails struct {
 	Host                 string `json:"smtpHost"`
 	Port                 int    `json:"smtpPort"`
 	Secure               bool   `json:"smtpSecure"`
+	IgnoreSTARTTLS       bool   `json:"smtpIgnoreSTARTTLS"`
 	IgnoreTLSError       bool   `json:"smtpIgnoreTLSError"`
 	DkimDomain           string `json:"smtpDkimDomain"`
 	DkimKeySelector      string `json:"smtpDkimKeySelector"`

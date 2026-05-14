@@ -295,7 +295,8 @@ func TestNotificationCRUD(t *testing.T) {
 				smtp.Password = "secretpassword"
 				smtp.CC = "cc@example.com"
 				smtp.BCC = "bcc@example.com"
-				smtp.Secure = true
+				smtp.Secure = false
+				smtp.IgnoreSTARTTLS = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
 				t.Helper()
