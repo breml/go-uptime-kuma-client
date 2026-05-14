@@ -94,9 +94,12 @@ func (t TCPPort) MarshalJSON() ([]byte, error) {
 type TCPPortDetails struct {
 	Hostname string `json:"hostname"`
 	Port     int    `json:"port"`
-	// SMTPSecurity selects the TLS mode used to validate the certificate
-	// presented on the port ("nostarttls", "secure" or "starttls"). Leave
-	// nil/unset to perform a plain TCP check without a TLS handshake.
+	// SMTPSecurity selects the TLS handshake mode used by the port
+	// monitor. Valid values are "nostarttls" (plain TCP, no TLS handshake
+	// or certificate validation), "secure" (immediate TLS handshake) and
+	// "starttls" (negotiate TLS via STARTTLS). Only "secure" and
+	// "starttls" perform a TLS handshake and certificate validation.
+	// Leave nil/unset to fall back to a plain TCP check.
 	SMTPSecurity *string `json:"smtpSecurity"`
 	// ExpiryNotification enables certificate expiry notifications. It is
 	// only honoured by the upstream server when SMTPSecurity is set to
