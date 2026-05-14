@@ -213,6 +213,7 @@ func TestNotificationCRUD(t *testing.T) {
 				},
 				WebhookDetails: notification.WebhookDetails{
 					WebhookURL:         "https://example.com/webhook",
+					HTTPMethod:         "post",
 					WebhookContentType: "json",
 				},
 			},
@@ -223,6 +224,7 @@ func TestNotificationCRUD(t *testing.T) {
 				}
 
 				webhook.Name = "Test Webhook Updated"
+				webhook.HTTPMethod = "get"
 				webhook.WebhookContentType = "custom"
 				webhook.WebhookCustomBody = `{"title": "Alert - {{ monitorJSON['name'] }}", "message": "{{ msg }}"}`
 				webhook.WebhookAdditionalHeaders = notification.WebhookAdditionalHeaders{

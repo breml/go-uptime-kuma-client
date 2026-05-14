@@ -111,14 +111,82 @@ func TestNotificationWebhook_Unmarshal(t *testing.T) {
 			wantJSON: `{"active":true,"applyExisting":false,"id":4,"isDefault":false,"name":"Webhook Headers","type":"webhook","userId":1,"webhookContentType":"json","webhookAdditionalHeaders":"{\"Authorization\":\"Bearer secret-token\",\"X-App-ID\":\"uptime-kuma\"}","webhookURL":"https://api.example.com/notify"}`,
 		},
 		{
-			name: "all features combined",
+			name: "explicit post http method",
 			data: []byte(
-				`{"id":5,"name":"Webhook Full","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"Webhook Full\",\"webhookURL\":\"https://alerts.example.com/v1/webhook\",\"webhookContentType\":\"custom\",\"webhookCustomBody\":\"{\\\"event\\\": \\\"{{ msg }}\\\", \\\"service\\\": \\\"{{ monitorJSON['name'] }}\\\"}\",\"webhookAdditionalHeaders\":\"{\\\"Authorization\\\":\\\"Bearer xyz123\\\",\\\"Content-Type\\\":\\\"application/json\\\",\\\"X-Custom-Header\\\":\\\"custom-value\\\"}\",\"type\":\"webhook\"}"}`,
+				`{"id":5,"name":"Webhook POST","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Webhook POST\",\"webhookURL\":\"https://example.com/webhook\",\"httpMethod\":\"post\",\"webhookContentType\":\"json\",\"type\":\"webhook\"}"}`,
 			),
 
 			want: notification.Webhook{
 				Base: notification.Base{
 					ID:            5,
+					Name:          "Webhook POST",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				WebhookDetails: notification.WebhookDetails{
+					WebhookURL:         "https://example.com/webhook",
+					HTTPMethod:         "post",
+					WebhookContentType: "json",
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":5,"isDefault":false,"name":"Webhook POST","type":"webhook","userId":1,"httpMethod":"post","webhookContentType":"json","webhookURL":"https://example.com/webhook"}`,
+		},
+		{
+			name: "get http method",
+			data: []byte(
+				`{"id":6,"name":"Webhook GET","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Webhook GET\",\"webhookURL\":\"https://example.com/webhook\",\"httpMethod\":\"get\",\"webhookContentType\":\"json\",\"type\":\"webhook\"}"}`,
+			),
+
+			want: notification.Webhook{
+				Base: notification.Base{
+					ID:            6,
+					Name:          "Webhook GET",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				WebhookDetails: notification.WebhookDetails{
+					WebhookURL:         "https://example.com/webhook",
+					HTTPMethod:         "get",
+					WebhookContentType: "json",
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":6,"isDefault":false,"name":"Webhook GET","type":"webhook","userId":1,"httpMethod":"get","webhookContentType":"json","webhookURL":"https://example.com/webhook"}`,
+		},
+		{
+			name: "legacy entry without http method",
+			data: []byte(
+				`{"id":7,"name":"Webhook Legacy","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Webhook Legacy\",\"webhookURL\":\"https://example.com/webhook\",\"webhookContentType\":\"json\",\"type\":\"webhook\"}"}`,
+			),
+
+			want: notification.Webhook{
+				Base: notification.Base{
+					ID:            7,
+					Name:          "Webhook Legacy",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				WebhookDetails: notification.WebhookDetails{
+					WebhookURL:         "https://example.com/webhook",
+					WebhookContentType: "json",
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":7,"isDefault":false,"name":"Webhook Legacy","type":"webhook","userId":1,"webhookContentType":"json","webhookURL":"https://example.com/webhook"}`,
+		},
+		{
+			name: "all features combined",
+			data: []byte(
+				`{"id":8,"name":"Webhook Full","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"Webhook Full\",\"webhookURL\":\"https://alerts.example.com/v1/webhook\",\"httpMethod\":\"post\",\"webhookContentType\":\"custom\",\"webhookCustomBody\":\"{\\\"event\\\": \\\"{{ msg }}\\\", \\\"service\\\": \\\"{{ monitorJSON['name'] }}\\\"}\",\"webhookAdditionalHeaders\":\"{\\\"Authorization\\\":\\\"Bearer xyz123\\\",\\\"Content-Type\\\":\\\"application/json\\\",\\\"X-Custom-Header\\\":\\\"custom-value\\\"}\",\"type\":\"webhook\"}"}`,
+			),
+
+			want: notification.Webhook{
+				Base: notification.Base{
+					ID:            8,
 					Name:          "Webhook Full",
 					IsActive:      true,
 					UserID:        1,
@@ -127,6 +195,7 @@ func TestNotificationWebhook_Unmarshal(t *testing.T) {
 				},
 				WebhookDetails: notification.WebhookDetails{
 					WebhookURL:         "https://alerts.example.com/v1/webhook",
+					HTTPMethod:         "post",
 					WebhookContentType: "custom",
 					WebhookCustomBody:  `{"event": "{{ msg }}", "service": "{{ monitorJSON['name'] }}"}`,
 					WebhookAdditionalHeaders: notification.WebhookAdditionalHeaders{
@@ -136,7 +205,7 @@ func TestNotificationWebhook_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":true,"id":5,"isDefault":true,"name":"Webhook Full","type":"webhook","userId":1,"webhookContentType":"custom","webhookCustomBody":"{\"event\": \"{{ msg }}\", \"service\": \"{{ monitorJSON['name'] }}\"}","webhookAdditionalHeaders":"{\"Authorization\":\"Bearer xyz123\",\"Content-Type\":\"application/json\",\"X-Custom-Header\":\"custom-value\"}","webhookURL":"https://alerts.example.com/v1/webhook"}`,
+			wantJSON: `{"active":true,"applyExisting":true,"id":8,"isDefault":true,"name":"Webhook Full","type":"webhook","userId":1,"httpMethod":"post","webhookContentType":"custom","webhookCustomBody":"{\"event\": \"{{ msg }}\", \"service\": \"{{ monitorJSON['name'] }}\"}","webhookAdditionalHeaders":"{\"Authorization\":\"Bearer xyz123\",\"Content-Type\":\"application/json\",\"X-Custom-Header\":\"custom-value\"}","webhookURL":"https://alerts.example.com/v1/webhook"}`,
 		},
 	}
 
