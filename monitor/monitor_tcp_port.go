@@ -72,6 +72,9 @@ func (t TCPPort) MarshalJSON() ([]byte, error) {
 	// Always override with current TCP Port-specific field values.
 	raw["hostname"] = t.Hostname
 	raw["port"] = t.Port
+	raw["smtpSecurity"] = t.SMTPSecurity
+	raw["expiryNotification"] = t.ExpiryNotification
+	raw["expectedTlsAlert"] = t.ExpectedTLSAlert
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -91,6 +94,18 @@ func (t TCPPort) MarshalJSON() ([]byte, error) {
 type TCPPortDetails struct {
 	Hostname string `json:"hostname"`
 	Port     int    `json:"port"`
+	// SMTPSecurity selects the TLS mode used to validate the certificate
+	// presented on the port ("nostarttls", "secure" or "starttls"). Leave
+	// nil/unset to perform a plain TCP check without a TLS handshake.
+	SMTPSecurity *string `json:"smtpSecurity"`
+	// ExpiryNotification enables certificate expiry notifications. It is
+	// only honoured by the upstream server when SMTPSecurity is set to
+	// "secure" or "starttls".
+	ExpiryNotification bool `json:"expiryNotification"`
+	// ExpectedTLSAlert is the TLS alert name that the server is expected
+	// to return during the handshake (e.g. "certificate_required" for
+	// mTLS verification). Leave nil/unset for a successful TLS handshake.
+	ExpectedTLSAlert *string `json:"expectedTlsAlert"`
 }
 
 // Type returns the monitor type.
