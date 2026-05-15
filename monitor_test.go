@@ -440,8 +440,9 @@ func TestMonitorCRUD(t *testing.T) {
 					AuthMethod:          monitor.AuthMethodNone,
 				},
 				HTTPJSONQueryDetails: monitor.HTTPJSONQueryDetails{
-					JSONPath:      "slideshow.title",
-					ExpectedValue: "Sample Slide Show",
+					JSONPath:                     "slideshow.title",
+					ExpectedValue:                "Sample Slide Show",
+					RetryOnlyOnStatusCodeFailure: false,
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -453,6 +454,7 @@ func TestMonitorCRUD(t *testing.T) {
 				json.Name = "Updated JSON Query Monitor"
 				json.JSONPath = "slideshow.author"
 				json.ExpectedValue = "Yours Truly"
+				json.RetryOnlyOnStatusCodeFailure = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -461,6 +463,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, id, json.ID)
 				require.Equal(t, "Test JSON Query Monitor", json.Name)
+				require.False(t, json.RetryOnlyOnStatusCodeFailure)
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()
@@ -477,6 +480,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated JSON Query Monitor", json.Name)
 				require.Equal(t, "slideshow.author", json.JSONPath)
 				require.Equal(t, "Yours Truly", json.ExpectedValue)
+				require.True(t, json.RetryOnlyOnStatusCodeFailure)
 			},
 			testPauseResume: true,
 		},
