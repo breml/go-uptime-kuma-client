@@ -113,6 +113,7 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	raw["jsonPath"] = h.JSONPath
 	raw["expectedValue"] = h.ExpectedValue
 	raw["jsonPathOperator"] = h.JSONPathOperator
+	raw["retryOnlyOnStatusCodeFailure"] = h.RetryOnlyOnStatusCodeFailure
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
@@ -127,9 +128,10 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 
 // HTTPJSONQueryDetails contains httpjsonquery-specific monitor configuration.
 type HTTPJSONQueryDetails struct {
-	JSONPath         string `json:"jsonPath"`
-	ExpectedValue    string `json:"expectedValue"`
-	JSONPathOperator string `json:"jsonPathOperator"`
+	JSONPath                     string `json:"jsonPath"`
+	ExpectedValue                string `json:"expectedValue"`
+	JSONPathOperator             string `json:"jsonPathOperator"`
+	RetryOnlyOnStatusCodeFailure bool   `json:"retryOnlyOnStatusCodeFailure"`
 }
 
 // Type returns the monitor type.
