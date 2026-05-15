@@ -18,7 +18,7 @@ pre-commit:
             run: bin/golangci-lint run --fix ./...
             stage_fixed: true
     - name: Lint markdown files
-      run: markdownlint-cli2 --fix --files '**/*.md' '!.scratch/**'
+      run: markdownlint-cli2 --fix --files '**/*.md' '!.scratch/**' '!TODO.md'
       stage_fixed: true
 
 pre-push:
