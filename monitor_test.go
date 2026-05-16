@@ -386,7 +386,7 @@ func TestMonitorCRUD(t *testing.T) {
 
 				dns.Name = "Updated DNS Monitor"
 				dns.Hostname = "google.com"
-				dns.ResolverServer = "8.8.8.8"
+				dns.SetResolverServers([]string{"8.8.8.8", "1.1.1.1"})
 				dns.ResolveType = monitor.DNSResolveTypeAAAA
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
@@ -412,7 +412,8 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "Updated DNS Monitor", dns.Name)
 				require.Equal(t, "google.com", dns.Hostname)
-				require.Equal(t, "8.8.8.8", dns.ResolverServer)
+				require.Equal(t, "8.8.8.8,1.1.1.1", dns.ResolverServer)
+				require.Equal(t, []string{"8.8.8.8", "1.1.1.1"}, dns.ResolverServers())
 				require.Equal(t, monitor.DNSResolveTypeAAAA, dns.ResolveType)
 			},
 			testPauseResume: true,

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // DNS represents a DNS monitor.
@@ -91,7 +92,11 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 
 // DNSDetails contains DNS-specific monitor configuration.
 type DNSDetails struct {
-	Hostname       string         `json:"hostname"`
+	Hostname string `json:"hostname"`
+	// ResolverServer holds one or more DNS resolver servers as a
+	// comma-separated list of IP addresses or hostnames (e.g.
+	// "1.1.1.1,8.8.8.8"). Use ResolverServers and SetResolverServers for
+	// access as a []string.
 	ResolverServer string         `json:"dns_resolve_server"`
 	ResolveType    DNSResolveType `json:"dns_resolve_type"`
 	Port           int            `json:"port"`
@@ -100,6 +105,49 @@ type DNSDetails struct {
 // Type returns the monitor type.
 func (DNSDetails) Type() string {
 	return "dns"
+}
+
+// ResolverServers returns the configured DNS resolver servers as a slice.
+// Whitespace around each entry is trimmed and empty entries are dropped,
+// matching the parsing performed by the Uptime Kuma server.
+func (d DNSDetails) ResolverServers() []string {
+	if d.ResolverServer == "" {
+		return nil
+	}
+
+	parts := strings.Split(d.ResolverServer, ",")
+	servers := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+
+		servers = append(servers, p)
+	}
+
+	if len(servers) == 0 {
+		return nil
+	}
+
+	return servers
+}
+
+// SetResolverServers sets the DNS resolver servers from a slice. The values
+// are joined with "," into the comma-separated form expected by the Uptime
+// Kuma server. Empty and whitespace-only entries are dropped.
+func (d *DNSDetails) SetResolverServers(servers []string) {
+	cleaned := make([]string, 0, len(servers))
+	for _, s := range servers {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+
+		cleaned = append(cleaned, s)
+	}
+
+	d.ResolverServer = strings.Join(cleaned, ",")
 }
 
 // DNSResolveType represents the DNS record type to resolve.
