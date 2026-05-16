@@ -383,4 +383,4 @@ tool (
 
 exclude github.com/docker/cli v28.2.2+incompatible
 
-replace github.com/maldikhan/go.socket.io => github.com/breml/go.socket.io v0.0.0-20260516125011-c65dff628137
+replace github.com/maldikhan/go.socket.io => github.com/breml/go.socket.io v0.0.0-20260516193936-e70410c8cd31
