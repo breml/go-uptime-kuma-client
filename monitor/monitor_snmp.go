@@ -75,6 +75,7 @@ func (s SNMP) MarshalJSON() ([]byte, error) {
 	raw["snmpVersion"] = s.SNMPVersion
 	raw["snmpOid"] = s.SNMPOID
 	raw["radiusPassword"] = s.SNMPCommunity
+	raw["snmpV3Username"] = s.SNMPV3Username
 	raw["jsonPath"] = s.JSONPath
 	raw["jsonPathOperator"] = s.JSONPathOperator
 	raw["expectedValue"] = s.ExpectedValue
@@ -100,6 +101,7 @@ type SNMPDetails struct {
 	SNMPVersion      string  `json:"snmpVersion"`
 	SNMPOID          string  `json:"snmpOid"`
 	SNMPCommunity    string  `json:"radiusPassword"`
+	SNMPV3Username   *string `json:"snmpV3Username"`
 	JSONPath         *string `json:"jsonPath"`
 	JSONPathOperator *string `json:"jsonPathOperator"`
 	ExpectedValue    *string `json:"expectedValue"`

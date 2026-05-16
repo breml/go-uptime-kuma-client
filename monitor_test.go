@@ -819,6 +819,63 @@ func TestMonitorCRUD(t *testing.T) {
 			testPauseResume: true,
 		},
 		{
+			name: "SNMPv3",
+			create: &monitor.SNMP{
+				Base: monitor.Base{
+					Name:           "Test SNMPv3 Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				SNMPDetails: monitor.SNMPDetails{
+					Hostname:       "192.168.1.1",
+					Port:           ptr.To(int64(161)),
+					SNMPVersion:    "3",
+					SNMPOID:        "1.3.6.1.2.1.1.3.0",
+					SNMPV3Username: ptr.To("snmpuser"),
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				snmp, ok := m.(*monitor.SNMP)
+				if !ok {
+					panic("failed to assert SNMP monitor")
+				}
+
+				snmp.Name = "Updated SNMPv3 Monitor"
+				snmp.Hostname = "10.0.0.1"
+				snmp.SNMPV3Username = ptr.To("updateduser")
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var snmp monitor.SNMP
+				err := actual.As(&snmp)
+				require.NoError(t, err)
+				require.Equal(t, id, snmp.ID)
+				require.Equal(t, "Test SNMPv3 Monitor", snmp.Name)
+				require.Equal(t, "3", snmp.SNMPVersion)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var snmp monitor.SNMP
+				err := base.As(&snmp)
+				require.NoError(t, err)
+				return &snmp
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var snmp monitor.SNMP
+				err := actual.As(&snmp)
+				require.NoError(t, err)
+				require.Equal(t, "Updated SNMPv3 Monitor", snmp.Name)
+				require.Equal(t, "10.0.0.1", snmp.Hostname)
+				require.Equal(t, "3", snmp.SNMPVersion)
+			},
+			testPauseResume: true,
+		},
+		{
 			name: "Docker",
 			create: &monitor.Docker{
 				Base: monitor.Base{
