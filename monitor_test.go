@@ -856,6 +856,10 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, id, snmp.ID)
 				require.Equal(t, "Test SNMPv3 Monitor", snmp.Name)
 				require.Equal(t, "3", snmp.SNMPVersion)
+				// Upstream Uptime Kuma (verified up to 2.3.2) does not include
+				// snmpV3Username in toJSON(); see
+				// https://github.com/louislam/uptime-kuma/pull/6552. The wire
+				// format is exercised by TestMonitorSNMP_Unmarshal.
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()
