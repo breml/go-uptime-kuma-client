@@ -48,6 +48,37 @@ func TestMonitorPostgres_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"postgres://username:password@host:port/database","databaseQuery":"SELECT 1","description":"Test PostgreSQL monitor","id":6,"interval":60,"maxretries":2,"name":"postgres-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"type":"postgres","upsideDown":false}`,
 		},
+		{
+			name: "success with conditions",
+			data: []byte(
+				`{"id":7,"name":"postgres-conditions","description":null,"pathName":"postgres-conditions","parent":null,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":1,"weight":2000,"active":true,"forceInactive":false,"type":"postgres","timeout":48,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":null,"dns_resolve_server":null,"dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{},"tags":[],"maintenance":false,"databaseQuery":"SELECT version()","databaseConnectionString":"postgres://user:pass@localhost:5432/app","conditions":[{"type":"expression","variable":"result","operator":"contains","value":"PostgreSQL","andOr":"and"}]}`,
+			),
+
+			want: monitor.Postgres{
+				Base: monitor.Base{
+					ID:              7,
+					Name:            "postgres-conditions",
+					Description:     nil,
+					PathName:        "postgres-conditions",
+					Parent:          nil,
+					Interval:        60,
+					RetryInterval:   60,
+					ResendInterval:  0,
+					MaxRetries:      1,
+					UpsideDown:      false,
+					NotificationIDs: nil,
+					IsActive:        true,
+				},
+				PostgresDetails: monitor.PostgresDetails{
+					DatabaseConnectionString: "postgres://user:pass@localhost:5432/app",
+					DatabaseQuery:            "SELECT version()",
+					Conditions: []monitor.Condition{
+						{Variable: "result", Operator: "contains", Value: "PostgreSQL", AndOr: monitor.ConditionAnd},
+					},
+				},
+			},
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[{"type":"expression","variable":"result","operator":"contains","value":"PostgreSQL","andOr":"and"}],"databaseConnectionString":"postgres://user:pass@localhost:5432/app","databaseQuery":"SELECT version()","description":null,"id":7,"interval":60,"maxretries":1,"name":"postgres-conditions","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"postgres","upsideDown":false}`,
+		},
 	}
 
 	for _, tc := range tests {

@@ -133,6 +133,40 @@ func TestMonitorMQTT_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"expectedValue":null,"hostname":"wss://mqtt.cloud.com","id":7,"interval":120,"jsonPath":null,"maxretries":1,"mqttCheckType":"keyword","mqttPassword":"cloudpass","mqttSuccessMessage":"valid","mqttTopic":"sensor/humidity","mqttUsername":"clouduser","mqttWebsocketPath":"/mqtt","name":"mqtt-ws-monitor","notificationIDList":{},"parent":null,"port":443,"resendInterval":0,"retryInterval":120,"type":"mqtt","upsideDown":false}`,
 		},
+		{
+			name: "success with conditions",
+			data: []byte(
+				`{"id":8,"name":"mqtt-conditions","description":null,"pathName":"mqtt-conditions","parent":null,"childrenIDs":[],"url":null,"method":"GET","hostname":"mqtt.example.com","port":1883,"mqttTopic":"sensors/temp","mqttUsername":null,"mqttPassword":null,"mqttWebsocketPath":null,"mqttCheckType":"keyword","mqttSuccessMessage":null,"jsonPath":null,"expectedValue":null,"maxretries":1,"weight":2000,"active":true,"forceInactive":false,"type":"mqtt","timeout":48,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":"A","dns_resolve_server":"1.1.1.1","dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{},"tags":[],"maintenance":false,"conditions":[{"type":"expression","variable":"topic","operator":"==","value":"sensors/temp","andOr":"and"},{"type":"expression","variable":"message","operator":"contains","value":"alert","andOr":"or"}]}`,
+			),
+
+			want: monitor.MQTT{
+				Base: monitor.Base{
+					ID:              8,
+					Name:            "mqtt-conditions",
+					Description:     nil,
+					PathName:        "mqtt-conditions",
+					Parent:          nil,
+					Interval:        60,
+					RetryInterval:   60,
+					ResendInterval:  0,
+					MaxRetries:      1,
+					UpsideDown:      false,
+					NotificationIDs: nil,
+					IsActive:        true,
+				},
+				MQTTDetails: monitor.MQTTDetails{
+					Hostname:      "mqtt.example.com",
+					Port:          &port1883,
+					MQTTTopic:     "sensors/temp",
+					MQTTCheckType: monitor.MQTTCheckTypeKeyword,
+					Conditions: []monitor.Condition{
+						{Variable: "topic", Operator: "==", Value: "sensors/temp", AndOr: monitor.ConditionAnd},
+						{Variable: "message", Operator: "contains", Value: "alert", AndOr: monitor.ConditionOr},
+					},
+				},
+			},
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[{"type":"expression","variable":"topic","operator":"==","value":"sensors/temp","andOr":"and"},{"type":"expression","variable":"message","operator":"contains","value":"alert","andOr":"or"}],"description":null,"expectedValue":null,"hostname":"mqtt.example.com","id":8,"interval":60,"jsonPath":null,"maxretries":1,"mqttCheckType":"keyword","mqttPassword":null,"mqttSuccessMessage":null,"mqttTopic":"sensors/temp","mqttUsername":null,"mqttWebsocketPath":null,"name":"mqtt-conditions","notificationIDList":{},"parent":null,"port":1883,"resendInterval":0,"retryInterval":60,"type":"mqtt","upsideDown":false}`,
+		},
 	}
 
 	for _, tc := range tests {

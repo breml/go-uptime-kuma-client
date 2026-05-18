@@ -76,6 +76,37 @@ func TestMonitorSQLServer_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;","databaseQuery":"SELECT COUNT(*) FROM sys.tables;","description":"Test SQL Server with query","id":2,"interval":120,"maxretries":3,"name":"sqlserver-query","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"type":"sqlserver","upsideDown":false}`,
 		},
+		{
+			name: "success with conditions",
+			data: []byte(
+				`{"id":3,"name":"sqlserver-conditions","description":null,"pathName":"sqlserver-conditions","parent":null,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":1,"weight":2000,"active":true,"forceInactive":false,"type":"sqlserver","timeout":48,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":null,"dns_resolve_server":null,"dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{},"tags":[],"maintenance":false,"databaseQuery":"SELECT COUNT(*) FROM sys.tables;","databaseConnectionString":"Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;","conditions":[{"type":"expression","variable":"result","operator":">","value":"10","andOr":"and"}]}`,
+			),
+
+			want: monitor.SQLServer{
+				Base: monitor.Base{
+					ID:              3,
+					Name:            "sqlserver-conditions",
+					Description:     nil,
+					PathName:        "sqlserver-conditions",
+					Parent:          nil,
+					Interval:        60,
+					RetryInterval:   60,
+					ResendInterval:  0,
+					MaxRetries:      1,
+					UpsideDown:      false,
+					NotificationIDs: nil,
+					IsActive:        true,
+				},
+				SQLServerDetails: monitor.SQLServerDetails{
+					DatabaseConnectionString: "Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;",
+					DatabaseQuery:            ptr.To("SELECT COUNT(*) FROM sys.tables;"),
+					Conditions: []monitor.Condition{
+						{Variable: "result", Operator: ">", Value: "10", AndOr: monitor.ConditionAnd},
+					},
+				},
+			},
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[{"type":"expression","variable":"result","operator":">","value":"10","andOr":"and"}],"databaseConnectionString":"Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;","databaseQuery":"SELECT COUNT(*) FROM sys.tables;","description":null,"id":3,"interval":60,"maxretries":1,"name":"sqlserver-conditions","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"sqlserver","upsideDown":false}`,
+		},
 	}
 
 	for _, tc := range tests {

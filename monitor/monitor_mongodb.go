@@ -79,7 +79,7 @@ func (m MongoDB) MarshalJSON() ([]byte, error) {
 	raw["accepted_statuscodes"] = []string{}
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
-	raw["conditions"] = []any{}
+	raw["conditions"] = conditionsForWire(m.Conditions)
 
 	data, err := json.Marshal(raw)
 	if err != nil {
@@ -99,6 +99,9 @@ type MongoDBDetails struct {
 	JSONPath *string `json:"jsonPath"`
 	// ExpectedValue is the expected value when using jsonPath.
 	ExpectedValue *string `json:"expectedValue"`
+	// Conditions is an optional list of assertion clauses evaluated against the
+	// numeric value extracted from the command result.
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
 // Type returns the monitor type.

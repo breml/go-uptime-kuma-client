@@ -77,7 +77,7 @@ func (r Redis) MarshalJSON() ([]byte, error) {
 	raw["accepted_statuscodes"] = []string{}
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
-	raw["conditions"] = []any{}
+	raw["conditions"] = conditionsForWire(r.Conditions)
 
 	data, err := json.Marshal(raw)
 	if err != nil {
@@ -91,6 +91,9 @@ func (r Redis) MarshalJSON() ([]byte, error) {
 type RedisDetails struct {
 	ConnectionString string `json:"databaseConnectionString"`
 	IgnoreTLS        bool   `json:"ignoreTls"`
+	// Conditions is an optional list of assertion clauses evaluated against the
+	// Redis command result.
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
 // Type returns the monitor type.

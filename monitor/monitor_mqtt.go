@@ -85,7 +85,7 @@ func (m MQTT) MarshalJSON() ([]byte, error) {
 	raw["accepted_statuscodes"] = []string{}
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
-	raw["conditions"] = []any{}
+	raw["conditions"] = conditionsForWire(m.Conditions)
 
 	data, err := json.Marshal(raw)
 	if err != nil {
@@ -117,6 +117,10 @@ type MQTTDetails struct {
 	JSONPath *string `json:"jsonPath"`
 	// ExpectedValue is the expected value for json-query check.
 	ExpectedValue *string `json:"expectedValue"`
+	// Conditions is an optional list of assertion clauses evaluated against the
+	// received MQTT payload. When set, the keyword / json-query check is bypassed
+	// and the condition results determine the monitor status.
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
 // Type returns the monitor type string.

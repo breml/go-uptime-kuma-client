@@ -76,6 +76,38 @@ func TestMonitorMySQL_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"mysql://admin:secret@mysql.example.com:3306/mydb","databaseQuery":"SELECT COUNT(*) FROM information_schema.tables;","description":"Test MySQL with query","id":2,"interval":120,"maxretries":3,"name":"mysql-query","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"type":"mysql","upsideDown":false}`,
 		},
+		{
+			name: "success with conditions",
+			data: []byte(
+				`{"id":3,"name":"mysql-conditions","description":null,"pathName":"mysql-conditions","parent":null,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":1,"weight":2000,"active":true,"forceInactive":false,"type":"mysql","timeout":48,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":null,"dns_resolve_server":null,"dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{},"tags":[],"maintenance":false,"databaseQuery":"SELECT COUNT(*) FROM users;","databaseConnectionString":"mysql://user:pass@localhost:3306/app","conditions":[{"type":"expression","variable":"result","operator":">","value":"0","andOr":"and"},{"type":"expression","variable":"result","operator":"<","value":"100","andOr":"and"}]}`,
+			),
+
+			want: monitor.MySQL{
+				Base: monitor.Base{
+					ID:              3,
+					Name:            "mysql-conditions",
+					Description:     nil,
+					PathName:        "mysql-conditions",
+					Parent:          nil,
+					Interval:        60,
+					RetryInterval:   60,
+					ResendInterval:  0,
+					MaxRetries:      1,
+					UpsideDown:      false,
+					NotificationIDs: nil,
+					IsActive:        true,
+				},
+				MySQLDetails: monitor.MySQLDetails{
+					DatabaseConnectionString: "mysql://user:pass@localhost:3306/app",
+					DatabaseQuery:            ptr.To("SELECT COUNT(*) FROM users;"),
+					Conditions: []monitor.Condition{
+						{Variable: "result", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
+						{Variable: "result", Operator: "<", Value: "100", AndOr: monitor.ConditionAnd},
+					},
+				},
+			},
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[{"type":"expression","variable":"result","operator":">","value":"0","andOr":"and"},{"type":"expression","variable":"result","operator":"<","value":"100","andOr":"and"}],"databaseConnectionString":"mysql://user:pass@localhost:3306/app","databaseQuery":"SELECT COUNT(*) FROM users;","description":null,"id":3,"interval":60,"maxretries":1,"name":"mysql-conditions","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"mysql","upsideDown":false}`,
+		},
 	}
 
 	for _, tc := range tests {
