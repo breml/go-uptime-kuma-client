@@ -80,6 +80,39 @@ func TestMonitorMongoDB_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"mongodb://user:pass@mongodb.example.com:27017/admin","databaseQuery":"{\"dbStats\": 1}","description":"Test MongoDB with command","expectedValue":"1","id":2,"interval":120,"jsonPath":"$.ok","maxretries":3,"name":"mongodb-query","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"type":"mongodb","upsideDown":false}`,
 		},
+		{
+			name: "success with conditions",
+			data: []byte(
+				`{"id":3,"name":"mongodb-conditions","description":null,"pathName":"mongodb-conditions","parent":null,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":1,"weight":2000,"active":true,"forceInactive":false,"type":"mongodb","timeout":48,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":null,"dns_resolve_server":null,"dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{},"tags":[],"maintenance":false,"databaseQuery":null,"jsonPath":null,"expectedValue":null,"databaseConnectionString":"mongodb://localhost:27017","conditions":[{"type":"expression","variable":"numericValue","operator":">=","value":"1","andOr":"and"}]}`,
+			),
+
+			want: monitor.MongoDB{
+				Base: monitor.Base{
+					ID:              3,
+					Name:            "mongodb-conditions",
+					Description:     nil,
+					PathName:        "mongodb-conditions",
+					Parent:          nil,
+					Interval:        60,
+					RetryInterval:   60,
+					ResendInterval:  0,
+					MaxRetries:      1,
+					UpsideDown:      false,
+					NotificationIDs: nil,
+					IsActive:        true,
+				},
+				MongoDBDetails: monitor.MongoDBDetails{
+					DatabaseConnectionString: "mongodb://localhost:27017",
+					DatabaseQuery:            nil,
+					JSONPath:                 nil,
+					ExpectedValue:            nil,
+					Conditions: []monitor.Condition{
+						{Variable: "numericValue", Operator: ">=", Value: "1", AndOr: monitor.ConditionAnd},
+					},
+				},
+			},
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[{"type":"expression","variable":"numericValue","operator":">=","value":"1","andOr":"and"}],"databaseConnectionString":"mongodb://localhost:27017","databaseQuery":null,"description":null,"expectedValue":null,"id":3,"interval":60,"jsonPath":null,"maxretries":1,"name":"mongodb-conditions","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"mongodb","upsideDown":false}`,
+		},
 	}
 
 	for _, tc := range tests {

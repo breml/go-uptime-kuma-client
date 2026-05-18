@@ -77,7 +77,7 @@ func (p Postgres) MarshalJSON() ([]byte, error) {
 	raw["accepted_statuscodes"] = []string{}
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
-	raw["conditions"] = []any{}
+	raw["conditions"] = conditionsForWire(p.Conditions)
 
 	data, err := json.Marshal(raw)
 	if err != nil {
@@ -91,6 +91,10 @@ func (p Postgres) MarshalJSON() ([]byte, error) {
 type PostgresDetails struct {
 	DatabaseConnectionString string `json:"databaseConnectionString"`
 	DatabaseQuery            string `json:"databaseQuery"`
+	// Conditions is an optional list of assertion clauses evaluated against the
+	// query result. When set, the query is expected to return a single value
+	// that is matched against the conditions.
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
 // Type returns the monitor type.

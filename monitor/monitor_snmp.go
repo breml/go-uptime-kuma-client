@@ -84,7 +84,7 @@ func (s SNMP) MarshalJSON() ([]byte, error) {
 	raw["accepted_statuscodes"] = []string{}
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
-	raw["conditions"] = []any{}
+	raw["conditions"] = conditionsForWire(s.Conditions)
 
 	data, err := json.Marshal(raw)
 	if err != nil {
@@ -105,6 +105,9 @@ type SNMPDetails struct {
 	JSONPath         *string `json:"jsonPath"`
 	JSONPathOperator *string `json:"jsonPathOperator"`
 	ExpectedValue    *string `json:"expectedValue"`
+	// Conditions is an optional list of assertion clauses evaluated against the
+	// SNMP query result.
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
 // Type returns the monitor type.

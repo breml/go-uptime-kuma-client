@@ -511,6 +511,9 @@ func TestMonitorCRUD(t *testing.T) {
 				postgres.Name = "Updated Postgres Monitor"
 				postgres.DatabaseConnectionString = "postgres://newuser:newpass@localhost:5432/newdb"
 				postgres.DatabaseQuery = "SELECT version()"
+				postgres.Conditions = []monitor.Condition{
+					{Variable: "result", Operator: "contains", Value: "PostgreSQL", AndOr: monitor.ConditionAnd},
+				}
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -535,6 +538,9 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated Postgres Monitor", postgres.Name)
 				require.Equal(t, "postgres://newuser:newpass@localhost:5432/newdb", postgres.DatabaseConnectionString)
 				require.Equal(t, "SELECT version()", postgres.DatabaseQuery)
+				require.Equal(t, []monitor.Condition{
+					{Variable: "result", Operator: "contains", Value: "PostgreSQL", AndOr: monitor.ConditionAnd},
+				}, postgres.Conditions)
 			},
 			testPauseResume: false,
 		},
@@ -616,6 +622,9 @@ func TestMonitorCRUD(t *testing.T) {
 
 				redis.Name = "Updated Redis Monitor"
 				redis.ConnectionString = "redis://user:password@localhost:6380"
+				redis.Conditions = []monitor.Condition{
+					{Variable: "result", Operator: "==", Value: "PONG", AndOr: monitor.ConditionAnd},
+				}
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -639,6 +648,9 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "Updated Redis Monitor", redis.Name)
 				require.Equal(t, "redis://user:password@localhost:6380", redis.ConnectionString)
+				require.Equal(t, []monitor.Condition{
+					{Variable: "result", Operator: "==", Value: "PONG", AndOr: monitor.ConditionAnd},
+				}, redis.Conditions)
 			},
 			testPauseResume: true,
 		},
@@ -792,6 +804,9 @@ func TestMonitorCRUD(t *testing.T) {
 				snmp.Name = "Updated SNMP Monitor"
 				snmp.Hostname = "10.0.0.1"
 				snmp.SNMPOID = "1.3.6.1.2.1.2.2.1.5.1"
+				snmp.Conditions = []monitor.Condition{
+					{Variable: "snmp", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
+				}
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -816,6 +831,9 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated SNMP Monitor", snmp.Name)
 				require.Equal(t, "10.0.0.1", snmp.Hostname)
 				require.Equal(t, "1.3.6.1.2.1.2.2.1.5.1", snmp.SNMPOID)
+				require.Equal(t, []monitor.Condition{
+					{Variable: "snmp", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
+				}, snmp.Conditions)
 			},
 			testPauseResume: true,
 		},
@@ -1082,6 +1100,10 @@ func TestMonitorCRUD(t *testing.T) {
 				mqtt.MQTTSuccessMessage = nil
 				mqtt.JSONPath = ptr.To("status")
 				mqtt.ExpectedValue = ptr.To("online")
+				mqtt.Conditions = []monitor.Condition{
+					{Variable: "topic", Operator: "==", Value: "home/temperature", AndOr: monitor.ConditionAnd},
+					{Variable: "message", Operator: "contains", Value: "online", AndOr: monitor.ConditionAnd},
+				}
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1109,6 +1131,10 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, monitor.MQTTCheckTypeJSONQuery, mqtt.MQTTCheckType)
 				require.Equal(t, "status", *mqtt.JSONPath)
 				require.Equal(t, "online", *mqtt.ExpectedValue)
+				require.Equal(t, []monitor.Condition{
+					{Variable: "topic", Operator: "==", Value: "home/temperature", AndOr: monitor.ConditionAnd},
+					{Variable: "message", Operator: "contains", Value: "online", AndOr: monitor.ConditionAnd},
+				}, mqtt.Conditions)
 			},
 			testPauseResume: true,
 		},
@@ -1260,6 +1286,9 @@ func TestMonitorCRUD(t *testing.T) {
 				sqlserver.Name = "Updated SQL Server Monitor"
 				sqlserver.DatabaseConnectionString = "Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;"
 				sqlserver.DatabaseQuery = ptr.To("SELECT COUNT(*) FROM sys.tables;")
+				sqlserver.Conditions = []monitor.Condition{
+					{Variable: "result", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
+				}
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1288,6 +1317,9 @@ func TestMonitorCRUD(t *testing.T) {
 					sqlserver.DatabaseConnectionString,
 				)
 				require.Equal(t, "SELECT COUNT(*) FROM sys.tables;", *sqlserver.DatabaseQuery)
+				require.Equal(t, []monitor.Condition{
+					{Variable: "result", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
+				}, sqlserver.Conditions)
 			},
 			testPauseResume: false,
 		},
@@ -1317,6 +1349,9 @@ func TestMonitorCRUD(t *testing.T) {
 				mysql.Name = "Updated MySQL Monitor"
 				mysql.DatabaseConnectionString = "mysql://admin:secret@mysql.example.com:3306/mydb"
 				mysql.DatabaseQuery = ptr.To("SELECT COUNT(*) FROM information_schema.tables;")
+				mysql.Conditions = []monitor.Condition{
+					{Variable: "result", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
+				}
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1341,6 +1376,9 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated MySQL Monitor", mysql.Name)
 				require.Equal(t, "mysql://admin:secret@mysql.example.com:3306/mydb", mysql.DatabaseConnectionString)
 				require.Equal(t, "SELECT COUNT(*) FROM information_schema.tables;", *mysql.DatabaseQuery)
+				require.Equal(t, []monitor.Condition{
+					{Variable: "result", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
+				}, mysql.Conditions)
 			},
 			testPauseResume: false,
 		},
@@ -1374,6 +1412,9 @@ func TestMonitorCRUD(t *testing.T) {
 				mongodb.DatabaseQuery = ptr.To("{\"dbStats\": 1}")
 				mongodb.JSONPath = ptr.To("$.ok")
 				mongodb.ExpectedValue = ptr.To("1")
+				mongodb.Conditions = []monitor.Condition{
+					{Variable: "numericValue", Operator: ">=", Value: "1", AndOr: monitor.ConditionAnd},
+				}
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1404,6 +1445,9 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "{\"dbStats\": 1}", *mongodb.DatabaseQuery)
 				require.Equal(t, "$.ok", *mongodb.JSONPath)
 				require.Equal(t, "1", *mongodb.ExpectedValue)
+				require.Equal(t, []monitor.Condition{
+					{Variable: "numericValue", Operator: ">=", Value: "1", AndOr: monitor.ConditionAnd},
+				}, mongodb.Conditions)
 			},
 			testPauseResume: false,
 		},
