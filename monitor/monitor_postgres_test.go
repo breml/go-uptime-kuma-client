@@ -23,22 +23,22 @@ func TestMonitorPostgres_Unmarshal(t *testing.T) {
 		{
 			name: "success with connection string only",
 			data: []byte(
-				`{"id":5,"name":"postgres-default","description":null,"pathName":"postgres-default","parent":null,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":1,"weight":2000,"active":true,"forceInactive":false,"type":"postgres","timeout":48,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":null,"dns_resolve_server":null,"dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{},"tags":[],"maintenance":false,"databaseQuery":null,"databaseConnectionString":"postgres://user:pass@localhost:5432/app"}`,
+				`{"id":5,"name":"postgres-default","description":"PostgreSQL with default query","pathName":"group / postgres-default","parent":1,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":1,"weight":2000,"active":true,"forceInactive":false,"type":"postgres","timeout":48,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":"A","dns_resolve_server":"1.1.1.1","dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{"1":true,"2":true},"tags":[],"maintenance":false,"mqttTopic":"","mqttSuccessMessage":"","databaseQuery":null,"authMethod":null,"grpcUrl":null,"grpcProtobuf":null,"grpcMethod":null,"grpcServiceName":null,"grpcEnableTls":false,"radiusCalledStationId":null,"radiusCallingStationId":null,"game":null,"gamedigGivenPortOnly":true,"httpBodyEncoding":"json","jsonPath":null,"expectedValue":null,"kafkaProducerTopic":null,"kafkaProducerBrokers":[],"kafkaProducerSsl":false,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerMessage":null,"screenshot":null,"headers":null,"body":null,"grpcBody":null,"grpcMetadata":null,"basic_auth_user":null,"basic_auth_pass":null,"oauth_client_id":null,"oauth_client_secret":null,"oauth_token_url":null,"oauth_scopes":null,"oauth_auth_method":"client_secret_basic","pushToken":null,"databaseConnectionString":"postgres://user:pass@localhost:5432/app","radiusUsername":null,"radiusPassword":null,"radiusSecret":null,"mqttUsername":"","mqttPassword":"","authWorkstation":null,"authDomain":null,"tlsCa":null,"tlsCert":null,"tlsKey":null,"kafkaProducerSaslOptions":{"mechanism":"None"},"includeSensitiveData":true}`,
 			),
 
 			want: monitor.Postgres{
 				Base: monitor.Base{
 					ID:              5,
 					Name:            "postgres-default",
-					Description:     nil,
-					PathName:        "postgres-default",
-					Parent:          nil,
+					Description:     ptr.To("PostgreSQL with default query"),
+					PathName:        "group / postgres-default",
+					Parent:          &parent1,
 					Interval:        60,
 					RetryInterval:   60,
 					ResendInterval:  0,
 					MaxRetries:      1,
 					UpsideDown:      false,
-					NotificationIDs: nil,
+					NotificationIDs: []int64{1, 2},
 					IsActive:        true,
 				},
 				PostgresDetails: monitor.PostgresDetails{
@@ -46,7 +46,7 @@ func TestMonitorPostgres_Unmarshal(t *testing.T) {
 					DatabaseQuery:            nil,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"postgres://user:pass@localhost:5432/app","databaseQuery":null,"description":null,"id":5,"interval":60,"maxretries":1,"name":"postgres-default","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"postgres","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"postgres://user:pass@localhost:5432/app","databaseQuery":null,"description":"PostgreSQL with default query","id":5,"interval":60,"maxretries":1,"name":"postgres-default","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"type":"postgres","upsideDown":false}`,
 		},
 		{
 			name: "success",
