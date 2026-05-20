@@ -125,3 +125,53 @@ func TestMonitorPostgres_Unmarshal(t *testing.T) {
 		})
 	}
 }
+
+func TestMonitorPostgres_String(t *testing.T) {
+	tests := []struct {
+		name string
+
+		details monitor.PostgresDetails
+
+		wantContains    []string
+		wantNotContains []string
+	}{
+		{
+			name: "query set",
+			details: monitor.PostgresDetails{
+				DatabaseConnectionString: "postgres://user:pass@localhost:5432/app",
+				DatabaseQuery:            ptr.To("SELECT 1"),
+			},
+			wantContains: []string{
+				`databaseConnectionString: "postgres://user:pass@localhost:5432/app"`,
+				`databaseQuery: "SELECT 1"`,
+			},
+			wantNotContains: []string{"0x"},
+		},
+		{
+			name: "query nil",
+			details: monitor.PostgresDetails{
+				DatabaseConnectionString: "postgres://user:pass@localhost:5432/app",
+				DatabaseQuery:            nil,
+			},
+			wantContains: []string{
+				`databaseConnectionString: "postgres://user:pass@localhost:5432/app"`,
+				"databaseQuery: <nil>",
+			},
+			wantNotContains: []string{"0x"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := monitor.Postgres{PostgresDetails: tc.details}.String()
+
+			for _, want := range tc.wantContains {
+				require.Contains(t, got, want)
+			}
+
+			for _, notWant := range tc.wantNotContains {
+				require.NotContains(t, got, notWant)
+			}
+		})
+	}
+}

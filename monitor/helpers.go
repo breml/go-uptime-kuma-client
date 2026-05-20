@@ -48,10 +48,24 @@ func formatMonitor(s any, includeType bool) string {
 			name = field.Name
 		}
 
+		// Render pointer fields by dereferencing so optional values such as
+		// *string appear as their underlying value (or <nil>) instead of as
+		// a pointer address.
 		var valueStr string
-		if value.Kind() == reflect.String {
+		switch {
+		case value.Kind() == reflect.String:
 			valueStr = fmt.Sprintf("%q", value.String())
-		} else {
+
+		case value.Kind() == reflect.Pointer && value.IsNil():
+			valueStr = "<nil>"
+
+		case value.Kind() == reflect.Pointer && value.Elem().Kind() == reflect.String:
+			valueStr = fmt.Sprintf("%q", value.Elem().String())
+
+		case value.Kind() == reflect.Pointer:
+			valueStr = fmt.Sprintf("%v", value.Elem().Interface())
+
+		default:
 			valueStr = fmt.Sprintf("%v", value.Interface())
 		}
 
