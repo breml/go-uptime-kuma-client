@@ -77,7 +77,9 @@ func (r RealBrowser) MarshalJSON() ([]byte, error) {
 	raw["accepted_statuscodes"] = r.AcceptedStatusCodes
 	raw["proxyId"] = r.ProxyID
 	raw["remote_browser"] = r.RemoteBrowser
-	raw["screenshot_delay"] = r.ScreenshotDelay
+	if r.ScreenshotDelay != nil {
+		raw["screenshot_delay"] = r.ScreenshotDelay
+	}
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
@@ -98,7 +100,7 @@ type RealBrowserDetails struct {
 	MaxRedirects        int      `json:"maxredirects"`
 	AcceptedStatusCodes []string `json:"accepted_statuscodes"`
 	RemoteBrowser       *int64   `json:"remote_browser,omitempty"`
-	ScreenshotDelay     int      `json:"screenshot_delay"`
+	ScreenshotDelay     *int     `json:"screenshot_delay,omitempty"`
 }
 
 // Type returns the monitor type.
