@@ -95,7 +95,7 @@ type GameDigDetails struct {
 	Hostname string `json:"hostname"`
 	// Port is the game server port.
 	Port int `json:"port"`
-	// Game is the game type identifier (e.g., minecraft, csgo, etc.).
+	// Game is the gamedig v5 game type identifier (e.g., minecraft, valve, l4d2).
 	Game string `json:"game"`
 	// GameDigGivenPortOnly indicates whether to use only the given port without auto-detection.
 	GameDigGivenPortOnly bool `json:"gamedigGivenPortOnly"`
