@@ -562,6 +562,7 @@ func TestMonitorCRUD(t *testing.T) {
 					IgnoreTLS:           false,
 					MaxRedirects:        10,
 					AcceptedStatusCodes: []string{"200-299"},
+					ScreenshotDelay:     1500,
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -572,6 +573,7 @@ func TestMonitorCRUD(t *testing.T) {
 
 				browser.Name = "Updated RealBrowser Monitor"
 				browser.URL = "https://httpbin.org/status/201"
+				browser.ScreenshotDelay = 2500
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
