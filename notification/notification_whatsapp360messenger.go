@@ -18,7 +18,7 @@ type Whatsapp360messengerDetails struct {
 	// Recipient is a comma- or semicolon-separated list of phone numbers.
 	Recipient string `json:"Whatsapp360messengerRecipient"`
 	// GroupIDs is the list of WhatsApp group IDs (multi-select).
-	GroupIDs []string `json:"Whatsapp360messengerGroupIds,omitempty"`
+	GroupIDs []string `json:"Whatsapp360messengerGroupIds,omitzero"`
 	// GroupID is the legacy single group ID kept for back-compat in upstream payloads.
 	GroupID *string `json:"Whatsapp360messengerGroupId,omitempty"`
 	// UseTemplate enables the use of a custom message template.

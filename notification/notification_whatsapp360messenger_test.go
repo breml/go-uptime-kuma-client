@@ -135,6 +135,29 @@ func TestNotificationWhatsapp360messenger_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"Whatsapp360messengerAuthToken":"tok","Whatsapp360messengerRecipient":"447488888888","Whatsapp360messengerTemplate":"","Whatsapp360messengerUseTemplate":false,"active":true,"applyExisting":false,"id":5,"isDefault":false,"name":"No Template 360messenger","type":"Whatsapp360messenger","userId":1}`,
 		},
+		{
+			name: "with explicitly empty GroupIDs slice serializes as empty array",
+			data: []byte(
+				`{"id":6,"name":"Empty Groups 360messenger","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Empty Groups 360messenger\",\"Whatsapp360messengerAuthToken\":\"tok\",\"Whatsapp360messengerRecipient\":\"447488888888\",\"Whatsapp360messengerGroupIds\":[],\"type\":\"Whatsapp360messenger\"}"}`,
+			),
+
+			want: notification.Whatsapp360messenger{
+				Base: notification.Base{
+					ID:            6,
+					Name:          "Empty Groups 360messenger",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				Whatsapp360messengerDetails: notification.Whatsapp360messengerDetails{
+					AuthToken: "tok",
+					Recipient: "447488888888",
+					GroupIDs:  []string{},
+				},
+			},
+			wantJSON: `{"Whatsapp360messengerAuthToken":"tok","Whatsapp360messengerGroupIds":[],"Whatsapp360messengerRecipient":"447488888888","active":true,"applyExisting":false,"id":6,"isDefault":false,"name":"Empty Groups 360messenger","type":"Whatsapp360messenger","userId":1}`,
+		},
 	}
 
 	for _, tc := range tests {
