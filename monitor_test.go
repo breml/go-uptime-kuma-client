@@ -499,7 +499,7 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 				PostgresDetails: monitor.PostgresDetails{
 					DatabaseConnectionString: "postgres://testuser:testpass@localhost:5432/testdb",
-					DatabaseQuery:            "SELECT 1",
+					DatabaseQuery:            ptr.To("SELECT 1"),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -510,7 +510,7 @@ func TestMonitorCRUD(t *testing.T) {
 
 				postgres.Name = "Updated Postgres Monitor"
 				postgres.DatabaseConnectionString = "postgres://newuser:newpass@localhost:5432/newdb"
-				postgres.DatabaseQuery = "SELECT version()"
+				postgres.DatabaseQuery = ptr.To("SELECT version()")
 				postgres.Conditions = []monitor.Condition{
 					{Variable: "result", Operator: "contains", Value: "PostgreSQL", AndOr: monitor.ConditionAnd},
 				}
@@ -537,7 +537,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "Updated Postgres Monitor", postgres.Name)
 				require.Equal(t, "postgres://newuser:newpass@localhost:5432/newdb", postgres.DatabaseConnectionString)
-				require.Equal(t, "SELECT version()", postgres.DatabaseQuery)
+				require.Equal(t, ptr.To("SELECT version()"), postgres.DatabaseQuery)
 				require.Equal(t, []monitor.Condition{
 					{Variable: "result", Operator: "contains", Value: "PostgreSQL", AndOr: monitor.ConditionAnd},
 				}, postgres.Conditions)

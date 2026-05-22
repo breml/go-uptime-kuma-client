@@ -89,8 +89,10 @@ func (p Postgres) MarshalJSON() ([]byte, error) {
 
 // PostgresDetails contains postgres-specific monitor configuration.
 type PostgresDetails struct {
+	// DatabaseConnectionString is the PostgreSQL connection string.
 	DatabaseConnectionString string `json:"databaseConnectionString"`
-	DatabaseQuery            string `json:"databaseQuery"`
+	// DatabaseQuery is an optional SQL query to execute (default: SELECT 1).
+	DatabaseQuery *string `json:"databaseQuery"`
 	// Conditions is an optional list of assertion clauses evaluated against the
 	// query result. When set, the query is expected to return a single value
 	// that is matched against the conditions.
