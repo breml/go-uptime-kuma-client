@@ -79,11 +79,7 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
 
-	if d.Conditions == nil {
-		raw["conditions"] = []any{}
-	} else {
-		raw["conditions"] = d.Conditions
-	}
+	raw["conditions"] = conditionsForWire(d.Conditions)
 
 	data, err := json.Marshal(raw)
 	if err != nil {
@@ -91,15 +87,6 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 	}
 
 	return data, nil
-}
-
-// Condition carries the information that allow setting a condition on the monitor.
-type Condition struct {
-	Type     string `json:"type"`
-	AndOr    string `json:"andOr"`
-	Variable string `json:"variable"`
-	Operator string `json:"operator"`
-	Value    string `json:"value"`
 }
 
 // DNSDetails contains DNS-specific monitor configuration.
@@ -112,7 +99,7 @@ type DNSDetails struct {
 	ResolverServer string         `json:"dns_resolve_server"`
 	ResolveType    DNSResolveType `json:"dns_resolve_type"`
 	Port           int            `json:"port"`
-	Conditions     []Condition    `json:"conditions"`
+	Conditions     []Condition    `json:"conditions,omitempty"`
 }
 
 // Type returns the monitor type.
