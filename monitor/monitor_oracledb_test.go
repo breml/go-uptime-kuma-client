@@ -113,6 +113,36 @@ func TestMonitorOracleDB_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"basic_auth_pass":"oracle","basic_auth_user":"system","conditions":[{"type":"expression","variable":"result","operator":"contains","value":"Oracle","andOr":"and"}],"databaseConnectionString":"db.example.com:1521/ORCL","databaseQuery":"SELECT banner FROM v$version WHERE banner LIKE 'Oracle%'","description":null,"id":3,"interval":60,"maxretries":1,"name":"oracledb-conditions","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"oracledb","upsideDown":false}`,
 		},
+		{
+			name: "success with null credentials",
+			data: []byte(
+				`{"id":4,"name":"oracledb-nocreds","description":null,"pathName":"oracledb-nocreds","parent":null,"childrenIDs":[],"type":"oracledb","active":true,"interval":60,"retryInterval":60,"resendInterval":0,"maxretries":1,"upsideDown":false,"notificationIDList":{},"databaseConnectionString":"localhost:1521/XEPDB1","databaseQuery":null,"basic_auth_user":null,"basic_auth_pass":null}`,
+			),
+
+			want: monitor.OracleDB{
+				Base: monitor.Base{
+					ID:              4,
+					Name:            "oracledb-nocreds",
+					Description:     nil,
+					PathName:        "oracledb-nocreds",
+					Parent:          nil,
+					Interval:        60,
+					RetryInterval:   60,
+					ResendInterval:  0,
+					MaxRetries:      1,
+					UpsideDown:      false,
+					NotificationIDs: nil,
+					IsActive:        true,
+				},
+				OracleDBDetails: monitor.OracleDBDetails{
+					DatabaseConnectionString: "localhost:1521/XEPDB1",
+					DatabaseQuery:            nil,
+					Username:                 "",
+					Password:                 "",
+				},
+			},
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"basic_auth_pass":"","basic_auth_user":"","conditions":[],"databaseConnectionString":"localhost:1521/XEPDB1","databaseQuery":null,"description":null,"id":4,"interval":60,"maxretries":1,"name":"oracledb-nocreds","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"oracledb","upsideDown":false}`,
+		},
 	}
 
 	for _, tc := range tests {
@@ -152,6 +182,8 @@ func TestMonitorOracleDB_String(t *testing.T) {
 			wantContains: []string{
 				`databaseConnectionString: "localhost:1521/XEPDB1"`,
 				`databaseQuery: "SELECT 1 FROM DUAL"`,
+				`basic_auth_user: "oracle"`,
+				`basic_auth_pass: "secret"`,
 			},
 			wantNotContains: []string{"0x"},
 		},
@@ -166,6 +198,8 @@ func TestMonitorOracleDB_String(t *testing.T) {
 			wantContains: []string{
 				`databaseConnectionString: "localhost:1521/XEPDB1"`,
 				"databaseQuery: <nil>",
+				`basic_auth_user: "oracle"`,
+				`basic_auth_pass: "secret"`,
 			},
 			wantNotContains: []string{"0x"},
 		},

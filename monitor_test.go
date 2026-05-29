@@ -585,6 +585,8 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, id, oracledb.ID)
 				require.Equal(t, "Test OracleDB Monitor", oracledb.Name)
+				require.Equal(t, "oracle", oracledb.Username)
+				require.Equal(t, "oraclepass", oracledb.Password)
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()
