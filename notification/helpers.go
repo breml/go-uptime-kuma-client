@@ -43,7 +43,7 @@ func formatNotification(s any, includeType bool) string {
 			continue
 		}
 
-		name := strings.Split(field.Tag.Get("json"), ",")[0]
+		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 
 		var valueStr string
 		switch {
