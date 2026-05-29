@@ -106,3 +106,36 @@ func TestNotificationJiraServiceManagement_Unmarshal(t *testing.T) {
 		})
 	}
 }
+
+func TestNotificationJiraServiceManagement_String(t *testing.T) {
+	jsm := notification.JiraServiceManagement{
+		Base: notification.Base{
+			ID:       1,
+			Name:     "Test JSM",
+			IsActive: true,
+			UserID:   1,
+		},
+		JiraServiceManagementDetails: notification.JiraServiceManagementDetails{
+			CloudID:  "cloud-123",
+			Email:    "user@example.com",
+			APIToken: "token-abc",
+			Priority: 3,
+		},
+	}
+
+	str := jsm.String()
+
+	require.Contains(t, str, "Test JSM")
+	require.Contains(t, str, "JiraServiceManagement")
+	require.Contains(t, str, "cloud-123")
+	require.Contains(t, str, "user@example.com")
+	require.Contains(t, str, "3")
+	require.NotContains(t, str, "0x")
+	require.NotContains(t, str, "token-abc")
+	require.Contains(t, str, "***")
+}
+
+func TestNotificationJiraServiceManagement_Type(t *testing.T) {
+	require.Equal(t, "JiraServiceManagement", notification.JiraServiceManagement{}.Type())
+	require.Equal(t, "JiraServiceManagement", notification.JiraServiceManagementDetails{}.Type())
+}

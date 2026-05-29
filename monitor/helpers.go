@@ -11,9 +11,10 @@ import (
 
 // formatMonitor formats a monitor instance as a string representation.
 // If includeType is true, it includes the monitor type in the output.
-//
-//nolint:revive // includeType is not a control coupling flag, it's a meaningful parameter
-func formatMonitor(s any, includeType bool) string {
+func formatMonitor( //nolint:revive // includeType is not a control coupling flag, it's a meaningful parameter
+	s any,
+	includeType bool,
+) string {
 	buf := strings.Builder{}
 
 	first := true
@@ -42,7 +43,7 @@ func formatMonitor(s any, includeType bool) string {
 			continue
 		}
 
-		name := strings.Split(field.Tag.Get("json"), ",")[0]
+		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 
 		if name == "" || name == "-" {
 			name = field.Name

@@ -30,10 +30,15 @@ func (JiraServiceManagementDetails) Type() string {
 
 // String returns a string representation of the notification.
 func (j JiraServiceManagement) String() string {
+	masked := j.JiraServiceManagementDetails
+	if masked.APIToken != "" {
+		masked.APIToken = "***"
+	}
+
 	return fmt.Sprintf(
 		"%s, %s",
 		formatNotification(j.Base, false),
-		formatNotification(j.JiraServiceManagementDetails, true),
+		formatNotification(masked, true),
 	)
 }
 
