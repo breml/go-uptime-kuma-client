@@ -1571,6 +1571,78 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "Globalping",
+			create: &monitor.Globalping{
+				Base: monitor.Base{
+					Name:           "Test Globalping Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				HTTPDetails: monitor.HTTPDetails{
+					Method:              "GET",
+					MaxRedirects:        10,
+					AcceptedStatusCodes: []string{"200-299"},
+					AuthMethod:          monitor.AuthMethodNone,
+				},
+				GlobalpingDetails: monitor.GlobalpingDetails{
+					Subtype:   monitor.GlobalpingSubtypePing,
+					Location:  "world",
+					IPFamily:  monitor.GlobalpingIPFamilyAuto,
+					Protocol:  "ICMP",
+					PingCount: 3,
+					Hostname:  "example.com",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				g, ok := m.(*monitor.Globalping)
+				if !ok {
+					panic("failed to assert Globalping monitor")
+				}
+
+				g.Name = "Updated Globalping Monitor"
+				g.Hostname = "google.com"
+				g.Location = "europe"
+				g.IPFamily = monitor.GlobalpingIPFamilyIPv4
+				g.PingCount = 5
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var g monitor.Globalping
+				err := actual.As(&g)
+				require.NoError(t, err)
+				require.Equal(t, id, g.ID)
+				require.Equal(t, "Test Globalping Monitor", g.Name)
+				require.Equal(t, monitor.GlobalpingSubtypePing, g.Subtype)
+				require.Equal(t, "world", g.Location)
+				require.Equal(t, "example.com", g.Hostname)
+				require.Equal(t, "ICMP", g.Protocol)
+				require.Equal(t, 3, g.PingCount)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var g monitor.Globalping
+				err := base.As(&g)
+				require.NoError(t, err)
+				return &g
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var g monitor.Globalping
+				err := actual.As(&g)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Globalping Monitor", g.Name)
+				require.Equal(t, "google.com", g.Hostname)
+				require.Equal(t, "europe", g.Location)
+				require.Equal(t, monitor.GlobalpingIPFamilyIPv4, g.IPFamily)
+				require.Equal(t, 5, g.PingCount)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {
