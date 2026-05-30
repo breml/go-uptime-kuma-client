@@ -14,6 +14,9 @@ type GoogleSheets struct {
 
 // GoogleSheetsDetails contains the Google Sheets-specific configuration.
 type GoogleSheetsDetails struct {
+	// Note: the upstream API uses lowercase "Url" (not "URL") in the JSON key,
+	// unlike the sibling GoogleChat type. Do not "fix" this to maintain wire
+	// compatibility with the Uptime Kuma server.
 	WebhookURL string `json:"googleSheetsWebhookUrl"`
 }
 

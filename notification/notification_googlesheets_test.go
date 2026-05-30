@@ -16,6 +16,7 @@ func TestNotificationGoogleSheets_Unmarshal(t *testing.T) {
 
 		want     notification.GoogleSheets
 		wantJSON string
+		wantErr  bool
 	}{
 		{
 			name: "success",
@@ -59,6 +60,16 @@ func TestNotificationGoogleSheets_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"googleSheetsWebhookUrl":"https://script.google.com/macros/s/BBBB/exec","id":2,"isDefault":false,"name":"Simple Google Sheets","type":"GoogleSheets","userId":1}`,
 		},
+		{
+			name:    "missing config field",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
+			wantErr: true,
+		},
+		{
+			name:    "invalid config json",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"not-json"}`),
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -66,6 +77,12 @@ func TestNotificationGoogleSheets_Unmarshal(t *testing.T) {
 			googleSheets := notification.GoogleSheets{}
 
 			err := json.Unmarshal(tc.data, &googleSheets)
+			if tc.wantErr {
+				require.Error(t, err)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			require.EqualExportedValues(t, tc.want, googleSheets)
