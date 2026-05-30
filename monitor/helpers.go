@@ -6,6 +6,7 @@ import (
 	"iter"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -79,6 +80,17 @@ func formatMonitor(s any, includeType bool) string {
 	}
 
 	return buf.String()
+}
+
+// notificationIDMap converts a slice of notification IDs to the map format
+// expected by the Uptime Kuma API.
+func notificationIDMap(ids []int64) map[string]bool {
+	m := map[string]bool{}
+	for _, id := range ids {
+		m[strconv.FormatInt(id, 10)] = true
+	}
+
+	return m
 }
 
 // orderedByKey returns an iterator over a map's key-value pairs in sorted order.

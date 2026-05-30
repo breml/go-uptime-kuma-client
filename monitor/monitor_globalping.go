@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
-	"strconv"
 )
 
 // Globalping represents a globalping monitor.
@@ -75,13 +74,7 @@ func (g Globalping) MarshalJSON() ([]byte, error) {
 	raw["upsideDown"] = g.UpsideDown
 	raw["active"] = g.IsActive
 
-	// Update notification IDs.
-	ids := map[string]bool{}
-	for _, id := range g.NotificationIDs {
-		ids[strconv.FormatInt(id, 10)] = true
-	}
-
-	raw["notificationIDList"] = ids
+	raw["notificationIDList"] = notificationIDMap(g.NotificationIDs)
 
 	// Always override with current HTTP-specific field values.
 	raw["url"] = g.URL
@@ -108,6 +101,7 @@ func (g Globalping) MarshalJSON() ([]byte, error) {
 	raw["oauth_client_id"] = g.OAuthClientID
 	raw["oauth_client_secret"] = g.OAuthClientSecret
 	raw["oauth_scopes"] = g.OAuthScopes
+	raw["oauth_audience"] = g.OAuthAudience
 	raw["cacheBust"] = g.CacheBust
 
 	// Always override with current Globalping-specific field values.
