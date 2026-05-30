@@ -1575,6 +1575,57 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "GoogleSheets",
+			expectedType: "GoogleSheets",
+			create: notification.GoogleSheets{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Google Sheets Created",
+				},
+				GoogleSheetsDetails: notification.GoogleSheetsDetails{
+					WebhookURL: "https://script.google.com/macros/s/AAAA/exec",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				googlesheets, ok := n.(*notification.GoogleSheets)
+				if !ok {
+					panic("failed to assert GoogleSheets notification")
+				}
+
+				googlesheets.Name = "Test Google Sheets Updated"
+				googlesheets.WebhookURL = "https://script.google.com/macros/s/BBBB/exec"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.GoogleSheets)
+				require.True(t, ok)
+				var googlesheets notification.GoogleSheets
+				err := actual.As(&googlesheets)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = googlesheets.UserID
+				require.EqualExportedValues(t, exp, googlesheets)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var googlesheets notification.GoogleSheets
+				err := base.As(&googlesheets)
+				require.NoError(t, err)
+				return &googlesheets
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.GoogleSheets)
+				require.True(t, ok)
+				var googlesheets notification.GoogleSheets
+				err := actual.As(&googlesheets)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, googlesheets)
+			},
+		},
+		{
 			name:         "Bark",
 			expectedType: "bark",
 			create: notification.Bark{
