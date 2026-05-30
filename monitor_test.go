@@ -1714,6 +1714,61 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "SIP Options",
+			create: &monitor.SIPOptions{
+				Base: monitor.Base{
+					Name:           "Test SIP Options Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				SIPOptionsDetails: monitor.SIPOptionsDetails{
+					Hostname: "sip.example.com",
+					Port:     5060,
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				sip, ok := m.(*monitor.SIPOptions)
+				if !ok {
+					panic("failed to assert SIPOptions monitor")
+				}
+
+				sip.Name = "Updated SIP Options Monitor"
+				sip.Hostname = "sip2.example.com"
+				sip.Port = 5061
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var sip monitor.SIPOptions
+				err := actual.As(&sip)
+				require.NoError(t, err)
+				require.Equal(t, id, sip.ID)
+				require.Equal(t, "Test SIP Options Monitor", sip.Name)
+				require.Equal(t, "sip.example.com", sip.Hostname)
+				require.Equal(t, 5060, sip.Port)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var sip monitor.SIPOptions
+				err := base.As(&sip)
+				require.NoError(t, err)
+				return &sip
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var sip monitor.SIPOptions
+				err := actual.As(&sip)
+				require.NoError(t, err)
+				require.Equal(t, "Updated SIP Options Monitor", sip.Name)
+				require.Equal(t, "sip2.example.com", sip.Hostname)
+				require.Equal(t, 5061, sip.Port)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {
