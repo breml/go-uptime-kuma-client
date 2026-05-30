@@ -545,6 +545,77 @@ func TestMonitorCRUD(t *testing.T) {
 			testPauseResume: false,
 		},
 		{
+			name: "OracleDB",
+			create: &monitor.OracleDB{
+				Base: monitor.Base{
+					Name:           "Test OracleDB Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       false,
+				},
+				OracleDBDetails: monitor.OracleDBDetails{
+					DatabaseConnectionString: "localhost:1521/XEPDB1",
+					DatabaseQuery:            ptr.To("SELECT 1 FROM DUAL"),
+					Username:                 "oracle",
+					Password:                 "oraclepass",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				oracledb, ok := m.(*monitor.OracleDB)
+				if !ok {
+					panic("failed to assert OracleDB monitor")
+				}
+
+				oracledb.Name = "Updated OracleDB Monitor"
+				oracledb.DatabaseConnectionString = "oracle.example.com:1521/PROD"
+				oracledb.DatabaseQuery = ptr.To("SELECT banner FROM v$version WHERE banner LIKE 'Oracle%'")
+				oracledb.Username = "system"
+				oracledb.Password = "newsecret"
+				oracledb.Conditions = []monitor.Condition{
+					{Variable: "result", Operator: "contains", Value: "Oracle", AndOr: monitor.ConditionAnd},
+				}
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var oracledb monitor.OracleDB
+				err := actual.As(&oracledb)
+				require.NoError(t, err)
+				require.Equal(t, id, oracledb.ID)
+				require.Equal(t, "Test OracleDB Monitor", oracledb.Name)
+				require.Equal(t, "oracle", oracledb.Username)
+				require.Equal(t, "oraclepass", oracledb.Password)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var oracledb monitor.OracleDB
+				err := base.As(&oracledb)
+				require.NoError(t, err)
+				return &oracledb
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var oracledb monitor.OracleDB
+				err := actual.As(&oracledb)
+				require.NoError(t, err)
+				require.Equal(t, "Updated OracleDB Monitor", oracledb.Name)
+				require.Equal(t, "oracle.example.com:1521/PROD", oracledb.DatabaseConnectionString)
+				require.Equal(
+					t,
+					ptr.To("SELECT banner FROM v$version WHERE banner LIKE 'Oracle%'"),
+					oracledb.DatabaseQuery,
+				)
+				require.Equal(t, "system", oracledb.Username)
+				require.Equal(t, "newsecret", oracledb.Password)
+				require.Equal(t, []monitor.Condition{
+					{Variable: "result", Operator: "contains", Value: "Oracle", AndOr: monitor.ConditionAnd},
+				}, oracledb.Conditions)
+			},
+			testPauseResume: false,
+		},
+		{
 			name: "Real Browser",
 			create: &monitor.RealBrowser{
 				Base: monitor.Base{
