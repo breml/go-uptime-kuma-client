@@ -1,0 +1,102 @@
+package monitor
+
+import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+)
+
+// SystemService represents a system-service monitor.
+type SystemService struct {
+	Base
+	SystemServiceDetails
+}
+
+// Type returns the monitor type.
+func (s SystemService) Type() string {
+	return s.SystemServiceDetails.Type()
+}
+
+// String returns a string representation of the monitor.
+func (s SystemService) String() string {
+	return fmt.Sprintf("%s, %s", formatMonitor(s.Base, false), formatMonitor(s.SystemServiceDetails, true))
+}
+
+// UnmarshalJSON unmarshals a JSON byte slice into a monitor.
+func (s *SystemService) UnmarshalJSON(data []byte) error {
+	base := Base{}
+	err := json.Unmarshal(data, &base)
+	if err != nil {
+		return fmt.Errorf("unmarshal system-service monitor base: %w", err)
+	}
+
+	details := SystemServiceDetails{}
+	err = json.Unmarshal(data, &details)
+	if err != nil {
+		return fmt.Errorf("unmarshal system-service monitor details: %w", err)
+	}
+
+	*s = SystemService{
+		Base:                 base,
+		SystemServiceDetails: details,
+	}
+
+	return nil
+}
+
+// MarshalJSON marshals a monitor into a JSON byte slice.
+func (s SystemService) MarshalJSON() ([]byte, error) {
+	raw := map[string]any{}
+	raw["id"] = s.ID
+	raw["type"] = "system-service"
+	raw["name"] = s.Name
+	raw["description"] = s.Description
+	// Don't set pathName, server generates it.
+	// raw["pathName"] = s.PathName
+	raw["parent"] = s.Parent
+	raw["interval"] = s.Interval
+	raw["retryInterval"] = s.RetryInterval
+	raw["resendInterval"] = s.ResendInterval
+	raw["maxretries"] = s.MaxRetries
+	raw["upsideDown"] = s.UpsideDown
+	raw["active"] = s.IsActive
+
+	// Update notification IDs.
+	ids := map[string]bool{}
+	for _, id := range s.NotificationIDs {
+		ids[strconv.FormatInt(id, 10)] = true
+	}
+
+	raw["notificationIDList"] = ids
+
+	// Always override with current SystemService-specific field values.
+	raw["system_service_name"] = s.SystemServiceName
+
+	// Server expects these fields to be arrays and not null.
+	raw["accepted_statuscodes"] = []string{}
+
+	// Uptime Kuma v2 requires conditions field (empty array by default)
+	raw["conditions"] = []any{}
+
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal system-service monitor: %w", err)
+	}
+
+	return data, nil
+}
+
+// SystemServiceDetails contains system-service-specific monitor configuration.
+type SystemServiceDetails struct {
+	// SystemServiceName is the name of the service to check. Must be non-empty.
+	// On Linux (systemd), valid characters are alphanumeric plus '.', '_', '-', and '@'
+	// (e.g. "nginx.service", "sshd@0.service"). On Windows, valid characters are
+	// alphanumeric plus '.', '_', '-' (e.g. "Spooler").
+	// Note: the upstream API uses snake_case for this field, unlike most other Uptime Kuma fields.
+	SystemServiceName string `json:"system_service_name"`
+}
+
+// Type returns the monitor type.
+func (SystemServiceDetails) Type() string {
+	return "system-service"
+}
