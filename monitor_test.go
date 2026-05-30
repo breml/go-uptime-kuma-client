@@ -1769,6 +1769,57 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "System Service",
+			create: &monitor.SystemService{
+				Base: monitor.Base{
+					Name:           "Test System Service Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				SystemServiceDetails: monitor.SystemServiceDetails{
+					SystemServiceName: "nginx.service",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				ss, ok := m.(*monitor.SystemService)
+				if !ok {
+					panic("failed to assert SystemService monitor")
+				}
+
+				ss.Name = "Updated System Service Monitor"
+				ss.SystemServiceName = "sshd.service"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var ss monitor.SystemService
+				err := actual.As(&ss)
+				require.NoError(t, err)
+				require.Equal(t, id, ss.ID)
+				require.Equal(t, "Test System Service Monitor", ss.Name)
+				require.Equal(t, "nginx.service", ss.SystemServiceName)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var ss monitor.SystemService
+				err := base.As(&ss)
+				require.NoError(t, err)
+				return &ss
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var ss monitor.SystemService
+				err := actual.As(&ss)
+				require.NoError(t, err)
+				require.Equal(t, "Updated System Service Monitor", ss.Name)
+				require.Equal(t, "sshd.service", ss.SystemServiceName)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {
