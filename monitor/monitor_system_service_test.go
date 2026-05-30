@@ -73,6 +73,32 @@ func TestMonitorSystemService_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"id":5,"interval":120,"maxretries":3,"name":"system-service-monitor-no-parent","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"system_service_name":"Spooler","type":"system-service","upsideDown":false}`,
 		},
+		{
+			name: "success with empty service name",
+			data: []byte(
+				`{"id":6,"name":"system-service-empty","description":null,"pathName":"system-service-empty","parent":null,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":0,"weight":2000,"active":true,"forceInactive":false,"type":"system-service","timeout":null,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":"A","dns_resolve_server":"1.1.1.1","dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{},"tags":[],"maintenance":false,"mqttTopic":"","mqttSuccessMessage":"","databaseQuery":null,"authMethod":null,"grpcUrl":null,"grpcProtobuf":null,"grpcMethod":null,"grpcServiceName":null,"grpcEnableTls":false,"radiusCalledStationId":null,"radiusCallingStationId":null,"game":null,"gamedigGivenPortOnly":true,"httpBodyEncoding":"json","jsonPath":null,"expectedValue":null,"kafkaProducerTopic":null,"kafkaProducerBrokers":[],"kafkaProducerSsl":false,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerMessage":null,"screenshot":null,"headers":null,"body":null,"grpcBody":null,"grpcMetadata":null,"basic_auth_user":null,"basic_auth_pass":null,"oauth_client_id":null,"oauth_client_secret":null,"oauth_token_url":null,"oauth_scopes":null,"oauth_auth_method":"client_secret_basic","pushToken":null,"databaseConnectionString":null,"radiusUsername":null,"radiusPassword":null,"radiusSecret":null,"mqttUsername":"","mqttPassword":"","authWorkstation":null,"authDomain":null,"tlsCa":null,"tlsCert":null,"tlsKey":null,"kafkaProducerSaslOptions":{"mechanism":"None"},"system_service_name":"","includeSensitiveData":true}`,
+			),
+
+			want: monitor.SystemService{
+				Base: monitor.Base{
+					ID:             6,
+					Name:           "system-service-empty",
+					Description:    nil,
+					PathName:       "system-service-empty",
+					Parent:         nil,
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     0,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				SystemServiceDetails: monitor.SystemServiceDetails{
+					SystemServiceName: "",
+				},
+			},
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"id":6,"interval":60,"maxretries":0,"name":"system-service-empty","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"system_service_name":"","type":"system-service","upsideDown":false}`,
+		},
 	}
 
 	for _, tc := range tests {

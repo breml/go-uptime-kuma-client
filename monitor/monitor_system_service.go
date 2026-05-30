@@ -27,13 +27,13 @@ func (s *SystemService) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return fmt.Errorf("unmarshal: %w", err)
+		return fmt.Errorf("unmarshal system-service monitor base: %w", err)
 	}
 
 	details := SystemServiceDetails{}
 	err = json.Unmarshal(data, &details)
 	if err != nil {
-		return fmt.Errorf("unmarshal: %w", err)
+		return fmt.Errorf("unmarshal system-service monitor details: %w", err)
 	}
 
 	*s = SystemService{
@@ -80,7 +80,7 @@ func (s SystemService) MarshalJSON() ([]byte, error) {
 
 	data, err := json.Marshal(raw)
 	if err != nil {
-		return nil, fmt.Errorf("marshal: %w", err)
+		return nil, fmt.Errorf("marshal system-service monitor: %w", err)
 	}
 
 	return data, nil
@@ -88,7 +88,10 @@ func (s SystemService) MarshalJSON() ([]byte, error) {
 
 // SystemServiceDetails contains system-service-specific monitor configuration.
 type SystemServiceDetails struct {
-	// SystemServiceName is the name of the service to check (e.g. "nginx.service" on Linux, "Spooler" on Windows).
+	// SystemServiceName is the name of the service to check. Must be non-empty.
+	// On Linux (systemd), valid characters are alphanumeric plus '.', '_', '-', and '@'
+	// (e.g. "nginx.service", "sshd@0.service"). On Windows, valid characters are
+	// alphanumeric plus '.', '_', '-' (e.g. "Spooler").
 	// Note: the upstream API uses snake_case for this field, unlike most other Uptime Kuma fields.
 	SystemServiceName string `json:"system_service_name"`
 }
