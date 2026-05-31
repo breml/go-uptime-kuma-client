@@ -3309,6 +3309,64 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Resend",
+			expectedType: "Resend",
+			create: notification.Resend{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Resend Created",
+				},
+				ResendDetails: notification.ResendDetails{
+					APIKey:    "re_test_api_key_xxxxx",
+					FromEmail: "sender@example.com",
+					FromName:  "Uptime Kuma",
+					ToEmail:   "alerts@example.com",
+					Subject:   "Test Subject",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				resend, ok := n.(*notification.Resend)
+				if !ok {
+					panic("failed to assert Resend notification")
+				}
+
+				resend.Name = "Test Resend Updated"
+				resend.APIKey = "re_updated_api_key_yyyyy"
+				resend.ToEmail = "updated@example.com, second@example.com"
+				resend.FromName = "Updated System"
+				resend.Subject = "Updated Subject"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Resend)
+				require.True(t, ok)
+				var resend notification.Resend
+				err := actual.As(&resend)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = resend.UserID
+				require.EqualExportedValues(t, exp, resend)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var resend notification.Resend
+				err := base.As(&resend)
+				require.NoError(t, err)
+				return &resend
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Resend)
+				require.True(t, ok)
+				var resend notification.Resend
+				err := actual.As(&resend)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, resend)
+			},
+		},
+		{
 			name:         "SendGrid",
 			expectedType: "SendGrid",
 			create: notification.SendGrid{
