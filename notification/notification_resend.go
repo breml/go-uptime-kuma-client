@@ -4,43 +4,38 @@ import (
 	"fmt"
 )
 
-// Resend represents a Resend notification provider.
-// Resend is a transactional email API for sending notifications via email.
+// Resend represents a Resend notification.
 type Resend struct {
 	Base
 	ResendDetails
 }
 
-// ResendDetails contains the configuration fields for Resend notifications.
+// ResendDetails contains Resend-specific notification configuration.
 type ResendDetails struct {
-	// APIKey is the Resend API key for authentication.
-	APIKey string `json:"resendApiKey"`
-	// FromEmail is the sender email address.
+	APIKey    string `json:"resendApiKey"`
 	FromEmail string `json:"resendFromEmail"`
-	// FromName is the sender name.
-	FromName string `json:"resendFromName"`
+	FromName  string `json:"resendFromName,omitempty"`
 	// ToEmail is a comma-separated list of recipient email addresses.
 	ToEmail string `json:"resendToEmail"`
-	// Subject is the email subject line.
-	Subject string `json:"resendSubject"`
+	Subject string `json:"resendSubject,omitempty"`
 }
 
-// Type returns the notification type identifier for Resend.
+// Type returns the notification type.
 func (r Resend) Type() string {
 	return r.ResendDetails.Type()
 }
 
-// Type returns the notification type identifier for ResendDetails.
+// Type returns the notification type.
 func (ResendDetails) Type() string {
 	return "Resend"
 }
 
-// String returns a string representation of the Resend notification.
+// String returns a string representation of the notification.
 func (r Resend) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(r.Base, false), formatNotification(r.ResendDetails, true))
 }
 
-// UnmarshalJSON unmarshals JSON data into a Resend notification.
+// UnmarshalJSON unmarshals a JSON byte slice into a notification.
 func (r *Resend) UnmarshalJSON(data []byte) error {
 	detail := ResendDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -56,7 +51,7 @@ func (r *Resend) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON marshals the Resend notification into JSON.
+// MarshalJSON marshals a notification into a JSON byte slice.
 func (r Resend) MarshalJSON() ([]byte, error) {
-	return marshalJSON(r.Base, r.ResendDetails)
+	return marshalJSON(r.Base, &r.ResendDetails)
 }

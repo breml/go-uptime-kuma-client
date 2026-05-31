@@ -16,6 +16,7 @@ func TestNotificationResend_Unmarshal(t *testing.T) {
 
 		want     notification.Resend
 		wantJSON string
+		wantErr  bool
 	}{
 		{
 			name: "success with all fields",
@@ -63,7 +64,7 @@ func TestNotificationResend_Unmarshal(t *testing.T) {
 					ToEmail:   "user@example.com",
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Resend","resendApiKey":"re_yyyyyyyyyyyyyyyy","resendFromEmail":"sender@example.com","resendFromName":"","resendSubject":"","resendToEmail":"user@example.com","type":"Resend","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Resend","resendApiKey":"re_yyyyyyyyyyyyyyyy","resendFromEmail":"sender@example.com","resendToEmail":"user@example.com","type":"Resend","userId":1}`,
 		},
 		{
 			name: "with multiple recipients",
@@ -90,6 +91,16 @@ func TestNotificationResend_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":3,"isDefault":false,"name":"Resend Multi To","resendApiKey":"re_zzzzzzzzzzzzzzzz","resendFromEmail":"sender@example.com","resendFromName":"Alert System","resendSubject":"System Alert","resendToEmail":"to1@example.com, to2@example.com","type":"Resend","userId":1}`,
 		},
+		{
+			name:    "missing config field",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
+			wantErr: true,
+		},
+		{
+			name:    "invalid config json",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"not-json"}`),
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -97,6 +108,12 @@ func TestNotificationResend_Unmarshal(t *testing.T) {
 			resend := notification.Resend{}
 
 			err := json.Unmarshal(tc.data, &resend)
+			if tc.wantErr {
+				require.Error(t, err)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			require.EqualExportedValues(t, tc.want, resend)
@@ -107,4 +124,9 @@ func TestNotificationResend_Unmarshal(t *testing.T) {
 			require.JSONEq(t, tc.wantJSON, string(data))
 		})
 	}
+}
+
+func TestNotificationResend_Type(t *testing.T) {
+	require.Equal(t, "Resend", notification.Resend{}.Type())
+	require.Equal(t, "Resend", notification.ResendDetails{}.Type())
 }
