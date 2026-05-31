@@ -1363,6 +1363,61 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "HaloPSA",
+			expectedType: "HaloPSA",
+			create: notification.HaloPSA{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test HaloPSA Created",
+				},
+				HaloPSADetails: notification.HaloPSADetails{
+					WebhookURL: "https://example.halopsa.com/api/v1/webhook",
+					Username:   "admin",
+					Password:   "secret",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				halopsa, ok := n.(*notification.HaloPSA)
+				if !ok {
+					panic("failed to assert HaloPSA notification")
+				}
+
+				halopsa.Name = "Test HaloPSA Updated"
+				halopsa.WebhookURL = "https://example.halopsa.com/api/v1/webhook/updated"
+				halopsa.Username = "updated-user"
+				halopsa.Password = "updated-secret"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.HaloPSA)
+				require.True(t, ok)
+				var halopsa notification.HaloPSA
+				err := actual.As(&halopsa)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = halopsa.UserID
+				require.EqualExportedValues(t, exp, halopsa)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var halopsa notification.HaloPSA
+				err := base.As(&halopsa)
+				require.NoError(t, err)
+				return &halopsa
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.HaloPSA)
+				require.True(t, ok)
+				var halopsa notification.HaloPSA
+				err := actual.As(&halopsa)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, halopsa)
+			},
+		},
+		{
 			name:         "AlertNow",
 			expectedType: "AlertNow",
 			create: notification.AlertNow{
