@@ -32,19 +32,19 @@ func (w *WebsocketUpgrade) UnmarshalJSON(data []byte) error {
 	base := Base{}
 	err := json.Unmarshal(data, &base)
 	if err != nil {
-		return fmt.Errorf("unmarshal: %w", err)
+		return fmt.Errorf("unmarshal websocket-upgrade base: %w", err)
 	}
 
 	httpDetails := HTTPDetails{}
 	err = json.Unmarshal(data, &httpDetails)
 	if err != nil {
-		return fmt.Errorf("unmarshal: %w", err)
+		return fmt.Errorf("unmarshal websocket-upgrade http details: %w", err)
 	}
 
 	wsDetails := WebsocketUpgradeDetails{}
 	err = json.Unmarshal(data, &wsDetails)
 	if err != nil {
-		return fmt.Errorf("unmarshal: %w", err)
+		return fmt.Errorf("unmarshal websocket-upgrade details: %w", err)
 	}
 
 	*w = WebsocketUpgrade{
@@ -104,15 +104,15 @@ func (w WebsocketUpgrade) MarshalJSON() ([]byte, error) {
 	raw["cacheBust"] = w.CacheBust
 
 	// Always override with current WebSocket-specific field values.
-	raw["wsIgnoreSecWebsocketAcceptHeader"] = w.WsIgnoreSecWebsocketAcceptHeader
-	raw["wsSubprotocol"] = w.WsSubprotocol
+	raw["wsIgnoreSecWebsocketAcceptHeader"] = w.IgnoreSecWebsocketAcceptHeader
+	raw["wsSubprotocol"] = w.Subprotocol
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
 
 	data, err := json.Marshal(raw)
 	if err != nil {
-		return nil, fmt.Errorf("marshal: %w", err)
+		return nil, fmt.Errorf("marshal websocket-upgrade monitor: %w", err)
 	}
 
 	return data, nil
@@ -120,8 +120,8 @@ func (w WebsocketUpgrade) MarshalJSON() ([]byte, error) {
 
 // WebsocketUpgradeDetails contains websocket-upgrade-specific monitor configuration.
 type WebsocketUpgradeDetails struct {
-	WsIgnoreSecWebsocketAcceptHeader bool   `json:"wsIgnoreSecWebsocketAcceptHeader"`
-	WsSubprotocol                    string `json:"wsSubprotocol"`
+	IgnoreSecWebsocketAcceptHeader bool   `json:"wsIgnoreSecWebsocketAcceptHeader"`
+	Subprotocol                    string `json:"wsSubprotocol"`
 }
 
 // Type returns the monitor type.
