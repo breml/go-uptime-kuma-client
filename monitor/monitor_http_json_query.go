@@ -3,7 +3,6 @@ package monitor
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 )
 
 // HTTPJSONQuery represents a httpjsonquery monitor.
@@ -74,13 +73,7 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	raw["upsideDown"] = h.UpsideDown
 	raw["active"] = h.IsActive
 
-	// Update notification IDs.
-	ids := map[string]bool{}
-	for _, id := range h.NotificationIDs {
-		ids[strconv.FormatInt(id, 10)] = true
-	}
-
-	raw["notificationIDList"] = ids
+	raw["notificationIDList"] = notificationIDMap(h.NotificationIDs)
 
 	// Always override with current HTTP-specific field values.
 	raw["url"] = h.URL
@@ -107,6 +100,7 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	raw["oauth_client_id"] = h.OAuthClientID
 	raw["oauth_client_secret"] = h.OAuthClientSecret
 	raw["oauth_scopes"] = h.OAuthScopes
+	raw["oauth_audience"] = h.OAuthAudience
 	raw["cacheBust"] = h.CacheBust
 
 	// Always override with current JSON Query-specific field values.

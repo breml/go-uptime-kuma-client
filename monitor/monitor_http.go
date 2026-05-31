@@ -3,7 +3,6 @@ package monitor
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 )
 
 // HTTP represents a http monitor.
@@ -61,13 +60,7 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw["upsideDown"] = h.UpsideDown
 	raw["active"] = h.IsActive
 
-	// Update notification IDs.
-	ids := map[string]bool{}
-	for _, id := range h.NotificationIDs {
-		ids[strconv.FormatInt(id, 10)] = true
-	}
-
-	raw["notificationIDList"] = ids
+	raw["notificationIDList"] = notificationIDMap(h.NotificationIDs)
 
 	// Always override with current HTTP-specific field values.
 	raw["url"] = h.URL
@@ -94,6 +87,7 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw["oauth_client_id"] = h.OAuthClientID
 	raw["oauth_client_secret"] = h.OAuthClientSecret
 	raw["oauth_scopes"] = h.OAuthScopes
+	raw["oauth_audience"] = h.OAuthAudience
 	raw["cacheBust"] = h.CacheBust
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
@@ -132,6 +126,7 @@ type HTTPDetails struct {
 	OAuthClientID       string     `json:"oauth_client_id"`
 	OAuthClientSecret   string     `json:"oauth_client_secret"`
 	OAuthScopes         string     `json:"oauth_scopes"`
+	OAuthAudience       string     `json:"oauth_audience"`
 	CacheBust           bool       `json:"cacheBust"`
 }
 
