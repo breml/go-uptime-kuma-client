@@ -15,6 +15,7 @@ func TestNotificationSMSIR_Unmarshal(t *testing.T) {
 		data     []byte
 		want     notification.SMSIR
 		wantJSON string
+		wantErr  bool
 	}{
 		{
 			name: "success with all fields",
@@ -85,6 +86,16 @@ func TestNotificationSMSIR_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"id":3,"isDefault":false,"name":"SMSIR Multi","smsirApiKey":"api-key-multi","smsirNumber":"9123456789,09987654321","smsirTemplate":"99999","type":"smsir","userId":1}`,
 		},
+		{
+			name:    "missing config field",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
+			wantErr: true,
+		},
+		{
+			name:    "invalid config json",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"not-json"}`),
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -92,6 +103,12 @@ func TestNotificationSMSIR_Unmarshal(t *testing.T) {
 			smsir := notification.SMSIR{}
 
 			err := json.Unmarshal(tc.data, &smsir)
+			if tc.wantErr {
+				require.Error(t, err)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			require.EqualExportedValues(t, tc.want, smsir)
