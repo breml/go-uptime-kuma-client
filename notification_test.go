@@ -937,7 +937,7 @@ func TestNotificationCRUD(t *testing.T) {
 				},
 				TelnyxDetails: notification.TelnyxDetails{
 					APIKey:             "KEYxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-					MessagingProfileID: "4001763e-7f7d-4c87-a8b1-1c5a0e5a3f48",
+					MessagingProfileID: ptr.To("4001763e-7f7d-4c87-a8b1-1c5a0e5a3f48"),
 					PhoneNumber:        "+15559876543",
 					ToNumber:           "+15551234567",
 				},

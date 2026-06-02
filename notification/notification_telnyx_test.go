@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -16,6 +17,7 @@ func TestNotificationTelnyx_Unmarshal(t *testing.T) {
 
 		want     notification.Telnyx
 		wantJSON string
+		wantErr  bool
 	}{
 		{
 			name: "success",
@@ -34,7 +36,7 @@ func TestNotificationTelnyx_Unmarshal(t *testing.T) {
 				},
 				TelnyxDetails: notification.TelnyxDetails{
 					APIKey:             "KEYxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-					MessagingProfileID: "4001763e-7f7d-4c87-a8b1-1c5a0e5a3f48",
+					MessagingProfileID: ptr.To("4001763e-7f7d-4c87-a8b1-1c5a0e5a3f48"),
 					PhoneNumber:        "+15559876543",
 					ToNumber:           "+15551234567",
 				},
@@ -62,7 +64,17 @@ func TestNotificationTelnyx_Unmarshal(t *testing.T) {
 					ToNumber:    "+15551234567",
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Telnyx","telnyxApiKey":"KEYxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","telnyxMessagingProfileId":"","telnyxPhoneNumber":"+15559876543","telnyxToNumber":"+15551234567","type":"telnyx","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Telnyx","telnyxApiKey":"KEYxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","telnyxPhoneNumber":"+15559876543","telnyxToNumber":"+15551234567","type":"telnyx","userId":1}`,
+		},
+		{
+			name:    "missing config field",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
+			wantErr: true,
+		},
+		{
+			name:    "invalid config json",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"not-json"}`),
+			wantErr: true,
 		},
 	}
 
@@ -71,6 +83,12 @@ func TestNotificationTelnyx_Unmarshal(t *testing.T) {
 			telnyx := notification.Telnyx{}
 
 			err := json.Unmarshal(tc.data, &telnyx)
+			if tc.wantErr {
+				require.Error(t, err)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			require.EqualExportedValues(t, tc.want, telnyx)

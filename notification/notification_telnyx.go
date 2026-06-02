@@ -12,10 +12,10 @@ type Telnyx struct {
 
 // TelnyxDetails contains telnyx-specific notification configuration.
 type TelnyxDetails struct {
-	APIKey             string `json:"telnyxApiKey"`
-	MessagingProfileID string `json:"telnyxMessagingProfileId"`
-	PhoneNumber        string `json:"telnyxPhoneNumber"`
-	ToNumber           string `json:"telnyxToNumber"`
+	APIKey             string  `json:"telnyxApiKey"`
+	MessagingProfileID *string `json:"telnyxMessagingProfileId,omitempty"`
+	PhoneNumber        string  `json:"telnyxPhoneNumber"`
+	ToNumber           string  `json:"telnyxToNumber"`
 }
 
 // Type returns the notification type.
