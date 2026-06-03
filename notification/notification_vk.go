@@ -12,8 +12,12 @@ type VK struct {
 
 // VKDetails contains VK-specific notification configuration.
 type VKDetails struct {
-	AccessToken    string `json:"vkAccessToken"`
-	PeerID         string `json:"vkPeerId"`
+	// AccessToken is the VK API user or service access token.
+	AccessToken string `json:"vkAccessToken"`
+	// PeerID is the recipient. Must be a numeric string: positive for user
+	// IDs, negative for community IDs, or 2000000000+chat_id for group chats.
+	PeerID string `json:"vkPeerId"`
+	// APIVersion is the VK API version string (e.g., "5.199").
 	APIVersion     string `json:"vkApiVersion"`
 	DontParseLinks bool   `json:"vkDontParseLinks"`
 }

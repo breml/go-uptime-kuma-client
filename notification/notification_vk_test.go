@@ -16,6 +16,7 @@ func TestNotificationVK_Unmarshal(t *testing.T) {
 
 		want     notification.VK
 		wantJSON string
+		wantErr  bool
 	}{
 		{
 			name: "success",
@@ -64,6 +65,16 @@ func TestNotificationVK_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple VK","vkAccessToken":"vk1.a.token","vkPeerId":"12345","vkApiVersion":"5.199","vkDontParseLinks":false,"type":"VK","userId":1}`,
 		},
+		{
+			name:    "missing config field",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
+			wantErr: true,
+		},
+		{
+			name:    "invalid config json",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"not-json"}`),
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -71,6 +82,12 @@ func TestNotificationVK_Unmarshal(t *testing.T) {
 			vk := notification.VK{}
 
 			err := json.Unmarshal(tc.data, &vk)
+			if tc.wantErr {
+				require.Error(t, err)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			require.EqualExportedValues(t, tc.want, vk)
