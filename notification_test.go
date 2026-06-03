@@ -4120,6 +4120,63 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Teltonika",
+			expectedType: "Teltonika",
+			create: notification.Teltonika{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Teltonika Created",
+				},
+				TeltonikaDetails: notification.TeltonikaDetails{
+					URL:         "https://192.168.100.1",
+					Username:    "admin",
+					Password:    "secret-password",
+					Modem:       "1-1",
+					PhoneNumber: "+336xxxxxxxx",
+					UnsafeTLS:   false,
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				teltonika, ok := n.(*notification.Teltonika)
+				if !ok {
+					panic("failed to assert Teltonika notification")
+				}
+
+				teltonika.Name = "Test Teltonika Updated"
+				teltonika.PhoneNumber = "+496xxxxxxxx"
+				teltonika.UnsafeTLS = true
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Teltonika)
+				require.True(t, ok)
+				var teltonika notification.Teltonika
+				err := actual.As(&teltonika)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = teltonika.UserID
+				require.EqualExportedValues(t, exp, teltonika)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var teltonika notification.Teltonika
+				err := base.As(&teltonika)
+				require.NoError(t, err)
+				return &teltonika
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Teltonika)
+				require.True(t, ok)
+				var teltonika notification.Teltonika
+				err := actual.As(&teltonika)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, teltonika)
+			},
+		},
+		{
 			name:         "Threema",
 			expectedType: "threema",
 			create: notification.Threema{
