@@ -5,8 +5,7 @@ import (
 )
 
 // Teltonika represents a Teltonika notification provider.
-// Teltonika uses a Teltonika RUTxxx series router as an SMS gateway over its HTTP API
-// (https://developers.teltonika-networks.com/reference/rut241/7.19.4/v1.11.1/messages).
+// Teltonika uses a Teltonika RUTxxx series router as an SMS gateway over its HTTP API.
 // This provider is only compatible with Teltonika RutOS >= 7.14.0 devices.
 type Teltonika struct {
 	Base
