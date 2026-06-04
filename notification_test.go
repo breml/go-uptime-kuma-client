@@ -3861,6 +3861,60 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "SMSIR",
+			expectedType: "smsir",
+			create: notification.SMSIR{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test SMSIR Created",
+				},
+				SMSIRDetails: notification.SMSIRDetails{
+					APIKey:   "test-api-key",
+					Number:   "9123456789",
+					Template: "12345",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				smsir, ok := n.(*notification.SMSIR)
+				if !ok {
+					panic("failed to assert SMSIR notification")
+				}
+
+				smsir.Name = "Test SMSIR Updated"
+				smsir.Number = "9123456789,09987654321"
+				smsir.Template = "54321"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.SMSIR)
+				require.True(t, ok)
+				var smsir notification.SMSIR
+				err := actual.As(&smsir)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = smsir.UserID
+				require.EqualExportedValues(t, exp, smsir)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var smsir notification.SMSIR
+				err := base.As(&smsir)
+				require.NoError(t, err)
+				return &smsir
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.SMSIR)
+				require.True(t, ok)
+				var smsir notification.SMSIR
+				err := actual.As(&smsir)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, smsir)
+			},
+		},
+		{
 			name:         "SMSManager",
 			expectedType: "SMSManager",
 			create: notification.SMSManager{
