@@ -4666,6 +4666,60 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "VK",
+			expectedType: "VK",
+			create: notification.VK{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test VK Created",
+				},
+				VKDetails: notification.VKDetails{
+					AccessToken: "vk1.a.abcdefghijklmnopqrstuvwxyz",
+					PeerID:      "2000000001",
+					APIVersion:  "5.199",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				vk, ok := n.(*notification.VK)
+				if !ok {
+					panic("failed to assert VK notification")
+				}
+
+				vk.Name = "Test VK Updated"
+				vk.PeerID = "2000000002"
+				vk.DontParseLinks = true
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.VK)
+				require.True(t, ok)
+				var vk notification.VK
+				err := actual.As(&vk)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = vk.UserID
+				require.EqualExportedValues(t, exp, vk)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var vk notification.VK
+				err := base.As(&vk)
+				require.NoError(t, err)
+				return &vk
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.VK)
+				require.True(t, ok)
+				var vk notification.VK
+				err := actual.As(&vk)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, vk)
+			},
+		},
+		{
 			name:         "ZohoCliq",
 			expectedType: "ZohoCliq",
 			create: notification.ZohoCliq{
