@@ -543,6 +543,61 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "JiraServiceManagement",
+			expectedType: "JiraServiceManagement",
+			create: notification.JiraServiceManagement{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Jira Service Management Created",
+				},
+				JiraServiceManagementDetails: notification.JiraServiceManagementDetails{
+					CloudID:  "cloud-123",
+					Email:    "user@example.com",
+					APIToken: "test-api-token-123",
+					Priority: 3,
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				jsm, ok := n.(*notification.JiraServiceManagement)
+				if !ok {
+					panic("failed to assert JiraServiceManagement notification")
+				}
+
+				jsm.Name = "Test Jira Service Management Updated"
+				jsm.CloudID = "cloud-456"
+				jsm.Priority = 1
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.JiraServiceManagement)
+				require.True(t, ok)
+				var jsm notification.JiraServiceManagement
+				err := actual.As(&jsm)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = jsm.UserID
+				require.EqualExportedValues(t, exp, jsm)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var jsm notification.JiraServiceManagement
+				err := base.As(&jsm)
+				require.NoError(t, err)
+				return &jsm
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.JiraServiceManagement)
+				require.True(t, ok)
+				var jsm notification.JiraServiceManagement
+				err := actual.As(&jsm)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, jsm)
+			},
+		},
+		{
 			name:         "HomeAssistant",
 			expectedType: "HomeAssistant",
 			create: notification.HomeAssistant{
