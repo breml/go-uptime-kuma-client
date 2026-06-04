@@ -4283,6 +4283,63 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Webpush",
+			expectedType: "Webpush",
+			create: notification.Webpush{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Webpush Created",
+				},
+				WebpushDetails: notification.WebpushDetails{
+					Subscription: notification.WebpushSubscription{
+						Endpoint: "https://push.example.com/abc123",
+						Keys: notification.WebpushSubscriptionKeys{
+							P256dh: "BGxi5eHcCnxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+							Auth:   "abc123auth",
+						},
+					},
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				webpush, ok := n.(*notification.Webpush)
+				if !ok {
+					panic("failed to assert Webpush notification")
+				}
+
+				webpush.Name = "Test Webpush Updated"
+				webpush.Subscription.Endpoint = "https://push.example.com/xyz789"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Webpush)
+				require.True(t, ok)
+				var webpush notification.Webpush
+				err := actual.As(&webpush)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = webpush.UserID
+				require.EqualExportedValues(t, exp, webpush)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var webpush notification.Webpush
+				err := base.As(&webpush)
+				require.NoError(t, err)
+				return &webpush
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Webpush)
+				require.True(t, ok)
+				var webpush notification.Webpush
+				err := actual.As(&webpush)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, webpush)
+			},
+		},
+		{
 			name:         "WPush",
 			expectedType: "WPush",
 			create: notification.WPush{

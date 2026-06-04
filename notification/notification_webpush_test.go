@@ -106,3 +106,37 @@ func TestNotificationWebpush_Unmarshal(t *testing.T) {
 		})
 	}
 }
+
+func TestNotificationWebpush_Type(t *testing.T) {
+	webpush := notification.Webpush{}
+	require.Equal(t, "Webpush", webpush.Type())
+
+	details := notification.WebpushDetails{}
+	require.Equal(t, "Webpush", details.Type())
+}
+
+func TestNotificationWebpush_String(t *testing.T) {
+	webpush := notification.Webpush{
+		Base: notification.Base{
+			ID:       1,
+			Name:     "Test Webpush",
+			IsActive: true,
+			UserID:   1,
+		},
+		WebpushDetails: notification.WebpushDetails{
+			Subscription: notification.WebpushSubscription{
+				Endpoint: "https://push.example.com/abc123",
+				Keys: notification.WebpushSubscriptionKeys{
+					P256dh: "BGxi5eHcCn...",
+					Auth:   "abc",
+				},
+			},
+		},
+	}
+
+	str := webpush.String()
+	require.Contains(t, str, "Test Webpush")
+	require.Contains(t, str, "Webpush")
+	require.Contains(t, str, "https://push.example.com/abc123")
+	require.NotContains(t, str, "0x")
+}
