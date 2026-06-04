@@ -981,6 +981,60 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Telnyx",
+			expectedType: "telnyx",
+			create: notification.Telnyx{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Telnyx Created",
+				},
+				TelnyxDetails: notification.TelnyxDetails{
+					APIKey:             "KEYxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+					MessagingProfileID: ptr.To("4001763e-7f7d-4c87-a8b1-1c5a0e5a3f48"),
+					PhoneNumber:        "+15559876543",
+					ToNumber:           "+15551234567",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				telnyx, ok := n.(*notification.Telnyx)
+				if !ok {
+					panic("failed to assert Telnyx notification")
+				}
+
+				telnyx.Name = "Test Telnyx Updated"
+				telnyx.ToNumber = "+15559999999"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Telnyx)
+				require.True(t, ok)
+				var telnyx notification.Telnyx
+				err := actual.As(&telnyx)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = telnyx.UserID
+				require.EqualExportedValues(t, exp, telnyx)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var telnyx notification.Telnyx
+				err := base.As(&telnyx)
+				require.NoError(t, err)
+				return &telnyx
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Telnyx)
+				require.True(t, ok)
+				var telnyx notification.Telnyx
+				err := actual.As(&telnyx)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, telnyx)
+			},
+		},
+		{
 			name:         "Mattermost",
 			expectedType: "mattermost",
 			create: notification.Mattermost{
