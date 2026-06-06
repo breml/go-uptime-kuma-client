@@ -1035,6 +1035,60 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "EgoSMS",
+			expectedType: "egosms",
+			create: notification.EgoSMS{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test EgoSMS Created",
+				},
+				EgoSMSDetails: notification.EgoSMSDetails{
+					Username:    "myuser",
+					Password:    "mypassword",
+					Sender:      ptr.To("TESTSENDER"),
+					PhoneNumber: "+41791234567",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				egosms, ok := n.(*notification.EgoSMS)
+				if !ok {
+					panic("failed to assert EgoSMS notification")
+				}
+
+				egosms.Name = "Test EgoSMS Updated"
+				egosms.PhoneNumber = "+41797654321"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.EgoSMS)
+				require.True(t, ok)
+				var egosms notification.EgoSMS
+				err := actual.As(&egosms)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = egosms.UserID
+				require.EqualExportedValues(t, exp, egosms)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var egosms notification.EgoSMS
+				err := base.As(&egosms)
+				require.NoError(t, err)
+				return &egosms
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.EgoSMS)
+				require.True(t, ok)
+				var egosms notification.EgoSMS
+				err := actual.As(&egosms)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, egosms)
+			},
+		},
+		{
 			name:         "Mattermost",
 			expectedType: "mattermost",
 			create: notification.Mattermost{
