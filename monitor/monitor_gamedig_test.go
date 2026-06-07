@@ -45,7 +45,7 @@ func TestMonitorGameDig_Unmarshal(t *testing.T) {
 					Port:                 25565,
 					Game:                 "minecraft",
 					GameDigGivenPortOnly: true,
-					GamedigToken:         func() *string { s := "secret-token"; return &s }(),
+					GameDigToken:         func() *string { s := "secret-token"; return &s }(),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test GameDig monitor","game":"minecraft","gamedigGivenPortOnly":true,"gamedigToken":"secret-token","hostname":"192.168.1.100","id":5,"interval":60,"maxretries":2,"name":"gamedig-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":25565,"resendInterval":0,"retryInterval":60,"type":"gamedig","upsideDown":false}`,

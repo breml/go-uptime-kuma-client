@@ -78,8 +78,8 @@ func (g GameDig) MarshalJSON() ([]byte, error) {
 	// Only send the token when set: older Uptime Kuma servers (predating the
 	// gamedigToken column) generically import every field of the payload and
 	// fail to create the monitor if an unknown field is present, even as null.
-	if g.GamedigToken != nil {
-		raw["gamedigToken"] = g.GamedigToken
+	if g.GameDigToken != nil {
+		raw["gamedigToken"] = g.GameDigToken
 	}
 
 	// Server expects these fields to be arrays and not null.
@@ -106,8 +106,8 @@ type GameDigDetails struct {
 	Game string `json:"game"`
 	// GameDigGivenPortOnly indicates whether to use only the given port without auto-detection.
 	GameDigGivenPortOnly bool `json:"gamedigGivenPortOnly"`
-	// GamedigToken is an optional authentication token for game servers that require it.
-	GamedigToken *string `json:"gamedigToken,omitempty"`
+	// GameDigToken is an optional authentication token for game servers that require it.
+	GameDigToken *string `json:"gamedigToken,omitempty"`
 }
 
 // Type returns the monitor type string.
