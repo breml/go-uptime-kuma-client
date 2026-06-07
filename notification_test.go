@@ -4834,6 +4834,62 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "VKTeams",
+			expectedType: "VKTeams",
+			create: notification.VKTeams{
+				Base: notification.Base{
+					ApplyExisting: true,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test VKTeams Created",
+				},
+				VKTeamsDetails: notification.VKTeamsDetails{
+					BotToken:       "001.1234567890.abcdefgh:1000000001",
+					ChatID:         "*****@chat.agent",
+					BaseURL:        "https://myteam.mail.ru",
+					UseTemplate:    true,
+					Template:       "Monitor: {monitor.name}\nStatus: {monitor.status}",
+					TemplateFormat: "MarkdownV2",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				vkteams, ok := n.(*notification.VKTeams)
+				if !ok {
+					panic("failed to assert VKTeams notification")
+				}
+
+				vkteams.Name = "Test VKTeams Updated"
+				vkteams.ChatID = "*****@updated.agent"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.VKTeams)
+				require.True(t, ok)
+				var vkteams notification.VKTeams
+				err := actual.As(&vkteams)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = vkteams.UserID
+				require.EqualExportedValues(t, exp, vkteams)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var vkteams notification.VKTeams
+				err := base.As(&vkteams)
+				require.NoError(t, err)
+				return &vkteams
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.VKTeams)
+				require.True(t, ok)
+				var vkteams notification.VKTeams
+				err := actual.As(&vkteams)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, vkteams)
+			},
+		},
+		{
 			name:         "ZohoCliq",
 			expectedType: "ZohoCliq",
 			create: notification.ZohoCliq{
