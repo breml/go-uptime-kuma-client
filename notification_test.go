@@ -34,7 +34,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "ntfy",
 			create: notification.Ntfy{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     true,
 					IsActive:      true,
 					Name:          "Test Ntfy Created",
@@ -96,7 +96,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "slack",
 			create: notification.Slack{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Slack Created",
@@ -265,7 +265,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "smtp",
 			create: notification.SMTP{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SMTP Created",
@@ -331,7 +331,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "telegram",
 			create: notification.Telegram{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Telegram Created",
@@ -384,7 +384,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "PagerDuty",
 			create: notification.PagerDuty{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test PagerDuty Created",
@@ -439,7 +439,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "signal",
 			create: notification.Signal{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Signal Created",
@@ -493,7 +493,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "Opsgenie",
 			create: notification.Opsgenie{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Opsgenie Created",
@@ -547,7 +547,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "JiraServiceManagement",
 			create: notification.JiraServiceManagement{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Jira Service Management Created",
@@ -602,7 +602,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "HomeAssistant",
 			create: notification.HomeAssistant{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Home Assistant Created",
@@ -656,7 +656,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "discord",
 			create: notification.Discord{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Discord Created",
@@ -715,7 +715,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "pushbullet",
 			create: notification.Pushbullet{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Pushbullet Created",
@@ -766,7 +766,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "pushover",
 			create: notification.Pushover{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Pushover Created",
@@ -826,7 +826,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "gotify",
 			create: notification.Gotify{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Gotify Created",
@@ -879,7 +879,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "GrafanaOncall",
 			create: notification.GrafanaOncall{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Grafana OnCall Created",
@@ -930,7 +930,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "twilio",
 			create: notification.Twilio{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Twilio Created",
@@ -985,7 +985,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "telnyx",
 			create: notification.Telnyx{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Telnyx Created",
@@ -1039,7 +1039,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "egosms",
 			create: notification.EgoSMS{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test EgoSMS Created",
@@ -1093,7 +1093,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "mattermost",
 			create: notification.Mattermost{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Mattermost Created",
@@ -1150,7 +1150,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "matrix",
 			create: notification.Matrix{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Matrix Created",
@@ -1207,7 +1207,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "rocket.chat",
 			create: notification.RocketChat{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Rocket.Chat Created",
@@ -1264,7 +1264,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "WeCom",
 			create: notification.WeCom{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test WeCom Created",
@@ -1317,7 +1317,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "Feishu",
 			create: notification.Feishu{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Feishu Created",
@@ -1368,7 +1368,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "DingDing",
 			create: notification.DingDing{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test DingDing Created",
@@ -1421,7 +1421,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "46elks",
 			create: notification.FortySixElks{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test 46elks Created",
@@ -1475,7 +1475,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "alerta",
 			create: notification.Alerta{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Alerta Created",
@@ -1530,7 +1530,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "HaloPSA",
 			create: notification.HaloPSA{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test HaloPSA Created",
@@ -1585,7 +1585,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "AlertNow",
 			create: notification.AlertNow{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test AlertNow Created",
@@ -1636,7 +1636,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "AliyunSMS",
 			create: notification.AliyunSMS{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test AliyunSMS Created",
@@ -1691,7 +1691,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "apprise",
 			create: notification.Apprise{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Apprise Created",
@@ -1743,7 +1743,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "GoogleChat",
 			create: notification.GoogleChat{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Google Chat Created",
@@ -1797,7 +1797,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "GoogleSheets",
 			create: notification.GoogleSheets{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Google Sheets Created",
@@ -1848,7 +1848,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "bark",
 			create: notification.Bark{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Bark Created",
@@ -1903,7 +1903,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "Bitrix24",
 			create: notification.Bitrix24{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Bitrix24 Created",
@@ -1955,7 +1955,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "brevo",
 			create: notification.Brevo{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Brevo Created",
@@ -2014,7 +2014,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "CallMeBot",
 			create: notification.CallMeBot{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test CallMeBot Created",
@@ -2065,7 +2065,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "Cellsynt",
 			create: notification.Cellsynt{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Cellsynt Created",
@@ -2124,7 +2124,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "clicksendsms",
 			create: notification.ClickSendSMS{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test ClickSend Created",
@@ -2179,7 +2179,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "EvolutionApi",
 			create: notification.Evolution{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Evolution Created",
@@ -2235,7 +2235,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "FlashDuty",
 			create: notification.FlashDuty{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test FlashDuty Created",
@@ -2288,7 +2288,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "GoAlert",
 			create: notification.GoAlert{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test GoAlert Created",
@@ -2451,7 +2451,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "HeiiOnCall",
 			create: notification.HeiiOnCall{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Heii On-Call Created",
@@ -2659,7 +2659,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "line",
 			create: notification.Line{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test LINE Created",
@@ -2712,7 +2712,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "lunasea",
 			create: notification.LunaSea{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test LunaSea Created",
@@ -2767,7 +2767,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "NextcloudTalk",
 			create: notification.NextcloudTalk{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Nextcloud Talk Created",
@@ -2825,7 +2825,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "nostr",
 			create: notification.Nostr{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Nostr Created",
@@ -2880,7 +2880,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "OneBot",
 			create: notification.OneBot{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test OneBot Created",
@@ -2936,7 +2936,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "octopush",
 			create: notification.Octopush{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Octopush V2 Created",
@@ -2994,7 +2994,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "OneChat",
 			create: notification.OneChat{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test OneChat Created",
@@ -3049,7 +3049,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "notifery",
 			create: notification.Notifery{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Notifery Created",
@@ -3104,7 +3104,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "onesender",
 			create: notification.OneSender{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test OneSender Created",
@@ -3160,7 +3160,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "PagerTree",
 			create: notification.PagerTree{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test PagerTree Created",
@@ -3214,7 +3214,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "promosms",
 			create: notification.PromoSMS{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test PromoSMS Created",
@@ -3272,7 +3272,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "Pumble",
 			create: notification.Pumble{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Pumble Created",
@@ -3323,7 +3323,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "PushDeer",
 			create: notification.PushDeer{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test PushDeer Created",
@@ -3376,7 +3376,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "PushPlus",
 			create: notification.PushPlus{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test PushPlus Created",
@@ -3427,7 +3427,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "pushy",
 			create: notification.Pushy{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Pushy Created",
@@ -3480,7 +3480,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "Resend",
 			create: notification.Resend{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Resend Created",
@@ -3538,7 +3538,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "SendGrid",
 			create: notification.SendGrid{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SendGrid Created",
@@ -3596,7 +3596,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "ServerChan",
 			create: notification.ServerChan{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test ServerChan Created",
@@ -3647,7 +3647,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "serwersms",
 			create: notification.SerwerSMS{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SerwerSMS Created",
@@ -3702,7 +3702,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "sevenio",
 			create: notification.SevenIO{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SevenIO Created",
@@ -3756,7 +3756,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "SIGNL4",
 			create: notification.SIGNL4{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SIGNL4 Created",
@@ -3807,7 +3807,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "smsc",
 			create: notification.SMSC{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SMSC Created",
@@ -3863,7 +3863,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "SMSEagle",
 			create: notification.SMSEagle{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SMSEagle Created",
@@ -3922,7 +3922,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "smsir",
 			create: notification.SMSIR{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SMSIR Created",
@@ -3976,7 +3976,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "SMSManager",
 			create: notification.SMSManager{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SMSManager Created",
@@ -4030,7 +4030,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "SMSPartner",
 			create: notification.SMSPartner{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SMSPartner Created",
@@ -4084,7 +4084,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "SMSPlanet",
 			create: notification.SMSPlanet{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SMS Planet Created",
@@ -4138,7 +4138,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "Splunk",
 			create: notification.Splunk{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Splunk Created",
@@ -4193,7 +4193,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "SpugPush",
 			create: notification.SpugPush{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test SpugPush Created",
@@ -4244,7 +4244,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "squadcast",
 			create: notification.Squadcast{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Squadcast Created",
@@ -4295,7 +4295,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "stackfield",
 			create: notification.Stackfield{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Stackfield Created",
@@ -4346,7 +4346,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "PushByTechulus",
 			create: notification.TechulusPush{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test TechulusPush Created",
@@ -4403,7 +4403,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "Teltonika",
 			create: notification.Teltonika{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Teltonika Created",
@@ -4460,7 +4460,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "threema",
 			create: notification.Threema{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Threema Created",
@@ -4515,7 +4515,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "waha",
 			create: notification.WAHA{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test WAHA Created",
@@ -4570,7 +4570,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "whapi",
 			create: notification.Whapi{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Whapi Created",
@@ -4623,7 +4623,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "Webpush",
 			create: notification.Webpush{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test Webpush Created",
@@ -4680,7 +4680,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "WPush",
 			create: notification.WPush{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test WPush Created",
@@ -4732,7 +4732,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "YZJ",
 			create: notification.YZJ{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test YZJ Created",
@@ -4784,7 +4784,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "VK",
 			create: notification.VK{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test VK Created",
@@ -4838,7 +4838,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "VKTeams",
 			create: notification.VKTeams{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test VKTeams Created",
@@ -4894,7 +4894,7 @@ func TestNotificationCRUD(t *testing.T) {
 			expectedType: "ZohoCliq",
 			create: notification.ZohoCliq{
 				Base: notification.Base{
-					ApplyExisting: true,
+					ApplyExisting: false,
 					IsDefault:     false,
 					IsActive:      true,
 					Name:          "Test ZohoCliq Created",
