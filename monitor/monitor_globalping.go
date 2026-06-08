@@ -89,6 +89,7 @@ func (g Globalping) MarshalJSON() ([]byte, error) {
 	raw["body"] = g.Body
 	raw["headers"] = g.Headers
 	raw["authMethod"] = g.AuthMethod
+	raw["bearer_token"] = g.BearerToken
 	raw["basic_auth_user"] = g.BasicAuthUser
 	raw["basic_auth_pass"] = g.BasicAuthPass
 	raw["authDomain"] = g.AuthDomain
