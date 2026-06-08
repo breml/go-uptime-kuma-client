@@ -88,6 +88,7 @@ func (w WebsocketUpgrade) MarshalJSON() ([]byte, error) {
 	raw["body"] = w.Body
 	raw["headers"] = w.Headers
 	raw["authMethod"] = w.AuthMethod
+	raw["bearer_token"] = w.BearerToken
 	raw["basic_auth_user"] = w.BasicAuthUser
 	raw["basic_auth_pass"] = w.BasicAuthPass
 	raw["authDomain"] = w.AuthDomain

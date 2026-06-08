@@ -88,6 +88,7 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	raw["body"] = h.Body
 	raw["headers"] = h.Headers
 	raw["authMethod"] = h.AuthMethod
+	raw["bearer_token"] = h.BearerToken
 	raw["basic_auth_user"] = h.BasicAuthUser
 	raw["basic_auth_pass"] = h.BasicAuthPass
 	raw["authDomain"] = h.AuthDomain

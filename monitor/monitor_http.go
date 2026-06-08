@@ -75,6 +75,7 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw["body"] = h.Body
 	raw["headers"] = h.Headers
 	raw["authMethod"] = h.AuthMethod
+	raw["bearer_token"] = h.BearerToken
 	raw["basic_auth_user"] = h.BasicAuthUser
 	raw["basic_auth_pass"] = h.BasicAuthPass
 	raw["authDomain"] = h.AuthDomain
@@ -114,6 +115,7 @@ type HTTPDetails struct {
 	Body                string     `json:"body"`
 	Headers             string     `json:"headers"`
 	AuthMethod          AuthMethod `json:"authMethod"`
+	BearerToken         string     `json:"bearer_token"`
 	BasicAuthUser       string     `json:"basic_auth_user"`
 	BasicAuthPass       string     `json:"basic_auth_pass"`
 	AuthDomain          string     `json:"authDomain"`
@@ -145,4 +147,5 @@ const (
 	AuthMethodNTLM     AuthMethod = "ntlm"
 	AuthMethodMTLS     AuthMethod = "mtls"
 	AuthMethodOAtuh2CC AuthMethod = "oauth2-cc"
+	AuthMethodBearer   AuthMethod = "bearer"
 )
