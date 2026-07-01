@@ -18,15 +18,24 @@ import (
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
-// readyEvents are the update events kuma.New() waits for before it returns. The
-// payloads only have to unmarshal into the registered handlers' argument types.
+// requiredReadyEvents are the update events kuma.New() and Client.Resync wait
+// for before they return. The payloads only have to unmarshal into the
+// registered handlers' argument types.
 //
 //nolint:gochecknoglobals // fixed table, shared by the fake server below.
-var readyEvents = []string{
+var requiredReadyEvents = []string{
 	`42["monitorList",{}]`,
-	`42["maintenanceList",{}]`,
 	`42["notificationList",[]]`,
 	`42["statusPageList",{}]`,
+}
+
+// optionalReadyEvents are the best-effort update events. A server that never
+// emits them (an older version, or a reverse proxy dropping them) must not
+// block either call, see kuma.WithReadyEvents.
+//
+//nolint:gochecknoglobals // fixed table, shared by the fake server below.
+var optionalReadyEvents = []string{
+	`42["maintenanceList",{}]`,
 	`42["proxyList",[]]`,
 	`42["dockerHostList",[]]`,
 	`42["apiKeyList",[]]`,
@@ -60,6 +69,9 @@ type fakeAckServer struct {
 	// suppressLists answers a loginByToken without resending the lists, which
 	// leaves a Resync waiting.
 	suppressLists bool
+	// suppressOptionalLists resends only the required lists, as a server that
+	// never emits the best-effort ones does.
+	suppressOptionalLists bool
 	// resyncPayload is the last loginByToken frame received.
 	resyncPayload string
 }
@@ -140,6 +152,13 @@ func (s *fakeAckServer) setSuppressLists(suppress bool) {
 	s.suppressLists = suppress
 }
 
+func (s *fakeAckServer) setSuppressOptionalLists(suppress bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.suppressOptionalLists = suppress
+}
+
 func (s *fakeAckServer) recordResync(payload string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -168,7 +187,16 @@ func (s *fakeAckServer) loginAck() string {
 }
 
 func (s *fakeAckServer) sendReadyEvents() {
-	for _, event := range readyEvents {
+	s.mu.Lock()
+	optionalSuppressed := s.suppressOptionalLists
+	s.mu.Unlock()
+
+	events := requiredReadyEvents
+	if !optionalSuppressed {
+		events = append(append([]string{}, requiredReadyEvents...), optionalReadyEvents...)
+	}
+
+	for _, event := range events {
 		s.messages <- []byte(event)
 	}
 }

@@ -27,6 +27,10 @@ import (
 // that triggers issue #271.
 type fakeSocketIOServer struct {
 	messages chan []byte
+	// eventsAfterLogin are socket.io EVENT frames enqueued right after the
+	// login ACK, e.g. `42["monitorList",{}]`. This lets a test emit only a
+	// subset of the initial list events to exercise the tolerant ready gate.
+	eventsAfterLogin []string
 }
 
 func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -105,6 +109,11 @@ func (s *fakeSocketIOServer) handleClientMessage(body []byte) {
 		// Enqueue login ACK: engine.io "4" + socket.io "3" (Ack) + ack ID + JSON payload.
 		ack := fmt.Sprintf(`43%s[{"ok":true,"msg":"Logged in successfully."}]`, ackID)
 		s.messages <- []byte(ack)
+
+		// Enqueue any configured post-login list events.
+		for _, event := range s.eventsAfterLogin {
+			s.messages <- []byte(event)
+		}
 
 	default:
 	}
@@ -360,7 +369,8 @@ func TestNewConnectTimeoutDuringReadyWait_WebSocketUpgrade(t *testing.T) {
 	// "connect to server: ...", not "missing events: ...".
 	require.ErrorContains(t, err, "missing events:",
 		"error should report missing events (not a connect-phase hang)")
-	require.ErrorContains(t, err, "apiKeyList")
+	require.ErrorContains(t, err, "monitorList",
+		"a required ready event should appear in the missing events list")
 }
 
 func TestNewConnectTimeoutDuringReadyWait(t *testing.T) {
@@ -402,6 +412,122 @@ func TestNewConnectTimeoutDuringReadyWait(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorIs(t, err, context.DeadlineExceeded, "error should wrap context.DeadlineExceeded, got: %v", err)
 	require.ErrorContains(t, err, "missing events:", "error should list the still-missing ready events")
-	require.ErrorContains(t, err, "apiKeyList", "apiKeyList should appear in the missing events list")
+	require.ErrorContains(t, err, "monitorList", "a required ready event should appear in the missing events list")
 	require.Less(t, elapsed, 2*timeout, "New() should return within 2x timeout, took %s", elapsed)
+}
+
+// TestNewReadyGateTolerant verifies that New() no longer requires the optional
+// list events. The fake server emits only the required core events
+// (monitorList, notificationList, statusPageList) and never sends the optional
+// ones (maintenanceList, proxyList, dockerHostList, apiKeyList). New() must
+// return successfully after the ready grace period, well before the connect
+// timeout — the behavior older Uptime Kuma versions and some reverse proxies
+// need (issue #358).
+func TestNewReadyGateTolerant(t *testing.T) {
+	const (
+		timeout = 2 * time.Second
+		grace   = 200 * time.Millisecond
+	)
+
+	server := httptest.NewServer(&fakeSocketIOServer{
+		messages: make(chan []byte, 10),
+		eventsAfterLogin: []string{
+			`42["monitorList",{}]`,
+			`42["notificationList",[]]`,
+			`42["statusPageList",{}]`,
+		},
+	})
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*timeout)
+	t.Cleanup(func() {
+		cancel()
+		server.CloseClientConnections()
+		server.Close()
+	})
+
+	start := time.Now()
+
+	client, err := kuma.New(
+		ctx,
+		server.URL,
+		"admin", "admin1",
+		kuma.WithConnectTimeout(timeout),
+		kuma.WithReadyGracePeriod(grace),
+	)
+
+	elapsed := time.Since(start)
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+	t.Cleanup(func() { _ = client.Disconnect() })
+	require.Less(t, elapsed, timeout, "New() should return after the grace period, not the connect timeout")
+}
+
+// TestNewReadyEventsOption verifies that WithReadyEvents narrows the required
+// ready set: the fake server emits only monitorList, and New() returns as soon
+// as it arrives because monitorList is the sole required event and the grace
+// period is disabled.
+func TestNewReadyEventsOption(t *testing.T) {
+	const timeout = 2 * time.Second
+
+	server := httptest.NewServer(&fakeSocketIOServer{
+		messages:         make(chan []byte, 10),
+		eventsAfterLogin: []string{`42["monitorList",{}]`},
+	})
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*timeout)
+	t.Cleanup(func() {
+		cancel()
+		server.CloseClientConnections()
+		server.Close()
+	})
+
+	client, err := kuma.New(
+		ctx,
+		server.URL,
+		"admin", "admin1",
+		kuma.WithConnectTimeout(timeout),
+		kuma.WithReadyEvents("monitorList"),
+		kuma.WithReadyGracePeriod(0),
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+	t.Cleanup(func() { _ = client.Disconnect() })
+}
+
+// TestNewTransportErrorSurfaced verifies that a real transport/handshake failure
+// is surfaced immediately instead of being masked by the connect timeout. The
+// endpoint points at a closed port (connection refused), so New() must return
+// the underlying error well before the generous connect timeout and must not
+// wrap context.DeadlineExceeded.
+func TestNewTransportErrorSurfaced(t *testing.T) {
+	// Reserve a port, then close the listener so nothing is listening.
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	addr := listener.Addr().String()
+	require.NoError(t, listener.Close())
+
+	const timeout = 10 * time.Second
+
+	ctx, cancel := context.WithTimeout(t.Context(), 2*timeout)
+	t.Cleanup(cancel)
+
+	start := time.Now()
+
+	_, err = kuma.New(
+		ctx,
+		"http://"+addr,
+		"admin", "admin1",
+		kuma.WithConnectTimeout(timeout),
+	)
+
+	elapsed := time.Since(start)
+
+	require.Error(t, err)
+	require.ErrorContains(t, err, "connect to server:")
+	require.NotErrorIs(t, err, context.DeadlineExceeded,
+		"a real transport error should be surfaced, not a context deadline")
+	require.Less(t, elapsed, timeout, "New() should fail fast, not wait out the connect timeout")
 }

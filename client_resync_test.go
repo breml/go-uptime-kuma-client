@@ -68,8 +68,25 @@ func TestResync(t *testing.T) {
 		err := kumaClient.Resync(ctx)
 
 		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.ErrorContains(t, err, "monitorList")
 		require.ErrorContains(t, err, "notificationList")
-		require.ErrorContains(t, err, "proxyList")
+		require.ErrorContains(t, err, "statusPageList")
+		require.NotContains(t, err.Error(), "proxyList",
+			"a best-effort list is not what a resync waits for")
+	})
+
+	t.Run("the_best_effort_lists_do_not_hold_it_up", func(t *testing.T) {
+		fake := &fakeAckServer{messages: make(chan []byte, 32)}
+		kumaClient := newFakeAckClient(t, fake)
+
+		// A server that only ever emits the required lists, as older versions
+		// and some reverse proxies do, has to resync just the same.
+		fake.setSuppressOptionalLists(true)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		require.NoError(t, kumaClient.Resync(ctx))
 	})
 
 	t.Run("without_a_session_token_it_reports_that_instead_of_hanging", func(t *testing.T) {
