@@ -256,6 +256,12 @@ func WithConnectTimeout(timeout time.Duration) Option {
 // statusPageList; the remaining known events (e.g. maintenanceList, apiKeyList)
 // are best-effort. Use this to widen or narrow the required set for servers or
 // reverse proxies that emit a different subset of events.
+//
+// An optional event that never arrives (server never sends it, or a proxy
+// drops it) leaves the corresponding client state (e.g. GetMaintenances,
+// GetProxyList, GetDockerHostList) populated as empty, indistinguishable from
+// a genuinely empty list on the server. A warning is logged in this case;
+// widen readyEvents to require an event if its state must be trustworthy.
 func WithReadyEvents(events ...string) Option {
 	return func(c *Client) {
 		c.readyEvents = events
@@ -667,6 +673,13 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	// A non-nil return is the real transport/handshake error (connection
 	// refused, TLS failure, proxy not forwarding the WebSocket upgrade), which
 	// we surface immediately instead of waiting out the timeout.
+	//
+	// This must use ctx, not ctxWithConnectTimeout: the socket.io client
+	// stores the context it receives here and keeps reading from the
+	// connection until that context is done, so it governs the lifetime of
+	// the whole connection, not just the initial dial. ctxWithConnectTimeout
+	// is deferred-canceled as soon as New() returns, which would tear down a
+	// freshly established connection immediately after a successful connect.
 	connectErr := make(chan error, 1)
 	go func() {
 		connectErr <- client.Connect(ctx)
@@ -699,6 +712,24 @@ connectLoop:
 				}
 
 			default:
+				// The dial is still in flight (it uses ctx, so this timeout
+				// does not abort it). Drain connectErr in the background so
+				// a late failure is not silently discarded, and so a late
+				// success (a connection nothing now owns, since New() is
+				// about to return without a *Client) is disconnected rather
+				// than leaked.
+				go func() {
+					dialErr := <-connectErr
+					if dialErr != nil {
+						c.socketioLogger.Warnf("New: dial failed after connect timeout: %s", dialErr)
+						return
+					}
+
+					disconnectErr := c.Disconnect()
+					if disconnectErr != nil {
+						c.socketioLogger.Warnf("New: disconnect orphaned late connection: %s", disconnectErr)
+					}
+				}()
 			}
 
 			return nil, fmt.Errorf("connect to server: %w", ctxWithConnectTimeout.Err())
@@ -757,20 +788,14 @@ connectLoop:
 		select {
 		case <-ready:
 			// All required events received. Give the best-effort optional
-			// events a short grace window to arrive (and populate the state
-			// cache) before returning.
-			if c.readyGracePeriod > 0 {
-				graceTimer := time.NewTimer(c.readyGracePeriod)
-
-				select {
-				case <-optionalReady:
-				case <-graceTimer.C:
-				case <-ctx.Done():
-					graceTimer.Stop()
-					return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
-				}
-
-				graceTimer.Stop()
+			// events their grace window to arrive (and populate the state
+			// cache) before returning, bounded by connectTimeoutDone so it
+			// cannot push New past the caller's WithConnectTimeout budget.
+			err = c.awaitOptionalReadyEvents(
+				ctx, "New", &updateSeenMu, optionalSeen, optionalReady, connectTimeoutDone,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("wait for ready: %w", err)
 			}
 
 			closeOnErr = false
@@ -944,22 +969,12 @@ func (c *Client) Resync(ctx context.Context) error {
 		return fmt.Errorf("resync: %w (missing events: %s)", ctx.Err(), strings.Join(missing, ", "))
 	}
 
-	// The required lists are in. Give the best-effort ones the same short
-	// grace window New grants them, so the cache they feed is refreshed too on
-	// a server that does emit them.
-	if c.readyGracePeriod > 0 {
-		graceTimer := time.NewTimer(c.readyGracePeriod)
-
-		select {
-		case <-optionalDone:
-		case <-graceTimer.C:
-		case <-ctx.Done():
-			graceTimer.Stop()
-
-			return fmt.Errorf("resync: %w", ctx.Err())
-		}
-
-		graceTimer.Stop()
+	// The required lists are in. Give the best-effort ones the same grace
+	// window New grants them, so the cache they feed is refreshed too on a
+	// server that does emit them.
+	err = c.awaitOptionalReadyEvents(ctx, "Resync", &pendingMu, optionalPending, optionalDone, nil)
+	if err != nil {
+		return fmt.Errorf("resync: %w", err)
 	}
 
 	return nil
@@ -994,6 +1009,59 @@ func (c *Client) splitReadyEvents() (required map[string]struct{}, optional map[
 	}
 
 	return required, optional
+}
+
+// awaitOptionalReadyEvents gives the best-effort ready events the ready grace
+// period to arrive, so the state they populate is current when the caller named
+// by caller returns, and warns about the ones that never came. optionalMu
+// guards optional.
+//
+// abort cuts the wait short as a success, which is how New keeps the grace
+// period within the caller's WithConnectTimeout budget; a nil abort never
+// fires. Only the context being done is an error: the required events are
+// already in, so nothing else here can fail the caller.
+func (c *Client) awaitOptionalReadyEvents(
+	ctx context.Context,
+	caller string,
+	optionalMu *sync.Mutex,
+	optional map[string]struct{},
+	optionalReady <-chan struct{},
+	abort <-chan struct{},
+) error {
+	if c.readyGracePeriod > 0 {
+		graceTimer := time.NewTimer(c.readyGracePeriod)
+
+		select {
+		case <-optionalReady:
+		case <-graceTimer.C:
+		case <-abort:
+		case <-ctx.Done():
+			graceTimer.Stop()
+
+			return fmt.Errorf("optional ready events: %w", ctx.Err())
+		}
+
+		graceTimer.Stop()
+	}
+
+	optionalMu.Lock()
+	missing := make([]string, 0, len(optional))
+
+	for event := range optional {
+		missing = append(missing, event)
+	}
+	optionalMu.Unlock()
+
+	if len(missing) > 0 {
+		slices.Sort(missing)
+		c.socketioLogger.Warnf(
+			"%s: optional ready events did not arrive within the grace period: %s",
+			caller,
+			strings.Join(missing, ", "),
+		)
+	}
+
+	return nil
 }
 
 type ackResponse struct {
