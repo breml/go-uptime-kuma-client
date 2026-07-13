@@ -94,6 +94,7 @@ type Client struct {
 	socketioClientConnectTimeout time.Duration
 	socketioLogger               socketio.Logger
 	autosetup                    bool
+	userAgent                    string
 
 	mu      *sync.Mutex
 	updates signals.Signal[string]
@@ -130,12 +131,23 @@ func WithConnectTimeout(timeout time.Duration) Option {
 	}
 }
 
+// WithUserAgent sets the User-Agent header sent with every request made by
+// the client: the entry-page/setup-database HTTP probing during autosetup,
+// the Socket.IO long-polling transport and the WebSocket handshake. When
+// unset, the underlying HTTP and WebSocket libraries' default User-Agent is
+// used.
+func WithUserAgent(userAgent string) Option {
+	return func(c *Client) {
+		c.userAgent = userAgent
+	}
+}
+
 // setupDatabase handles the database setup phase for Uptime Kuma v2.
 // It checks if database setup is needed and configures SQLite if required.
 // The function will wait for the server to restart after database configuration.
 //
 //nolint:revive // Complexity is necessary for complete database setup logic
-func setupDatabase(ctx context.Context, baseURL string) error {
+func setupDatabase(ctx context.Context, baseURL string, userAgent string) error {
 	// Convert socket.io URL to HTTP URL
 	httpURL := strings.Replace(baseURL, "ws://", "http://", 1)
 	httpURL = strings.Replace(httpURL, "wss://", "https://", 1)
@@ -162,6 +174,8 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	if err != nil {
 		return fmt.Errorf("create entry-page request: %w", err)
 	}
+
+	setUserAgent(req, userAgent)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -211,6 +225,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	setUserAgent(req, userAgent)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -260,6 +275,8 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 				pollCancel()
 				continue
 			}
+
+			setUserAgent(pollReq, userAgent)
 
 			pollResp, err := http.DefaultClient.Do(pollReq)
 			if err != nil {
@@ -320,14 +337,19 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	// Handle database setup for Uptime Kuma v2 if autosetup is enabled
 	if c.autosetup {
-		err := setupDatabase(ctxWithConnectTimeout, baseURL)
+		err := setupDatabase(ctxWithConnectTimeout, baseURL, c.userAgent)
 		if err != nil {
 			return nil, fmt.Errorf("database setup: %w", err)
 		}
 	}
 
+	engineIOClientOpt, err := newEngineIOClientOption(baseURL, c.socketioLogger, c.userAgent)
+	if err != nil {
+		return nil, fmt.Errorf("configure transport: %w", err)
+	}
+
 	client, err := socketio.NewClient(
-		socketio.WithRawURL(baseURL),
+		engineIOClientOpt,
 		socketio.WithLogger(c.socketioLogger),
 	)
 	if err != nil {

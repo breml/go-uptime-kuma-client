@@ -5,6 +5,7 @@ go 1.25.2
 require (
 	github.com/maldikhan/go.socket.io v0.1.1
 	github.com/ory/dockertest/v3 v3.12.0
+	golang.org/x/net v0.54.0
 	golang.org/x/sync v0.20.0
 )
 
@@ -374,7 +375,6 @@ require (
 	github.com/maniartech/signals v1.3.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/net v0.54.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
