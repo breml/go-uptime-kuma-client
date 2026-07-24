@@ -48,7 +48,7 @@ func TestMonitorDNS_Unmarshal(t *testing.T) {
 					Port:           53,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test DNS monitor","dns_resolve_server":"1.1.1.1","dns_resolve_type":"A","hostname":"example.com","id":5,"interval":60,"maxretries":2,"name":"dns-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":53,"resendInterval":0,"retryInterval":60,"type":"dns","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test DNS monitor","dns_resolve_server":"1.1.1.1","dns_resolve_type":"A","domainExpiryNotification":false,"hostname":"example.com","id":5,"interval":60,"maxretries":2,"name":"dns-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":53,"resendInterval":0,"retryInterval":60,"type":"dns","upsideDown":false}`,
 		},
 		{
 			name: "with conditions",
@@ -84,7 +84,7 @@ func TestMonitorDNS_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[{"type":"expression","variable":"record","operator":"equals","value":"target.example.com.","andOr":"and"}],"description":"Test CNAME DNS monitor","dns_resolve_server":"9.9.9.9","dns_resolve_type":"CNAME","hostname":"example.com","id":7,"interval":60,"maxretries":2,"name":"dns-cname","notificationIDList":{},"parent":null,"port":53,"resendInterval":0,"retryInterval":60,"type":"dns","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[{"type":"expression","variable":"record","operator":"equals","value":"target.example.com.","andOr":"and"}],"description":"Test CNAME DNS monitor","dns_resolve_server":"9.9.9.9","dns_resolve_type":"CNAME","domainExpiryNotification":false,"hostname":"example.com","id":7,"interval":60,"maxretries":2,"name":"dns-cname","notificationIDList":{},"parent":null,"port":53,"resendInterval":0,"retryInterval":60,"type":"dns","upsideDown":false}`,
 		},
 		{
 			name: "multi resolver",
@@ -114,7 +114,7 @@ func TestMonitorDNS_Unmarshal(t *testing.T) {
 					Port:           53,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test multi-resolver DNS monitor","dns_resolve_server":"1.1.1.1,8.8.8.8","dns_resolve_type":"A","hostname":"example.com","id":6,"interval":60,"maxretries":2,"name":"dns-multi-resolver","notificationIDList":{"1":true,"2":true},"parent":1,"port":53,"resendInterval":0,"retryInterval":60,"type":"dns","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test multi-resolver DNS monitor","dns_resolve_server":"1.1.1.1,8.8.8.8","dns_resolve_type":"A","domainExpiryNotification":false,"hostname":"example.com","id":6,"interval":60,"maxretries":2,"name":"dns-multi-resolver","notificationIDList":{"1":true,"2":true},"parent":1,"port":53,"resendInterval":0,"retryInterval":60,"type":"dns","upsideDown":false}`,
 		},
 	}
 

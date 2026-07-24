@@ -73,6 +73,7 @@ func (s Steam) MarshalJSON() ([]byte, error) {
 	raw["hostname"] = s.Hostname
 	raw["port"] = s.Port
 	raw["timeout"] = s.Timeout
+	raw["domainExpiryNotification"] = s.DomainExpiryNotification
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -96,6 +97,9 @@ type SteamDetails struct {
 	Port int `json:"port"`
 	// Timeout is the request timeout in seconds.
 	Timeout *int64 `json:"timeout"`
+	// DomainExpiryNotification enables domain expiry notifications
+	// for the monitored domain.
+	DomainExpiryNotification bool `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type string.

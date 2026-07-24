@@ -80,6 +80,7 @@ func (m MQTT) MarshalJSON() ([]byte, error) {
 	raw["mqttSuccessMessage"] = m.MQTTSuccessMessage
 	raw["jsonPath"] = m.JSONPath
 	raw["expectedValue"] = m.ExpectedValue
+	raw["domainExpiryNotification"] = m.DomainExpiryNotification
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -121,6 +122,9 @@ type MQTTDetails struct {
 	// received MQTT payload. When set, the keyword / json-query check is bypassed
 	// and the condition results determine the monitor status.
 	Conditions []Condition `json:"conditions,omitempty"`
+	// DomainExpiryNotification enables domain expiry notifications
+	// for the monitored domain.
+	DomainExpiryNotification bool `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type string.

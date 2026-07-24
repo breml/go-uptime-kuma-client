@@ -51,7 +51,7 @@ func TestMonitorRealBrowser_Unmarshal(t *testing.T) {
 					ScreenshotDelay:     ptr.To(1500),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"conditions":[],"description":null,"id":2,"ignoreTls":false,"interval":60,"maxredirects":10,"maxretries":2,"name":"example.com","notificationIDList":{"1":true},"parent":1,"proxyId":null,"remote_browser":null,"resendInterval":0,"retryInterval":60,"screenshot_delay":1500,"timeout":48,"type":"real-browser","upsideDown":false,"url":"https://www.example.com"}`,
+			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"conditions":[],"description":null,"domainExpiryNotification":false,"id":2,"ignoreTls":false,"interval":60,"maxredirects":10,"maxretries":2,"name":"example.com","notificationIDList":{"1":true},"parent":1,"proxyId":null,"remote_browser":null,"resendInterval":0,"retryInterval":60,"screenshot_delay":1500,"timeout":48,"type":"real-browser","upsideDown":false,"url":"https://www.example.com"}`,
 		},
 		{
 			name: "without screenshot_delay",
@@ -84,7 +84,7 @@ func TestMonitorRealBrowser_Unmarshal(t *testing.T) {
 					ScreenshotDelay:     nil,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"conditions":[],"description":null,"id":2,"ignoreTls":false,"interval":60,"maxredirects":10,"maxretries":2,"name":"example.com","notificationIDList":{"1":true},"parent":1,"proxyId":null,"remote_browser":null,"resendInterval":0,"retryInterval":60,"timeout":48,"type":"real-browser","upsideDown":false,"url":"https://www.example.com"}`,
+			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"conditions":[],"description":null,"domainExpiryNotification":false,"id":2,"ignoreTls":false,"interval":60,"maxredirects":10,"maxretries":2,"name":"example.com","notificationIDList":{"1":true},"parent":1,"proxyId":null,"remote_browser":null,"resendInterval":0,"retryInterval":60,"timeout":48,"type":"real-browser","upsideDown":false,"url":"https://www.example.com"}`,
 		},
 	}
 

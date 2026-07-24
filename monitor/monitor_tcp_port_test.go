@@ -46,7 +46,7 @@ func TestMonitorTCPPort_Unmarshal(t *testing.T) {
 					Port:     8080,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test TCP Port monitor","expectedTlsAlert":null,"expiryNotification":false,"hostname":"example.com","id":4,"interval":60,"maxretries":2,"name":"tcp-port-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":8080,"resendInterval":0,"retryInterval":60,"smtpSecurity":null,"type":"port","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test TCP Port monitor","domainExpiryNotification":false,"expectedTlsAlert":null,"expiryNotification":false,"hostname":"example.com","id":4,"interval":60,"maxretries":2,"name":"tcp-port-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":8080,"resendInterval":0,"retryInterval":60,"smtpSecurity":null,"type":"port","upsideDown":false}`,
 		},
 		{
 			name: "with TLS fields",
@@ -75,7 +75,7 @@ func TestMonitorTCPPort_Unmarshal(t *testing.T) {
 					ExpectedTLSAlert:   ptr.To("certificate_required"),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"TCP monitor with TLS","expectedTlsAlert":"certificate_required","expiryNotification":true,"hostname":"smtp.example.com","id":5,"interval":120,"maxretries":3,"name":"tcp-tls-monitor","notificationIDList":{},"parent":null,"port":465,"resendInterval":0,"retryInterval":60,"smtpSecurity":"secure","type":"port","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"TCP monitor with TLS","domainExpiryNotification":false,"expectedTlsAlert":"certificate_required","expiryNotification":true,"hostname":"smtp.example.com","id":5,"interval":120,"maxretries":3,"name":"tcp-tls-monitor","notificationIDList":{},"parent":null,"port":465,"resendInterval":0,"retryInterval":60,"smtpSecurity":"secure","type":"port","upsideDown":false}`,
 		},
 	}
 

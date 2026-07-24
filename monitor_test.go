@@ -61,6 +61,7 @@ func TestMonitorCRUD(t *testing.T) {
 
 				http.Name = "Updated HTTP Monitor"
 				http.URL = "https://httpbin.org/status/201"
+				http.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -84,6 +85,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "Updated HTTP Monitor", http.Name)
 				require.Equal(t, "https://httpbin.org/status/201", http.URL)
+				require.True(t, http.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -159,6 +161,7 @@ func TestMonitorCRUD(t *testing.T) {
 				ping.Name = "Updated Ping Monitor"
 				ping.Hostname = "1.1.1.1"
 				ping.PacketSize = 64
+				ping.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -183,6 +186,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated Ping Monitor", ping.Name)
 				require.Equal(t, "1.1.1.1", ping.Hostname)
 				require.Equal(t, 64, ping.PacketSize)
+				require.True(t, ping.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -264,6 +268,7 @@ func TestMonitorCRUD(t *testing.T) {
 				tcp.SMTPSecurity = ptr.To("secure")
 				tcp.ExpiryNotification = true
 				tcp.ExpectedTLSAlert = ptr.To("certificate_required")
+				tcp.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -293,6 +298,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.True(t, tcp.ExpiryNotification)
 				require.NotNil(t, tcp.ExpectedTLSAlert)
 				require.Equal(t, "certificate_required", *tcp.ExpectedTLSAlert)
+				require.True(t, tcp.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -332,6 +338,7 @@ func TestMonitorCRUD(t *testing.T) {
 				http.Name = "Updated HTTP Keyword Monitor"
 				http.Keyword = "Moby Dick"
 				http.InvertKeyword = true
+				http.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -356,6 +363,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated HTTP Keyword Monitor", http.Name)
 				require.Equal(t, "Moby Dick", http.Keyword)
 				require.True(t, http.InvertKeyword)
+				require.True(t, http.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -388,6 +396,7 @@ func TestMonitorCRUD(t *testing.T) {
 				dns.Hostname = "google.com"
 				dns.SetResolverServers([]string{"8.8.8.8", "1.1.1.1"})
 				dns.ResolveType = monitor.DNSResolveTypeAAAA
+				dns.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -415,6 +424,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "8.8.8.8,1.1.1.1", dns.ResolverServer)
 				require.Equal(t, []string{"8.8.8.8", "1.1.1.1"}, dns.ResolverServers())
 				require.Equal(t, monitor.DNSResolveTypeAAAA, dns.ResolveType)
+				require.True(t, dns.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -456,6 +466,7 @@ func TestMonitorCRUD(t *testing.T) {
 				json.JSONPath = "slideshow.author"
 				json.ExpectedValue = "Yours Truly"
 				json.RetryOnlyOnStatusCodeFailure = true
+				json.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -482,6 +493,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "slideshow.author", json.JSONPath)
 				require.Equal(t, "Yours Truly", json.ExpectedValue)
 				require.True(t, json.RetryOnlyOnStatusCodeFailure)
+				require.True(t, json.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -645,6 +657,7 @@ func TestMonitorCRUD(t *testing.T) {
 				browser.Name = "Updated RealBrowser Monitor"
 				browser.URL = "https://httpbin.org/status/201"
 				browser.ScreenshotDelay = ptr.To(2500)
+				browser.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -668,6 +681,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "Updated RealBrowser Monitor", browser.Name)
 				require.Equal(t, "https://httpbin.org/status/201", browser.URL)
+				require.True(t, browser.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -757,6 +771,7 @@ func TestMonitorCRUD(t *testing.T) {
 				smtp.Hostname = "smtp.newserver.com"
 				smtp.Port = &port465
 				smtp.SMTPSecurity = &securitySecure
+				smtp.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -782,6 +797,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "smtp.newserver.com", smtp.Hostname)
 				require.Equal(t, int64(465), *smtp.Port)
 				require.Equal(t, "secure", *smtp.SMTPSecurity)
+				require.True(t, smtp.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -819,6 +835,7 @@ func TestMonitorCRUD(t *testing.T) {
 				grpc.Keyword = "NOT_SERVING"
 				grpc.InvertKeyword = true
 				grpc.GrpcEnableTLS = true
+				grpc.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -845,6 +862,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "NOT_SERVING", grpc.Keyword)
 				require.True(t, grpc.InvertKeyword)
 				require.True(t, grpc.GrpcEnableTLS)
+				require.True(t, grpc.DomainExpiryNotification)
 			},
 			testPauseResume: false,
 		},
@@ -880,6 +898,7 @@ func TestMonitorCRUD(t *testing.T) {
 				snmp.Conditions = []monitor.Condition{
 					{Variable: "snmp", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
 				}
+				snmp.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -907,6 +926,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, []monitor.Condition{
 					{Variable: "snmp", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
 				}, snmp.Conditions)
+				require.True(t, snmp.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -1049,6 +1069,7 @@ func TestMonitorCRUD(t *testing.T) {
 				steam.Name = "Updated Steam Monitor"
 				steam.Hostname = "10.0.0.1"
 				steam.Port = 27016
+				steam.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1073,6 +1094,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated Steam Monitor", steam.Name)
 				require.Equal(t, "10.0.0.1", steam.Hostname)
 				require.Equal(t, 27016, steam.Port)
+				require.True(t, steam.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -1106,6 +1128,7 @@ func TestMonitorCRUD(t *testing.T) {
 				gamedig.Port = 27015
 				gamedig.Game = "csgo"
 				gamedig.GameDigGivenPortOnly = false
+				gamedig.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1132,6 +1155,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, 27015, gamedig.Port)
 				require.Equal(t, "csgo", gamedig.Game)
 				require.False(t, gamedig.GameDigGivenPortOnly)
+				require.True(t, gamedig.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -1177,6 +1201,7 @@ func TestMonitorCRUD(t *testing.T) {
 					{Variable: "topic", Operator: "==", Value: "home/temperature", AndOr: monitor.ConditionAnd},
 					{Variable: "message", Operator: "contains", Value: "online", AndOr: monitor.ConditionAnd},
 				}
+				mqtt.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1208,6 +1233,7 @@ func TestMonitorCRUD(t *testing.T) {
 					{Variable: "topic", Operator: "==", Value: "home/temperature", AndOr: monitor.ConditionAnd},
 					{Variable: "message", Operator: "contains", Value: "online", AndOr: monitor.ConditionAnd},
 				}, mqtt.Conditions)
+				require.True(t, mqtt.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -1560,6 +1586,7 @@ func TestMonitorCRUD(t *testing.T) {
 				radius.Secret = "newsecret"
 				radius.CalledStationID = ptr.To("555-1234")
 				radius.CallingStationID = ptr.To("555-9999")
+				radius.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1589,6 +1616,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "newsecret", radius.Secret)
 				require.Equal(t, "555-1234", *radius.CalledStationID)
 				require.Equal(t, "555-9999", *radius.CallingStationID)
+				require.True(t, radius.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -1616,6 +1644,7 @@ func TestMonitorCRUD(t *testing.T) {
 
 				tailscale.Name = "Updated Tailscale Ping Monitor"
 				tailscale.Hostname = "mydevice.mydomain.ts.net"
+				tailscale.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1639,6 +1668,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "Updated Tailscale Ping Monitor", tailscale.Name)
 				require.Equal(t, "mydevice.mydomain.ts.net", tailscale.Hostname)
+				require.True(t, tailscale.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},
@@ -1740,6 +1770,7 @@ func TestMonitorCRUD(t *testing.T) {
 				sip.Name = "Updated SIP Options Monitor"
 				sip.Hostname = "sip2.example.com"
 				sip.Port = 5061
+				sip.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1766,6 +1797,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated SIP Options Monitor", sip.Name)
 				require.Equal(t, "sip2.example.com", sip.Hostname)
 				require.Equal(t, 5061, sip.Port)
+				require.True(t, sip.DomainExpiryNotification)
 			},
 			testPauseResume: true,
 		},

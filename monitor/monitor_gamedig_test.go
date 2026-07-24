@@ -48,7 +48,7 @@ func TestMonitorGameDig_Unmarshal(t *testing.T) {
 					GameDigToken:         func() *string { s := "secret-token"; return &s }(),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test GameDig monitor","game":"minecraft","gamedigGivenPortOnly":true,"gamedigToken":"secret-token","hostname":"192.168.1.100","id":5,"interval":60,"maxretries":2,"name":"gamedig-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":25565,"resendInterval":0,"retryInterval":60,"type":"gamedig","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test GameDig monitor","domainExpiryNotification":false,"game":"minecraft","gamedigGivenPortOnly":true,"gamedigToken":"secret-token","hostname":"192.168.1.100","id":5,"interval":60,"maxretries":2,"name":"gamedig-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":25565,"resendInterval":0,"retryInterval":60,"type":"gamedig","upsideDown":false}`,
 		},
 		{
 			name: "success with null description and given port only false",
@@ -78,7 +78,7 @@ func TestMonitorGameDig_Unmarshal(t *testing.T) {
 					GameDigGivenPortOnly: false,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"game":"csgo","gamedigGivenPortOnly":false,"hostname":"10.0.0.1","id":6,"interval":60,"maxretries":3,"name":"gamedig-monitor-csgo","notificationIDList":{},"parent":null,"port":27015,"resendInterval":0,"retryInterval":60,"type":"gamedig","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"domainExpiryNotification":false,"game":"csgo","gamedigGivenPortOnly":false,"hostname":"10.0.0.1","id":6,"interval":60,"maxretries":3,"name":"gamedig-monitor-csgo","notificationIDList":{},"parent":null,"port":27015,"resendInterval":0,"retryInterval":60,"type":"gamedig","upsideDown":false}`,
 		},
 		{
 			name: "success with different game type and inactive",
@@ -108,7 +108,7 @@ func TestMonitorGameDig_Unmarshal(t *testing.T) {
 					GameDigGivenPortOnly: true,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":false,"conditions":[],"description":null,"game":"rust","gamedigGivenPortOnly":true,"hostname":"example.com","id":7,"interval":120,"maxretries":1,"name":"gamedig-monitor-rust","notificationIDList":{},"parent":null,"port":28015,"resendInterval":0,"retryInterval":120,"type":"gamedig","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":false,"conditions":[],"description":null,"domainExpiryNotification":false,"game":"rust","gamedigGivenPortOnly":true,"hostname":"example.com","id":7,"interval":120,"maxretries":1,"name":"gamedig-monitor-rust","notificationIDList":{},"parent":null,"port":28015,"resendInterval":0,"retryInterval":120,"type":"gamedig","upsideDown":false}`,
 		},
 	}
 

@@ -73,6 +73,7 @@ func (s SMTP) MarshalJSON() ([]byte, error) {
 	raw["hostname"] = s.Hostname
 	raw["port"] = s.Port
 	raw["smtpSecurity"] = s.SMTPSecurity
+	raw["domainExpiryNotification"] = s.DomainExpiryNotification
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -90,9 +91,10 @@ func (s SMTP) MarshalJSON() ([]byte, error) {
 
 // SMTPDetails contains SMTP-specific monitor configuration.
 type SMTPDetails struct {
-	Hostname     string  `json:"hostname"`
-	Port         *int64  `json:"port"`
-	SMTPSecurity *string `json:"smtpSecurity"`
+	Hostname                 string  `json:"hostname"`
+	Port                     *int64  `json:"port"`
+	SMTPSecurity             *string `json:"smtpSecurity"`
+	DomainExpiryNotification bool    `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type.

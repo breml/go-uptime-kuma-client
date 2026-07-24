@@ -49,7 +49,7 @@ func TestMonitorSteam_Unmarshal(t *testing.T) {
 					Timeout:  &timeout48,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Steam monitor","hostname":"192.168.1.100","id":5,"interval":60,"maxretries":2,"name":"steam-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":27015,"resendInterval":0,"retryInterval":60,"timeout":48,"type":"steam","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Steam monitor","domainExpiryNotification":false,"hostname":"192.168.1.100","id":5,"interval":60,"maxretries":2,"name":"steam-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":27015,"resendInterval":0,"retryInterval":60,"timeout":48,"type":"steam","upsideDown":false}`,
 		},
 		{
 			name: "success with null timeout",
@@ -78,7 +78,7 @@ func TestMonitorSteam_Unmarshal(t *testing.T) {
 					Timeout:  nil,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"hostname":"10.0.0.1","id":6,"interval":60,"maxretries":3,"name":"steam-monitor-no-timeout","notificationIDList":{},"parent":null,"port":27016,"resendInterval":0,"retryInterval":60,"timeout":null,"type":"steam","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"domainExpiryNotification":false,"hostname":"10.0.0.1","id":6,"interval":60,"maxretries":3,"name":"steam-monitor-no-timeout","notificationIDList":{},"parent":null,"port":27016,"resendInterval":0,"retryInterval":60,"timeout":null,"type":"steam","upsideDown":false}`,
 		},
 		{
 			name: "success with different timeout",
@@ -107,7 +107,7 @@ func TestMonitorSteam_Unmarshal(t *testing.T) {
 					Timeout:  &timeout30,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":false,"conditions":[],"description":null,"hostname":"example.com","id":7,"interval":120,"maxretries":1,"name":"steam-monitor-custom-timeout","notificationIDList":{},"parent":null,"port":27020,"resendInterval":0,"retryInterval":120,"timeout":30,"type":"steam","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":false,"conditions":[],"description":null,"domainExpiryNotification":false,"hostname":"example.com","id":7,"interval":120,"maxretries":1,"name":"steam-monitor-custom-timeout","notificationIDList":{},"parent":null,"port":27020,"resendInterval":0,"retryInterval":120,"timeout":30,"type":"steam","upsideDown":false}`,
 		},
 	}
 

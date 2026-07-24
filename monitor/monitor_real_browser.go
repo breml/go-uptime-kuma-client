@@ -77,6 +77,7 @@ func (r RealBrowser) MarshalJSON() ([]byte, error) {
 	raw["accepted_statuscodes"] = r.AcceptedStatusCodes
 	raw["proxyId"] = r.ProxyID
 	raw["remote_browser"] = r.RemoteBrowser
+	raw["domainExpiryNotification"] = r.DomainExpiryNotification
 	if r.ScreenshotDelay != nil {
 		raw["screenshot_delay"] = r.ScreenshotDelay
 	}
@@ -94,13 +95,14 @@ func (r RealBrowser) MarshalJSON() ([]byte, error) {
 
 // RealBrowserDetails contains realbrowser-specific monitor configuration.
 type RealBrowserDetails struct {
-	URL                 string   `json:"url"`
-	Timeout             int64    `json:"timeout"`
-	IgnoreTLS           bool     `json:"ignoreTls"`
-	MaxRedirects        int      `json:"maxredirects"`
-	AcceptedStatusCodes []string `json:"accepted_statuscodes"`
-	RemoteBrowser       *int64   `json:"remote_browser,omitempty"`
-	ScreenshotDelay     *int     `json:"screenshot_delay,omitempty"`
+	URL                      string   `json:"url"`
+	Timeout                  int64    `json:"timeout"`
+	IgnoreTLS                bool     `json:"ignoreTls"`
+	MaxRedirects             int      `json:"maxredirects"`
+	AcceptedStatusCodes      []string `json:"accepted_statuscodes"`
+	RemoteBrowser            *int64   `json:"remote_browser,omitempty"`
+	ScreenshotDelay          *int     `json:"screenshot_delay,omitempty"`
+	DomainExpiryNotification bool     `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type.

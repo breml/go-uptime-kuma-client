@@ -46,7 +46,7 @@ func TestMonitorSIPOptions_Unmarshal(t *testing.T) {
 					Port:     5060,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SIP Options monitor","hostname":"sip.example.com","id":4,"interval":60,"maxretries":2,"name":"sip-options-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":5060,"resendInterval":0,"retryInterval":60,"type":"sip-options","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SIP Options monitor","domainExpiryNotification":false,"hostname":"sip.example.com","id":4,"interval":60,"maxretries":2,"name":"sip-options-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":5060,"resendInterval":0,"retryInterval":60,"type":"sip-options","upsideDown":false}`,
 		},
 		{
 			name: "success without parent",
@@ -73,7 +73,7 @@ func TestMonitorSIPOptions_Unmarshal(t *testing.T) {
 					Port:     5061,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"hostname":"192.168.1.10","id":5,"interval":120,"maxretries":3,"name":"sip-options-monitor-no-parent","notificationIDList":{},"parent":null,"port":5061,"resendInterval":0,"retryInterval":60,"type":"sip-options","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"domainExpiryNotification":false,"hostname":"192.168.1.10","id":5,"interval":120,"maxretries":3,"name":"sip-options-monitor-no-parent","notificationIDList":{},"parent":null,"port":5061,"resendInterval":0,"retryInterval":60,"type":"sip-options","upsideDown":false}`,
 		},
 	}
 

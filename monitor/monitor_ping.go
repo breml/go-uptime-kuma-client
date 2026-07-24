@@ -73,6 +73,7 @@ func (p Ping) MarshalJSON() ([]byte, error) {
 	raw["hostname"] = p.Hostname
 	raw["packetSize"] = p.PacketSize
 	raw["timeout"] = p.Timeout
+	raw["domainExpiryNotification"] = p.DomainExpiryNotification
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -94,6 +95,9 @@ type PingDetails struct {
 	PacketSize int    `json:"packetSize"`
 	// Timeout is an optional request timeout in seconds.
 	Timeout *int64 `json:"timeout"`
+	// DomainExpiryNotification enables domain expiry notifications
+	// for the monitored domain.
+	DomainExpiryNotification bool `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type.

@@ -66,6 +66,7 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw["url"] = h.URL
 	raw["timeout"] = h.Timeout
 	raw["expiryNotification"] = h.ExpiryNotification
+	raw["domainExpiryNotification"] = h.DomainExpiryNotification
 	raw["ignoreTls"] = h.IgnoreTLS
 	raw["maxredirects"] = h.MaxRedirects
 	raw["accepted_statuscodes"] = h.AcceptedStatusCodes
@@ -104,32 +105,33 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 
 // HTTPDetails contains http-specific monitor configuration.
 type HTTPDetails struct {
-	URL                 string     `json:"url"`
-	Timeout             int64      `json:"timeout"`
-	ExpiryNotification  bool       `json:"expiryNotification"`
-	IgnoreTLS           bool       `json:"ignoreTls"`
-	MaxRedirects        int        `json:"maxredirects"`
-	AcceptedStatusCodes []string   `json:"accepted_statuscodes"`
-	Method              string     `json:"method"`
-	HTTPBodyEncoding    string     `json:"httpBodyEncoding"`
-	Body                string     `json:"body"`
-	Headers             string     `json:"headers"`
-	AuthMethod          AuthMethod `json:"authMethod"`
-	BearerToken         string     `json:"bearer_token"`
-	BasicAuthUser       string     `json:"basic_auth_user"`
-	BasicAuthPass       string     `json:"basic_auth_pass"`
-	AuthDomain          string     `json:"authDomain"`
-	AuthWorkstation     string     `json:"authWorkstation"`
-	TLSCert             string     `json:"tlsCert"`
-	TLSKey              string     `json:"tlsKey"`
-	TLSCa               string     `json:"tlsCa"`
-	OAuthAuthMethod     string     `json:"oauth_auth_method"`
-	OAuthTokenURL       string     `json:"oauth_token_url"`
-	OAuthClientID       string     `json:"oauth_client_id"`
-	OAuthClientSecret   string     `json:"oauth_client_secret"`
-	OAuthScopes         string     `json:"oauth_scopes"`
-	OAuthAudience       string     `json:"oauth_audience"`
-	CacheBust           bool       `json:"cacheBust"`
+	URL                      string     `json:"url"`
+	Timeout                  int64      `json:"timeout"`
+	ExpiryNotification       bool       `json:"expiryNotification"`
+	DomainExpiryNotification bool       `json:"domainExpiryNotification"`
+	IgnoreTLS                bool       `json:"ignoreTls"`
+	MaxRedirects             int        `json:"maxredirects"`
+	AcceptedStatusCodes      []string   `json:"accepted_statuscodes"`
+	Method                   string     `json:"method"`
+	HTTPBodyEncoding         string     `json:"httpBodyEncoding"`
+	Body                     string     `json:"body"`
+	Headers                  string     `json:"headers"`
+	AuthMethod               AuthMethod `json:"authMethod"`
+	BearerToken              string     `json:"bearer_token"`
+	BasicAuthUser            string     `json:"basic_auth_user"`
+	BasicAuthPass            string     `json:"basic_auth_pass"`
+	AuthDomain               string     `json:"authDomain"`
+	AuthWorkstation          string     `json:"authWorkstation"`
+	TLSCert                  string     `json:"tlsCert"`
+	TLSKey                   string     `json:"tlsKey"`
+	TLSCa                    string     `json:"tlsCa"`
+	OAuthAuthMethod          string     `json:"oauth_auth_method"`
+	OAuthTokenURL            string     `json:"oauth_token_url"`
+	OAuthClientID            string     `json:"oauth_client_id"`
+	OAuthClientSecret        string     `json:"oauth_client_secret"`
+	OAuthScopes              string     `json:"oauth_scopes"`
+	OAuthAudience            string     `json:"oauth_audience"`
+	CacheBust                bool       `json:"cacheBust"`
 }
 
 // Type returns the monitor type.

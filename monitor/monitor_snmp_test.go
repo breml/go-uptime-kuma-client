@@ -53,7 +53,7 @@ func TestMonitorSNMP_Unmarshal(t *testing.T) {
 					ExpectedValue:    ptr.To("1000000000"),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SNMP monitor","expectedValue":"1000000000","hostname":"192.168.1.1","id":10,"interval":60,"jsonPath":"ifSpeed","jsonPathOperator":"==","maxretries":2,"name":"snmp-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":161,"radiusPassword":"public","resendInterval":0,"retryInterval":60,"snmpOid":"1.3.6.1.2.1.2.2.1.5.1","snmpV3Username":null,"snmpVersion":"2c","type":"snmp","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SNMP monitor","domainExpiryNotification":false,"expectedValue":"1000000000","hostname":"192.168.1.1","id":10,"interval":60,"jsonPath":"ifSpeed","jsonPathOperator":"==","maxretries":2,"name":"snmp-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":161,"radiusPassword":"public","resendInterval":0,"retryInterval":60,"snmpOid":"1.3.6.1.2.1.2.2.1.5.1","snmpV3Username":null,"snmpVersion":"2c","type":"snmp","upsideDown":false}`,
 		},
 		{
 			name: "success with minimal fields",
@@ -87,7 +87,7 @@ func TestMonitorSNMP_Unmarshal(t *testing.T) {
 					ExpectedValue:    nil,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"expectedValue":null,"hostname":"10.0.0.1","id":11,"interval":60,"jsonPath":null,"jsonPathOperator":null,"maxretries":3,"name":"snmp-minimal","notificationIDList":{},"parent":null,"port":161,"radiusPassword":"public","resendInterval":0,"retryInterval":60,"snmpOid":"1.3.6.1.2.1.1.3.0","snmpV3Username":null,"snmpVersion":"1","type":"snmp","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"domainExpiryNotification":false,"expectedValue":null,"hostname":"10.0.0.1","id":11,"interval":60,"jsonPath":null,"jsonPathOperator":null,"maxretries":3,"name":"snmp-minimal","notificationIDList":{},"parent":null,"port":161,"radiusPassword":"public","resendInterval":0,"retryInterval":60,"snmpOid":"1.3.6.1.2.1.1.3.0","snmpV3Username":null,"snmpVersion":"1","type":"snmp","upsideDown":false}`,
 		},
 		{
 			name: "success with SNMPv3 noAuthNoPriv",
@@ -122,7 +122,7 @@ func TestMonitorSNMP_Unmarshal(t *testing.T) {
 					ExpectedValue:    nil,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SNMPv3 monitor","expectedValue":null,"hostname":"192.168.1.2","id":12,"interval":60,"jsonPath":null,"jsonPathOperator":null,"maxretries":3,"name":"snmp-v3","notificationIDList":{},"parent":null,"port":161,"radiusPassword":"","resendInterval":0,"retryInterval":60,"snmpOid":"1.3.6.1.2.1.1.3.0","snmpV3Username":"snmpuser","snmpVersion":"3","type":"snmp","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SNMPv3 monitor","domainExpiryNotification":false,"expectedValue":null,"hostname":"192.168.1.2","id":12,"interval":60,"jsonPath":null,"jsonPathOperator":null,"maxretries":3,"name":"snmp-v3","notificationIDList":{},"parent":null,"port":161,"radiusPassword":"","resendInterval":0,"retryInterval":60,"snmpOid":"1.3.6.1.2.1.1.3.0","snmpV3Username":"snmpuser","snmpVersion":"3","type":"snmp","upsideDown":false}`,
 		},
 		{
 			name: "success with conditions",
@@ -156,7 +156,7 @@ func TestMonitorSNMP_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[{"type":"expression","variable":"snmp","operator":">","value":"0","andOr":"and"}],"description":null,"expectedValue":null,"hostname":"10.0.0.2","id":13,"interval":60,"jsonPath":null,"jsonPathOperator":null,"maxretries":1,"name":"snmp-conditions","notificationIDList":{},"parent":null,"port":161,"radiusPassword":"public","resendInterval":0,"retryInterval":60,"snmpOid":"1.3.6.1.2.1.1.3.0","snmpV3Username":null,"snmpVersion":"2c","type":"snmp","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[{"type":"expression","variable":"snmp","operator":">","value":"0","andOr":"and"}],"description":null,"domainExpiryNotification":false,"expectedValue":null,"hostname":"10.0.0.2","id":13,"interval":60,"jsonPath":null,"jsonPathOperator":null,"maxretries":1,"name":"snmp-conditions","notificationIDList":{},"parent":null,"port":161,"radiusPassword":"public","resendInterval":0,"retryInterval":60,"snmpOid":"1.3.6.1.2.1.1.3.0","snmpV3Username":null,"snmpVersion":"2c","type":"snmp","upsideDown":false}`,
 		},
 	}
 

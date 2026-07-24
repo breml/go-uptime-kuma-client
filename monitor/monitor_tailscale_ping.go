@@ -71,6 +71,7 @@ func (t TailscalePing) MarshalJSON() ([]byte, error) {
 
 	// Always override with current Tailscale Ping-specific field values.
 	raw["hostname"] = t.Hostname
+	raw["domainExpiryNotification"] = t.DomainExpiryNotification
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -90,6 +91,9 @@ func (t TailscalePing) MarshalJSON() ([]byte, error) {
 type TailscalePingDetails struct {
 	// Hostname is the Tailscale hostname or IP address to ping.
 	Hostname string `json:"hostname"`
+	// DomainExpiryNotification enables domain expiry notifications
+	// for the monitored domain.
+	DomainExpiryNotification bool `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type.

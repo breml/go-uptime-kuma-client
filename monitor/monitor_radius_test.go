@@ -55,7 +55,7 @@ func TestMonitorRadius_Unmarshal(t *testing.T) {
 					CallingStationID: nil,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Radius monitor","hostname":"radius.example.com","id":1,"interval":60,"maxretries":2,"name":"radius-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":1812,"radiusCalledStationId":null,"radiusCallingStationId":null,"radiusPassword":"testpass","radiusSecret":"sharedsecret","radiusUsername":"testuser","resendInterval":0,"retryInterval":60,"type":"radius","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Radius monitor","domainExpiryNotification":false,"hostname":"radius.example.com","id":1,"interval":60,"maxretries":2,"name":"radius-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":1812,"radiusCalledStationId":null,"radiusCallingStationId":null,"radiusPassword":"testpass","radiusSecret":"sharedsecret","radiusUsername":"testuser","resendInterval":0,"retryInterval":60,"type":"radius","upsideDown":false}`,
 		},
 		{
 			name: "success with custom port and station IDs",
@@ -88,7 +88,7 @@ func TestMonitorRadius_Unmarshal(t *testing.T) {
 					CallingStationID: &callingStation,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Radius with station IDs","hostname":"auth.example.com","id":2,"interval":120,"maxretries":3,"name":"radius-advanced","notificationIDList":{},"parent":1,"port":1813,"radiusCalledStationId":"555-1234","radiusCallingStationId":"555-9999","radiusPassword":"adminpass","radiusSecret":"secret123","radiusUsername":"admin","resendInterval":0,"retryInterval":60,"type":"radius","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Radius with station IDs","domainExpiryNotification":false,"hostname":"auth.example.com","id":2,"interval":120,"maxretries":3,"name":"radius-advanced","notificationIDList":{},"parent":1,"port":1813,"radiusCalledStationId":"555-1234","radiusCallingStationId":"555-9999","radiusPassword":"adminpass","radiusSecret":"secret123","radiusUsername":"admin","resendInterval":0,"retryInterval":60,"type":"radius","upsideDown":false}`,
 		},
 	}
 

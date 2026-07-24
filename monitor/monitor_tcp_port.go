@@ -74,6 +74,7 @@ func (t TCPPort) MarshalJSON() ([]byte, error) {
 	raw["port"] = t.Port
 	raw["smtpSecurity"] = t.SMTPSecurity
 	raw["expiryNotification"] = t.ExpiryNotification
+	raw["domainExpiryNotification"] = t.DomainExpiryNotification
 	raw["expectedTlsAlert"] = t.ExpectedTLSAlert
 
 	// Server expects these fields to be arrays and not null.
@@ -105,6 +106,11 @@ type TCPPortDetails struct {
 	// only honoured by the upstream server when SMTPSecurity is set to
 	// "secure" or "starttls".
 	ExpiryNotification bool `json:"expiryNotification"`
+	// DomainExpiryNotification enables domain expiry notifications
+	// for the monitored domain (for TLDs supported by Uptime Kuma's RDAP
+	// lookup). Independent of ExpiryNotification, which covers TLS
+	// certificate expiry.
+	DomainExpiryNotification bool `json:"domainExpiryNotification"`
 	// ExpectedTLSAlert is the TLS alert name that the server is expected
 	// to return during the handshake (e.g. "certificate_required" for
 	// mTLS verification). Leave nil/unset for a successful TLS handshake.
