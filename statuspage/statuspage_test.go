@@ -43,7 +43,7 @@ func TestStatusPage_MarshalUnmarshal(t *testing.T) {
 						Name:   "Web Services",
 						Weight: 1,
 						MonitorList: []statuspage.PublicMonitor{
-							{ID: 100, SendURL: &sendURLTrue},
+							{ID: 100, SendURL: &sendURLTrue, URL: ptr.To("https://example.com/")},
 							{ID: 101, SendURL: &sendURLFalse},
 						},
 					},
@@ -95,7 +95,7 @@ func TestPublicGroup_MarshalUnmarshal(t *testing.T) {
 				Name:   "Test Group",
 				Weight: 5,
 				MonitorList: []statuspage.PublicMonitor{
-					{ID: 10, SendURL: &sendURL},
+					{ID: 10, SendURL: &sendURL, URL: ptr.To("https://example.com/")},
 					{ID: 20, SendURL: nil},
 				},
 			},
@@ -141,6 +141,14 @@ func TestPublicMonitor_MarshalUnmarshal(t *testing.T) {
 		{
 			name:    "monitor without sendUrl",
 			monitor: statuspage.PublicMonitor{ID: 3, SendURL: nil},
+		},
+		{
+			name:    "monitor with custom url",
+			monitor: statuspage.PublicMonitor{ID: 4, SendURL: &sendURLTrue, URL: ptr.To("https://example.com/")},
+		},
+		{
+			name:    "monitor without custom url",
+			monitor: statuspage.PublicMonitor{ID: 5, SendURL: &sendURLTrue, URL: nil},
 		},
 	}
 
