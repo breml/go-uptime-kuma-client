@@ -79,6 +79,7 @@ func (s SNMP) MarshalJSON() ([]byte, error) {
 	raw["jsonPath"] = s.JSONPath
 	raw["jsonPathOperator"] = s.JSONPathOperator
 	raw["expectedValue"] = s.ExpectedValue
+	raw["domainExpiryNotification"] = s.DomainExpiryNotification
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -108,6 +109,9 @@ type SNMPDetails struct {
 	// Conditions is an optional list of assertion clauses evaluated against the
 	// SNMP query result.
 	Conditions []Condition `json:"conditions,omitempty"`
+	// DomainExpiryNotification enables domain expiry notifications
+	// for the monitored domain.
+	DomainExpiryNotification bool `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type.

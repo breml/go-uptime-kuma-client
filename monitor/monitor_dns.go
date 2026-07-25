@@ -75,6 +75,7 @@ func (d DNS) MarshalJSON() ([]byte, error) {
 	raw["dns_resolve_server"] = d.ResolverServer
 	raw["dns_resolve_type"] = d.ResolveType
 	raw["port"] = d.Port
+	raw["domainExpiryNotification"] = d.DomainExpiryNotification
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -96,10 +97,11 @@ type DNSDetails struct {
 	// comma-separated list of IP addresses or hostnames (e.g.
 	// "1.1.1.1,8.8.8.8"). Use ResolverServers and SetResolverServers for
 	// access as a []string.
-	ResolverServer string         `json:"dns_resolve_server"`
-	ResolveType    DNSResolveType `json:"dns_resolve_type"`
-	Port           int            `json:"port"`
-	Conditions     []Condition    `json:"conditions,omitempty"`
+	ResolverServer           string         `json:"dns_resolve_server"`
+	ResolveType              DNSResolveType `json:"dns_resolve_type"`
+	Port                     int            `json:"port"`
+	DomainExpiryNotification bool           `json:"domainExpiryNotification"`
+	Conditions               []Condition    `json:"conditions,omitempty"`
 }
 
 // Type returns the monitor type.

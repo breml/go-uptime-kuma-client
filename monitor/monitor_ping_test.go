@@ -48,7 +48,7 @@ func TestMonitorPing_Unmarshal(t *testing.T) {
 					Timeout:    &timeout48,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test ping monitor","hostname":"8.8.8.8","id":3,"interval":60,"maxretries":2,"name":"ping-monitor","notificationIDList":{"1":true,"2":true},"packetSize":64,"parent":1,"resendInterval":0,"retryInterval":60,"timeout":48,"type":"ping","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test ping monitor","domainExpiryNotification":false,"hostname":"8.8.8.8","id":3,"interval":60,"maxretries":2,"name":"ping-monitor","notificationIDList":{"1":true,"2":true},"packetSize":64,"parent":1,"resendInterval":0,"retryInterval":60,"timeout":48,"type":"ping","upsideDown":false}`,
 		},
 		{
 			name: "success with null timeout",
@@ -77,7 +77,7 @@ func TestMonitorPing_Unmarshal(t *testing.T) {
 					Timeout:    nil,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"hostname":"1.1.1.1","id":4,"interval":60,"maxretries":3,"name":"ping-monitor-no-timeout","notificationIDList":{},"packetSize":56,"parent":null,"resendInterval":0,"retryInterval":60,"timeout":null,"type":"ping","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"domainExpiryNotification":false,"hostname":"1.1.1.1","id":4,"interval":60,"maxretries":3,"name":"ping-monitor-no-timeout","notificationIDList":{},"packetSize":56,"parent":null,"resendInterval":0,"retryInterval":60,"timeout":null,"type":"ping","upsideDown":false}`,
 		},
 	}
 

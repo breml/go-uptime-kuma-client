@@ -52,7 +52,7 @@ func TestMonitorGrpcKeyword_Unmarshal(t *testing.T) {
 					InvertKeyword:   false,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"grpcBody":"{\"service\":\"\"}","grpcEnableTls":false,"grpcMethod":"Check","grpcProtobuf":"syntax = \"proto3\";\n\npackage grpc.health.v1;\n\nservice Health {\n  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);\n}\n\nmessage HealthCheckRequest {\n  string service = 1;\n}\n\nmessage HealthCheckResponse {\n  enum ServingStatus {\n    UNKNOWN = 0;\n    SERVING = 1;\n    NOT_SERVING = 2;\n  }\n  ServingStatus status = 1;\n}\n","grpcServiceName":"Health","grpcUrl":"localhost:50051","id":2,"interval":60,"invertKeyword":false,"keyword":"SERVING","maxretries":2,"name":"grpc-test","notificationIDList":{"1":true},"parent":1,"description":null,"resendInterval":0,"retryInterval":60,"type":"grpc-keyword","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"grpcBody":"{\"service\":\"\"}","grpcEnableTls":false,"grpcMethod":"Check","grpcProtobuf":"syntax = \"proto3\";\n\npackage grpc.health.v1;\n\nservice Health {\n  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);\n}\n\nmessage HealthCheckRequest {\n  string service = 1;\n}\n\nmessage HealthCheckResponse {\n  enum ServingStatus {\n    UNKNOWN = 0;\n    SERVING = 1;\n    NOT_SERVING = 2;\n  }\n  ServingStatus status = 1;\n}\n","grpcServiceName":"Health","grpcUrl":"localhost:50051","id":2,"interval":60,"invertKeyword":false,"keyword":"SERVING","maxretries":2,"name":"grpc-test","notificationIDList":{"1":true},"parent":1,"description":null,"domainExpiryNotification":false,"resendInterval":0,"retryInterval":60,"type":"grpc-keyword","upsideDown":false}`,
 		},
 		{
 			name: "with invert keyword",
@@ -86,7 +86,7 @@ func TestMonitorGrpcKeyword_Unmarshal(t *testing.T) {
 					InvertKeyword:   true,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test inverted keyword","grpcBody":"{}","grpcEnableTls":true,"grpcMethod":"Status","grpcProtobuf":"syntax = \"proto3\";","grpcServiceName":"MyService","grpcUrl":"example.com:443","id":3,"interval":120,"invertKeyword":true,"keyword":"NOT_SERVING","maxretries":1,"name":"grpc-inverted","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"grpc-keyword","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test inverted keyword","domainExpiryNotification":false,"grpcBody":"{}","grpcEnableTls":true,"grpcMethod":"Status","grpcProtobuf":"syntax = \"proto3\";","grpcServiceName":"MyService","grpcUrl":"example.com:443","id":3,"interval":120,"invertKeyword":true,"keyword":"NOT_SERVING","maxretries":1,"name":"grpc-inverted","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"type":"grpc-keyword","upsideDown":false}`,
 		},
 	}
 

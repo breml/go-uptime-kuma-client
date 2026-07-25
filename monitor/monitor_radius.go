@@ -77,6 +77,7 @@ func (r Radius) MarshalJSON() ([]byte, error) {
 	raw["radiusSecret"] = r.Secret
 	raw["radiusCalledStationId"] = r.CalledStationID
 	raw["radiusCallingStationId"] = r.CallingStationID
+	raw["domainExpiryNotification"] = r.DomainExpiryNotification
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -108,6 +109,9 @@ type RadiusDetails struct {
 	CalledStationID *string `json:"radiusCalledStationId"`
 	// CallingStationID is the optional Calling-Station-ID attribute.
 	CallingStationID *string `json:"radiusCallingStationId"`
+	// DomainExpiryNotification enables domain expiry notifications
+	// for the monitored domain.
+	DomainExpiryNotification bool `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type.

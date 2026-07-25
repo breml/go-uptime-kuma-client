@@ -74,6 +74,7 @@ func (g GameDig) MarshalJSON() ([]byte, error) {
 	raw["port"] = g.Port
 	raw["game"] = g.Game
 	raw["gamedigGivenPortOnly"] = g.GameDigGivenPortOnly
+	raw["domainExpiryNotification"] = g.DomainExpiryNotification
 
 	// Only send the token when set: older Uptime Kuma servers (predating the
 	// gamedigToken column) generically import every field of the payload and
@@ -108,6 +109,9 @@ type GameDigDetails struct {
 	GameDigGivenPortOnly bool `json:"gamedigGivenPortOnly"`
 	// GameDigToken is an optional authentication token for game servers that require it.
 	GameDigToken *string `json:"gamedigToken,omitempty"`
+	// DomainExpiryNotification enables domain expiry notifications
+	// for the monitored domain.
+	DomainExpiryNotification bool `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type string.

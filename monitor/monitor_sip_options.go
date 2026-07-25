@@ -72,6 +72,7 @@ func (s SIPOptions) MarshalJSON() ([]byte, error) {
 	// Always override with current SIPOptions-specific field values.
 	raw["hostname"] = s.Hostname
 	raw["port"] = s.Port
+	raw["domainExpiryNotification"] = s.DomainExpiryNotification
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -89,8 +90,9 @@ func (s SIPOptions) MarshalJSON() ([]byte, error) {
 
 // SIPOptionsDetails contains sip-options-specific monitor configuration.
 type SIPOptionsDetails struct {
-	Hostname string `json:"hostname"`
-	Port     int    `json:"port"`
+	Hostname                 string `json:"hostname"`
+	Port                     int    `json:"port"`
+	DomainExpiryNotification bool   `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type.

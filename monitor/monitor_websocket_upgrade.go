@@ -79,6 +79,7 @@ func (w WebsocketUpgrade) MarshalJSON() ([]byte, error) {
 	raw["url"] = w.URL
 	raw["timeout"] = w.Timeout
 	raw["expiryNotification"] = w.ExpiryNotification
+	raw["domainExpiryNotification"] = w.DomainExpiryNotification
 	raw["ignoreTls"] = w.IgnoreTLS
 	raw["maxredirects"] = w.MaxRedirects
 	raw["accepted_statuscodes"] = w.AcceptedStatusCodes

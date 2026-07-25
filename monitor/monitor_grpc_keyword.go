@@ -78,6 +78,7 @@ func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 	raw["grpcBody"] = g.GrpcBody
 	raw["keyword"] = g.Keyword
 	raw["invertKeyword"] = g.InvertKeyword
+	raw["domainExpiryNotification"] = g.DomainExpiryNotification
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -95,14 +96,15 @@ func (g GrpcKeyword) MarshalJSON() ([]byte, error) {
 
 // GrpcKeywordDetails contains grpckeyword-specific monitor configuration.
 type GrpcKeywordDetails struct {
-	GrpcURL         string `json:"grpcUrl"`
-	GrpcProtobuf    string `json:"grpcProtobuf"`
-	GrpcServiceName string `json:"grpcServiceName"`
-	GrpcMethod      string `json:"grpcMethod"`
-	GrpcEnableTLS   bool   `json:"grpcEnableTls"`
-	GrpcBody        string `json:"grpcBody"`
-	Keyword         string `json:"keyword"`
-	InvertKeyword   bool   `json:"invertKeyword"`
+	GrpcURL                  string `json:"grpcUrl"`
+	GrpcProtobuf             string `json:"grpcProtobuf"`
+	GrpcServiceName          string `json:"grpcServiceName"`
+	GrpcMethod               string `json:"grpcMethod"`
+	GrpcEnableTLS            bool   `json:"grpcEnableTls"`
+	GrpcBody                 string `json:"grpcBody"`
+	Keyword                  string `json:"keyword"`
+	InvertKeyword            bool   `json:"invertKeyword"`
+	DomainExpiryNotification bool   `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type.

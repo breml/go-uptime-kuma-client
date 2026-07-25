@@ -59,7 +59,7 @@ func TestMonitorMQTT_Unmarshal(t *testing.T) {
 					ExpectedValue:      nil,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test MQTT monitor","expectedValue":null,"hostname":"mqtt.example.com","id":5,"interval":60,"jsonPath":null,"maxretries":2,"mqttCheckType":"keyword","mqttPassword":"","mqttSuccessMessage":"OK","mqttTopic":"home/temperature","mqttUsername":"","mqttWebsocketPath":null,"name":"mqtt-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":1883,"resendInterval":0,"retryInterval":60,"type":"mqtt","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test MQTT monitor","domainExpiryNotification":false,"expectedValue":null,"hostname":"mqtt.example.com","id":5,"interval":60,"jsonPath":null,"maxretries":2,"mqttCheckType":"keyword","mqttPassword":"","mqttSuccessMessage":"OK","mqttTopic":"home/temperature","mqttUsername":"","mqttWebsocketPath":null,"name":"mqtt-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":1883,"resendInterval":0,"retryInterval":60,"type":"mqtt","upsideDown":false}`,
 		},
 		{
 			name: "success with json-query check type",
@@ -95,7 +95,7 @@ func TestMonitorMQTT_Unmarshal(t *testing.T) {
 					ExpectedValue:      ptr.To("25"),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":false,"conditions":[],"description":null,"expectedValue":"25","hostname":"mqtt.local","id":6,"interval":60,"jsonPath":"temperature","maxretries":3,"mqttCheckType":"json-query","mqttPassword":null,"mqttSuccessMessage":null,"mqttTopic":"home/data","mqttUsername":null,"mqttWebsocketPath":null,"name":"mqtt-json-monitor","notificationIDList":{},"parent":null,"port":8883,"resendInterval":0,"retryInterval":60,"type":"mqtt","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":false,"conditions":[],"description":null,"domainExpiryNotification":false,"expectedValue":"25","hostname":"mqtt.local","id":6,"interval":60,"jsonPath":"temperature","maxretries":3,"mqttCheckType":"json-query","mqttPassword":null,"mqttSuccessMessage":null,"mqttTopic":"home/data","mqttUsername":null,"mqttWebsocketPath":null,"name":"mqtt-json-monitor","notificationIDList":{},"parent":null,"port":8883,"resendInterval":0,"retryInterval":60,"type":"mqtt","upsideDown":false}`,
 		},
 		{
 			name: "success with websocket path",
@@ -131,7 +131,7 @@ func TestMonitorMQTT_Unmarshal(t *testing.T) {
 					ExpectedValue:      nil,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"expectedValue":null,"hostname":"wss://mqtt.cloud.com","id":7,"interval":120,"jsonPath":null,"maxretries":1,"mqttCheckType":"keyword","mqttPassword":"cloudpass","mqttSuccessMessage":"valid","mqttTopic":"sensor/humidity","mqttUsername":"clouduser","mqttWebsocketPath":"/mqtt","name":"mqtt-ws-monitor","notificationIDList":{},"parent":null,"port":443,"resendInterval":0,"retryInterval":120,"type":"mqtt","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"domainExpiryNotification":false,"expectedValue":null,"hostname":"wss://mqtt.cloud.com","id":7,"interval":120,"jsonPath":null,"maxretries":1,"mqttCheckType":"keyword","mqttPassword":"cloudpass","mqttSuccessMessage":"valid","mqttTopic":"sensor/humidity","mqttUsername":"clouduser","mqttWebsocketPath":"/mqtt","name":"mqtt-ws-monitor","notificationIDList":{},"parent":null,"port":443,"resendInterval":0,"retryInterval":120,"type":"mqtt","upsideDown":false}`,
 		},
 		{
 			name: "success with conditions",
@@ -165,7 +165,7 @@ func TestMonitorMQTT_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[{"type":"expression","variable":"topic","operator":"==","value":"sensors/temp","andOr":"and"},{"type":"expression","variable":"message","operator":"contains","value":"alert","andOr":"or"}],"description":null,"expectedValue":null,"hostname":"mqtt.example.com","id":8,"interval":60,"jsonPath":null,"maxretries":1,"mqttCheckType":"keyword","mqttPassword":null,"mqttSuccessMessage":null,"mqttTopic":"sensors/temp","mqttUsername":null,"mqttWebsocketPath":null,"name":"mqtt-conditions","notificationIDList":{},"parent":null,"port":1883,"resendInterval":0,"retryInterval":60,"type":"mqtt","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[{"type":"expression","variable":"topic","operator":"==","value":"sensors/temp","andOr":"and"},{"type":"expression","variable":"message","operator":"contains","value":"alert","andOr":"or"}],"description":null,"domainExpiryNotification":false,"expectedValue":null,"hostname":"mqtt.example.com","id":8,"interval":60,"jsonPath":null,"maxretries":1,"mqttCheckType":"keyword","mqttPassword":null,"mqttSuccessMessage":null,"mqttTopic":"sensors/temp","mqttUsername":null,"mqttWebsocketPath":null,"name":"mqtt-conditions","notificationIDList":{},"parent":null,"port":1883,"resendInterval":0,"retryInterval":60,"type":"mqtt","upsideDown":false}`,
 		},
 	}
 

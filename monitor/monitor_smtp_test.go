@@ -50,7 +50,7 @@ func TestMonitorSMTP_Unmarshal(t *testing.T) {
 					SMTPSecurity: nil,
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SMTP monitor","hostname":"mail.example.com","id":7,"interval":60,"maxretries":2,"name":"smtp-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":null,"resendInterval":0,"retryInterval":60,"smtpSecurity":null,"type":"smtp","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SMTP monitor","domainExpiryNotification":false,"hostname":"mail.example.com","id":7,"interval":60,"maxretries":2,"name":"smtp-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":null,"resendInterval":0,"retryInterval":60,"smtpSecurity":null,"type":"smtp","upsideDown":false}`,
 		},
 		{
 			name: "success with secure port and secure security",
@@ -79,7 +79,7 @@ func TestMonitorSMTP_Unmarshal(t *testing.T) {
 					SMTPSecurity: ptr.To("secure"),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SMTP secure monitor","hostname":"mail.example.com","id":8,"interval":60,"maxretries":2,"name":"smtp-secure-monitor","notificationIDList":{"1":true},"parent":1,"port":465,"resendInterval":0,"retryInterval":60,"smtpSecurity":"secure","type":"smtp","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SMTP secure monitor","domainExpiryNotification":false,"hostname":"mail.example.com","id":8,"interval":60,"maxretries":2,"name":"smtp-secure-monitor","notificationIDList":{"1":true},"parent":1,"port":465,"resendInterval":0,"retryInterval":60,"smtpSecurity":"secure","type":"smtp","upsideDown":false}`,
 		},
 		{
 			name: "success with starttls security",
@@ -108,7 +108,7 @@ func TestMonitorSMTP_Unmarshal(t *testing.T) {
 					SMTPSecurity: ptr.To("starttls"),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SMTP STARTTLS monitor","hostname":"mail.example.com","id":9,"interval":60,"maxretries":2,"name":"smtp-starttls-monitor","notificationIDList":{},"parent":1,"port":587,"resendInterval":0,"retryInterval":60,"smtpSecurity":"starttls","type":"smtp","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SMTP STARTTLS monitor","domainExpiryNotification":false,"hostname":"mail.example.com","id":9,"interval":60,"maxretries":2,"name":"smtp-starttls-monitor","notificationIDList":{},"parent":1,"port":587,"resendInterval":0,"retryInterval":60,"smtpSecurity":"starttls","type":"smtp","upsideDown":false}`,
 		},
 		{
 			name: "success with nostarttls security",
@@ -137,7 +137,7 @@ func TestMonitorSMTP_Unmarshal(t *testing.T) {
 					SMTPSecurity: ptr.To("nostarttls"),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SMTP no STARTTLS monitor","hostname":"mail.example.com","id":10,"interval":60,"maxretries":2,"name":"smtp-nostarttls-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":25,"resendInterval":0,"retryInterval":60,"smtpSecurity":"nostarttls","type":"smtp","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SMTP no STARTTLS monitor","domainExpiryNotification":false,"hostname":"mail.example.com","id":10,"interval":60,"maxretries":2,"name":"smtp-nostarttls-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":25,"resendInterval":0,"retryInterval":60,"smtpSecurity":"nostarttls","type":"smtp","upsideDown":false}`,
 		},
 	}
 

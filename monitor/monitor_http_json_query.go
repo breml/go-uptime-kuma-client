@@ -79,6 +79,7 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	raw["url"] = h.URL
 	raw["timeout"] = h.Timeout
 	raw["expiryNotification"] = h.ExpiryNotification
+	raw["domainExpiryNotification"] = h.DomainExpiryNotification
 	raw["ignoreTls"] = h.IgnoreTLS
 	raw["maxredirects"] = h.MaxRedirects
 	raw["accepted_statuscodes"] = h.AcceptedStatusCodes

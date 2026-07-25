@@ -45,7 +45,7 @@ func TestMonitorTailscalePing_Unmarshal(t *testing.T) {
 					Hostname: "100.100.100.100",
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Tailscale Ping monitor","hostname":"100.100.100.100","id":1,"interval":60,"maxretries":2,"name":"tailscale-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"type":"tailscale-ping","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Tailscale Ping monitor","domainExpiryNotification":false,"hostname":"100.100.100.100","id":1,"interval":60,"maxretries":2,"name":"tailscale-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"type":"tailscale-ping","upsideDown":false}`,
 		},
 		{
 			name: "success with tailscale hostname",
@@ -72,7 +72,7 @@ func TestMonitorTailscalePing_Unmarshal(t *testing.T) {
 					Hostname: "mydevice.mydomain.ts.net",
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Tailscale with hostname","hostname":"mydevice.mydomain.ts.net","id":2,"interval":120,"maxretries":3,"name":"tailscale-hostname","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"type":"tailscale-ping","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Tailscale with hostname","domainExpiryNotification":false,"hostname":"mydevice.mydomain.ts.net","id":2,"interval":120,"maxretries":3,"name":"tailscale-hostname","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"type":"tailscale-ping","upsideDown":false}`,
 		},
 	}
 
