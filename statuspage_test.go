@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
@@ -164,7 +165,7 @@ func TestClient_StatusPageWithMonitors(t *testing.T) {
 				Name:   "Web Services",
 				Weight: 1,
 				MonitorList: []statuspage.PublicMonitor{
-					{ID: monitor1ID, SendURL: &sendURLTrue},
+					{ID: monitor1ID, SendURL: &sendURLTrue, URL: ptr.To("https://example.com/")},
 					{ID: monitor2ID, SendURL: &sendURLFalse},
 				},
 			},

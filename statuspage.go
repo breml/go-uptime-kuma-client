@@ -87,6 +87,10 @@ func (c *Client) SaveStatusPage(ctx context.Context, sp *statuspage.StatusPage) 
 				monitorData["sendUrl"] = *monitor.SendURL
 			}
 
+			if monitor.URL != nil {
+				monitorData["url"] = *monitor.URL
+			}
+
 			monitorList[j] = monitorData
 		}
 

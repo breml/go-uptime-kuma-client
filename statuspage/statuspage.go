@@ -33,4 +33,8 @@ type PublicGroup struct {
 type PublicMonitor struct {
 	ID      int64 `json:"id"`
 	SendURL *bool `json:"sendUrl,omitempty"`
+	// URL overrides the link shown for this monitor on the status page.
+	// It corresponds to Uptime Kuma's "Custom URL" status page monitor
+	// setting (server-side stored as monitor_group.custom_url).
+	URL *string `json:"url,omitempty"`
 }
