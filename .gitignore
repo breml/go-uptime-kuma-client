@@ -27,3 +27,4 @@ go.work.sum
 
 # local config files
 CLAUDE.local.md
+.claude/commands/
