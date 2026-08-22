@@ -5,7 +5,7 @@ import (
 )
 
 // Ooredoo represents an Ooredoo notification provider.
-// Ooredoo is a Maldivian bulk SMS gateway for sending text message notifications.
+// Ooredoo Maldives is a bulk SMS gateway for sending text message notifications.
 type Ooredoo struct {
 	Base
 	OoredooDetails
@@ -22,9 +22,11 @@ type OoredooDetails struct {
 	// an "Authorization: Bearer" header.
 	BearerToken string `json:"ooredooBearerToken"`
 	// ToNumber holds one or more recipient phone numbers, separated by comma,
-	// semicolon, whitespace or newline. Bare 7 digit numbers are prefixed with
-	// the Maldives country code 960 by the server, which sends the recipients
-	// in batches of 20 per request.
+	// semicolon or whitespace. Since whitespace separates recipients, an
+	// individual number must not contain spaces. The server strips a leading
+	// "+" and prefixes bare 7 digit numbers with the Maldives country code 960.
+	// If no valid number remains, the server rejects the notification when it
+	// is sent.
 	ToNumber string `json:"ooredooToNumber"`
 	// ServerURL is the Ooredoo API endpoint. If unset, the server falls back to
 	// https://o-papi1-lb01.ooredoo.mv/bulk_sms/v2.
