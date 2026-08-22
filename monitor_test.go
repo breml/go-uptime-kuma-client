@@ -1853,6 +1853,57 @@ func TestMonitorCRUD(t *testing.T) {
 			testPauseResume: true,
 		},
 		{
+			name: "PM2",
+			create: &monitor.PM2{
+				Base: monitor.Base{
+					Name:           "Test PM2 Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				PM2Details: monitor.PM2Details{
+					SystemServiceName: "api-server",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				pm2, ok := m.(*monitor.PM2)
+				if !ok {
+					panic("failed to assert PM2 monitor")
+				}
+
+				pm2.Name = "Updated PM2 Monitor"
+				pm2.SystemServiceName = "worker 1"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var pm2 monitor.PM2
+				err := actual.As(&pm2)
+				require.NoError(t, err)
+				require.Equal(t, id, pm2.ID)
+				require.Equal(t, "Test PM2 Monitor", pm2.Name)
+				require.Equal(t, "api-server", pm2.SystemServiceName)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var pm2 monitor.PM2
+				err := base.As(&pm2)
+				require.NoError(t, err)
+				return &pm2
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var pm2 monitor.PM2
+				err := actual.As(&pm2)
+				require.NoError(t, err)
+				require.Equal(t, "Updated PM2 Monitor", pm2.Name)
+				require.Equal(t, "worker 1", pm2.SystemServiceName)
+			},
+			testPauseResume: true,
+		},
+		{
 			name: "NTP",
 			create: &monitor.NTP{
 				Base: monitor.Base{
