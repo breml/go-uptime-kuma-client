@@ -23,13 +23,14 @@ type OoredooDetails struct {
 	BearerToken string `json:"ooredooBearerToken"`
 	// ToNumber holds one or more recipient phone numbers, separated by comma,
 	// semicolon or whitespace. Since whitespace separates recipients, an
-	// individual number must not contain spaces. The server strips a leading
-	// "+" and prefixes bare 7 digit numbers with the Maldives country code 960.
-	// If no valid number remains, the server rejects the notification when it
-	// is sent.
+	// individual number must not contain spaces. The server strips every "+"
+	// character and prefixes bare 7 digit numbers with the Maldives country
+	// code 960. The numbers are not validated: the server only rejects the
+	// notification when it is sent and no recipient remains at all, any other
+	// value is passed on to the gateway as is.
 	ToNumber string `json:"ooredooToNumber"`
-	// ServerURL is the Ooredoo API endpoint. If unset, the server falls back to
-	// https://o-papi1-lb01.ooredoo.mv/bulk_sms/v2.
+	// ServerURL is the Ooredoo API endpoint. If unset or empty, the server
+	// falls back to https://o-papi1-lb01.ooredoo.mv/bulk_sms/v2.
 	ServerURL *string `json:"ooredooServerUrl,omitempty"`
 }
 
