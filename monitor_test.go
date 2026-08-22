@@ -1852,6 +1852,76 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "NTP",
+			create: &monitor.NTP{
+				Base: monitor.Base{
+					Name:           "Test NTP Monitor",
+					Interval:       300,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				NTPDetails: monitor.NTPDetails{
+					Hostname: "pool.ntp.org",
+					Port:     ptr.To(int64(123)),
+					Timeout:  ptr.To(int64(10)),
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				ntp, ok := m.(*monitor.NTP)
+				if !ok {
+					panic("failed to assert NTP monitor")
+				}
+
+				ntp.Name = "Updated NTP Monitor"
+				ntp.Hostname = "time.cloudflare.com"
+				ntp.Port = ptr.To(int64(1123))
+				ntp.Timeout = ptr.To(int64(20))
+				ntp.NTPStratumThreshold = ptr.To(int64(3))
+				ntp.NTPTimeOffsetThreshold = ptr.To(int64(250))
+				ntp.NTPRootDispersionThreshold = ptr.To(int64(100))
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var ntp monitor.NTP
+				err := actual.As(&ntp)
+				require.NoError(t, err)
+				require.Equal(t, id, ntp.ID)
+				require.Equal(t, "Test NTP Monitor", ntp.Name)
+				require.Equal(t, "pool.ntp.org", ntp.Hostname)
+				require.NotNil(t, ntp.Port)
+				require.Equal(t, int64(123), *ntp.Port)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var ntp monitor.NTP
+				err := base.As(&ntp)
+				require.NoError(t, err)
+				return &ntp
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var ntp monitor.NTP
+				err := actual.As(&ntp)
+				require.NoError(t, err)
+				require.Equal(t, "Updated NTP Monitor", ntp.Name)
+				require.Equal(t, "time.cloudflare.com", ntp.Hostname)
+				require.NotNil(t, ntp.Port)
+				require.Equal(t, int64(1123), *ntp.Port)
+				require.NotNil(t, ntp.Timeout)
+				require.Equal(t, int64(20), *ntp.Timeout)
+				require.NotNil(t, ntp.NTPStratumThreshold)
+				require.Equal(t, int64(3), *ntp.NTPStratumThreshold)
+				require.NotNil(t, ntp.NTPTimeOffsetThreshold)
+				require.Equal(t, int64(250), *ntp.NTPTimeOffsetThreshold)
+				require.NotNil(t, ntp.NTPRootDispersionThreshold)
+				require.Equal(t, int64(100), *ntp.NTPRootDispersionThreshold)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {
