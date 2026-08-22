@@ -1093,6 +1093,62 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Ooredoo",
+			expectedType: "Ooredoo",
+			create: notification.Ooredoo{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Ooredoo Created",
+				},
+				OoredooDetails: notification.OoredooDetails{
+					Username:    "test_user",
+					AccessKey:   "test_access_key",
+					BearerToken: "test_bearer_token",
+					ToNumber:    "7712345, 9607798765",
+					ServerURL:   ptr.To("https://o-papi1-lb01.ooredoo.mv/bulk_sms/v2"),
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				ooredoo, ok := n.(*notification.Ooredoo)
+				if !ok {
+					panic("failed to assert Ooredoo notification")
+				}
+
+				ooredoo.Name = "Test Ooredoo Updated"
+				ooredoo.ToNumber = "9607712345"
+				ooredoo.ServerURL = nil
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Ooredoo)
+				require.True(t, ok)
+				var ooredoo notification.Ooredoo
+				err := actual.As(&ooredoo)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = ooredoo.UserID
+				require.EqualExportedValues(t, exp, ooredoo)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var ooredoo notification.Ooredoo
+				err := base.As(&ooredoo)
+				require.NoError(t, err)
+				return &ooredoo
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Ooredoo)
+				require.True(t, ok)
+				var ooredoo notification.Ooredoo
+				err := actual.As(&ooredoo)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, ooredoo)
+			},
+		},
+		{
 			name:         "EgoSMS",
 			expectedType: "egosms",
 			create: notification.EgoSMS{
