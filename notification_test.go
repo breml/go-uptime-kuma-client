@@ -1061,6 +1061,8 @@ func TestNotificationCRUD(t *testing.T) {
 
 				plivo.Name = "Test Plivo Updated"
 				plivo.ToNumber = "+15559999999"
+				plivo.MessageType = notification.PlivoMessageTypeSMS
+				plivo.AnswerURL = nil
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
 				t.Helper()

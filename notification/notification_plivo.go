@@ -17,11 +17,13 @@ type PlivoDetails struct {
 	FromNumber string `json:"plivoFromNumber"`
 	ToNumber   string `json:"plivoToNumber"`
 	// MessageType selects whether the alert is delivered as an SMS or as a
-	// voice call.
-	MessageType PlivoMessageType `json:"plivoMessageType"`
-	// AnswerURL returns the Plivo XML for the call. It is only used and only
-	// required if MessageType is PlivoMessageTypeCall. The alert text is
-	// appended as a "message" query parameter.
+	// voice call. If unset, the server delivers the alert as an SMS.
+	MessageType PlivoMessageType `json:"plivoMessageType,omitempty"`
+	// AnswerURL is fetched by Plivo with an HTTP GET to obtain the Plivo XML
+	// driving the call. It is only used and only required if MessageType is
+	// PlivoMessageTypeCall, where it must be an absolute URL. The server sets
+	// the alert text as the "message" query parameter, replacing any "message"
+	// parameter already present.
 	AnswerURL *string `json:"plivoAnswerUrl,omitempty"`
 }
 

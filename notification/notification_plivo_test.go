@@ -71,6 +71,30 @@ func TestNotificationPlivo_Unmarshal(t *testing.T) {
 			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Plivo","plivoAuthID":"MAXXXXXXXXXXXXXXXXXX","plivoAuthToken":"test_auth_token","plivoFromNumber":"+15559876543","plivoMessageType":"sms","plivoToNumber":"+15551234567","type":"plivo","userId":1}`,
 		},
 		{
+			name: "message type unset",
+			data: []byte(
+				`{"id":3,"name":"Default Plivo","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Default Plivo\",\"plivoAuthID\":\"MAXXXXXXXXXXXXXXXXXX\",\"plivoAuthToken\":\"test_auth_token\",\"plivoFromNumber\":\"+15559876543\",\"plivoToNumber\":\"+15551234567\",\"type\":\"plivo\"}"}`,
+			),
+
+			want: notification.Plivo{
+				Base: notification.Base{
+					ID:            3,
+					Name:          "Default Plivo",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				PlivoDetails: notification.PlivoDetails{
+					AuthID:     "MAXXXXXXXXXXXXXXXXXX",
+					AuthToken:  "test_auth_token",
+					FromNumber: "+15559876543",
+					ToNumber:   "+15551234567",
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":3,"isDefault":false,"name":"Default Plivo","plivoAuthID":"MAXXXXXXXXXXXXXXXXXX","plivoAuthToken":"test_auth_token","plivoFromNumber":"+15559876543","plivoToNumber":"+15551234567","type":"plivo","userId":1}`,
+		},
+		{
 			name:    "missing config field",
 			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
 			wantErr: true,
@@ -101,6 +125,22 @@ func TestNotificationPlivo_Unmarshal(t *testing.T) {
 			require.NoError(t, err)
 
 			require.JSONEq(t, tc.wantJSON, string(data))
+		})
+	}
+}
+
+func TestPlivoMessageType_String(t *testing.T) {
+	tests := []struct {
+		messageType notification.PlivoMessageType
+		want        string
+	}{
+		{notification.PlivoMessageTypeSMS, "sms"},
+		{notification.PlivoMessageTypeCall, "call"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.want, func(t *testing.T) {
+			require.Equal(t, tc.want, tc.messageType.String())
 		})
 	}
 }
