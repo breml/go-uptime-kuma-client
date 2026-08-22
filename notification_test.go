@@ -1035,6 +1035,64 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Plivo",
+			expectedType: "plivo",
+			create: notification.Plivo{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Plivo Created",
+				},
+				PlivoDetails: notification.PlivoDetails{
+					AuthID:      "MAXXXXXXXXXXXXXXXXXX",
+					AuthToken:   "test_auth_token",
+					FromNumber:  "+15559876543",
+					ToNumber:    "+15551234567",
+					MessageType: notification.PlivoMessageTypeCall,
+					AnswerURL:   ptr.To("https://example.com/answer.xml"),
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				plivo, ok := n.(*notification.Plivo)
+				if !ok {
+					panic("failed to assert Plivo notification")
+				}
+
+				plivo.Name = "Test Plivo Updated"
+				plivo.ToNumber = "+15559999999"
+				plivo.MessageType = notification.PlivoMessageTypeSMS
+				plivo.AnswerURL = nil
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Plivo)
+				require.True(t, ok)
+				var plivo notification.Plivo
+				err := actual.As(&plivo)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = plivo.UserID
+				require.EqualExportedValues(t, exp, plivo)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var plivo notification.Plivo
+				err := base.As(&plivo)
+				require.NoError(t, err)
+				return &plivo
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Plivo)
+				require.True(t, ok)
+				var plivo notification.Plivo
+				err := actual.As(&plivo)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, plivo)
+			},
+		},
+		{
 			name:         "EgoSMS",
 			expectedType: "egosms",
 			create: notification.EgoSMS{
