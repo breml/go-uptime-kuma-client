@@ -2,8 +2,10 @@ package monitor
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // PM2 represents a pm2 monitor.
@@ -46,6 +48,10 @@ func (p *PM2) UnmarshalJSON(data []byte) error {
 
 // MarshalJSON marshals a monitor into a JSON byte slice.
 func (p PM2) MarshalJSON() ([]byte, error) {
+	if strings.TrimSpace(p.ProcessName) == "" {
+		return nil, errors.New("marshal: process name is required")
+	}
+
 	raw := map[string]any{}
 	raw["id"] = p.ID
 	raw["type"] = "pm2"
@@ -70,7 +76,7 @@ func (p PM2) MarshalJSON() ([]byte, error) {
 	raw["notificationIDList"] = ids
 
 	// Always override with current PM2-specific field values.
-	raw["system_service_name"] = p.SystemServiceName
+	raw["system_service_name"] = p.ProcessName
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -88,18 +94,27 @@ func (p PM2) MarshalJSON() ([]byte, error) {
 
 // PM2Details contains pm2-specific monitor configuration.
 //
-// The pm2 monitor shells out to the pm2 CLI on the Uptime Kuma host, so, like
-// the system-service monitor, it only works on non-container installations.
+// The behaviour described below was verified against Uptime Kuma 2.5.0.
+//
+// The check runs `pm2 jlist` on the Uptime Kuma host, so the pm2 CLI must be
+// installed there and must see the target PM2 daemon. The official container
+// image does not ship it, but, unlike the system-service monitor, upstream
+// does not otherwise restrict the type in containers.
 type PM2Details struct {
-	// SystemServiceName is the name of the PM2 process to check, as reported
-	// by `pm2 jlist`. The server trims the value and requires it to be
-	// non-empty and free of ASCII control characters (U+0000..U+001F, U+007F).
-	// The process name is used instead of the numeric PM2 id, because PM2
-	// reassigns ids after a process is deleted and recreated.
-	// Note: the field is shared with the system-service monitor and the
+	// ProcessName identifies the PM2 process to check. The server matches it
+	// against both the process name and the stringified numeric PM2 id
+	// reported by `pm2 jlist`, so either form works. Prefer the name, because
+	// PM2 reassigns ids after a process is deleted and recreated.
+	//
+	// The server trims the value and requires it to be non-empty and free of
+	// ASCII control characters (U+0000..U+001F, U+007F). MarshalJSON rejects
+	// an empty (or whitespace-only) value, the remaining rules are enforced
+	// by the server only.
+	//
+	// Note: the wire field is shared with the system-service monitor and the
 	// upstream API uses snake_case for it, unlike most other Uptime Kuma
 	// fields.
-	SystemServiceName string `json:"system_service_name"`
+	ProcessName string `json:"system_service_name"`
 }
 
 // Type returns the monitor type.
