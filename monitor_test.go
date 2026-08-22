@@ -1864,10 +1864,14 @@ func TestMonitorCRUD(t *testing.T) {
 					UpsideDown:     false,
 					IsActive:       true,
 				},
+				// Timeout is left unset on purpose: the server column is
+				// NOT NULL, so MarshalJSON has to substitute a value.
 				NTPDetails: monitor.NTPDetails{
-					Hostname: "pool.ntp.org",
-					Port:     ptr.To(int64(123)),
-					Timeout:  ptr.To(int64(10)),
+					Hostname:                   "pool.ntp.org",
+					Port:                       ptr.To(int64(1123)),
+					NTPStratumThreshold:        ptr.To(int64(4)),
+					NTPTimeOffsetThreshold:     ptr.To(int64(500)),
+					NTPRootDispersionThreshold: ptr.To(int64(250)),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -1893,7 +1897,15 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Test NTP Monitor", ntp.Name)
 				require.Equal(t, "pool.ntp.org", ntp.Hostname)
 				require.NotNil(t, ntp.Port)
-				require.Equal(t, int64(123), *ntp.Port)
+				require.Equal(t, int64(1123), *ntp.Port)
+				require.NotNil(t, ntp.Timeout)
+				require.Equal(t, int64(10), *ntp.Timeout)
+				require.NotNil(t, ntp.NTPStratumThreshold)
+				require.Equal(t, int64(4), *ntp.NTPStratumThreshold)
+				require.NotNil(t, ntp.NTPTimeOffsetThreshold)
+				require.Equal(t, int64(500), *ntp.NTPTimeOffsetThreshold)
+				require.NotNil(t, ntp.NTPRootDispersionThreshold)
+				require.Equal(t, int64(250), *ntp.NTPRootDispersionThreshold)
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()

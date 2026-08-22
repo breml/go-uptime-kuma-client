@@ -79,6 +79,32 @@ func TestMonitorNTP_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"NTP monitor with thresholds","hostname":"time.cloudflare.com","id":5,"interval":600,"maxretries":3,"name":"ntp-thresholds-monitor","notificationIDList":{"1":true,"2":true},"ntpRootDispersionThreshold":100,"ntpStratumThreshold":3,"ntpTimeOffsetThreshold":250,"parent":1,"port":1123,"resendInterval":0,"retryInterval":120,"timeout":20,"type":"ntp","upsideDown":false}`,
 		},
+		{
+			name: "success with unset optional fields",
+			data: []byte(
+				`{"id":6,"name":"ntp-minimal","description":null,"pathName":"ntp-minimal","parent":null,"childrenIDs":[],"url":null,"method":"GET","hostname":"time.example.com","port":null,"maxretries":0,"weight":2000,"active":true,"forceInactive":false,"type":"ntp","timeout":null,"interval":300,"retryInterval":60,"resendInterval":0,"upsideDown":false,"accepted_statuscodes":["200-299"],"notificationIDList":{},"tags":[],"maintenance":false,"conditions":[],"ntpStratumThreshold":null,"ntpTimeOffsetThreshold":null,"ntpRootDispersionThreshold":null}`,
+			),
+
+			want: monitor.NTP{
+				Base: monitor.Base{
+					ID:             6,
+					Name:           "ntp-minimal",
+					PathName:       "ntp-minimal",
+					Interval:       300,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     0,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				NTPDetails: monitor.NTPDetails{
+					Hostname: "time.example.com",
+				},
+			},
+			// Port and the thresholds stay null, but timeout is substituted
+			// because the server column is NOT NULL.
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"hostname":"time.example.com","id":6,"interval":300,"maxretries":0,"name":"ntp-minimal","notificationIDList":{},"ntpRootDispersionThreshold":null,"ntpStratumThreshold":null,"ntpTimeOffsetThreshold":null,"parent":null,"port":null,"resendInterval":0,"retryInterval":60,"timeout":10,"type":"ntp","upsideDown":false}`,
+		},
 	}
 
 	for _, tc := range tests {
@@ -96,4 +122,14 @@ func TestMonitorNTP_Unmarshal(t *testing.T) {
 			require.JSONEq(t, tc.wantJSON, string(data))
 		})
 	}
+}
+
+func TestMonitorNTP_MarshalRequiresHostname(t *testing.T) {
+	ntpMonitor := monitor.NTP{
+		Base: monitor.Base{Name: "ntp-without-hostname"},
+	}
+
+	_, err := json.Marshal(ntpMonitor)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "hostname is required")
 }
