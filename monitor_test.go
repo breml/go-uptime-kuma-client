@@ -1853,6 +1853,62 @@ func TestMonitorCRUD(t *testing.T) {
 			testPauseResume: true,
 		},
 		{
+			name: "PM2",
+			create: &monitor.PM2{
+				Base: monitor.Base{
+					Name:           "Test PM2 Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				PM2Details: monitor.PM2Details{
+					ProcessName: "api-server",
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				pm2, ok := m.(*monitor.PM2)
+				if !ok {
+					panic("failed to assert PM2 monitor")
+				}
+
+				pm2.Name = "Updated PM2 Monitor"
+				// The space in "worker 1" is deliberate: the server rejects it
+				// for system-service monitors but allows it for pm2, so the
+				// update fails if the client ever sends the wrong type.
+				pm2.ProcessName = "worker 1"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var pm2 monitor.PM2
+				err := actual.As(&pm2)
+				require.NoError(t, err)
+				require.Equal(t, "pm2", pm2.Type())
+				require.Equal(t, id, pm2.ID)
+				require.Equal(t, "Test PM2 Monitor", pm2.Name)
+				require.Equal(t, "api-server", pm2.ProcessName)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var pm2 monitor.PM2
+				err := base.As(&pm2)
+				require.NoError(t, err)
+				return &pm2
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var pm2 monitor.PM2
+				err := actual.As(&pm2)
+				require.NoError(t, err)
+				require.Equal(t, "pm2", pm2.Type())
+				require.Equal(t, "Updated PM2 Monitor", pm2.Name)
+				require.Equal(t, "worker 1", pm2.ProcessName)
+			},
+			testPauseResume: true,
+		},
+		{
 			name: "NTP",
 			create: &monitor.NTP{
 				Base: monitor.Base{
