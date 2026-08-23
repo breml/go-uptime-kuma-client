@@ -1149,6 +1149,59 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Flowtriq",
+			expectedType: "Flowtriq",
+			create: notification.Flowtriq{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Flowtriq Created",
+				},
+				FlowtriqDetails: notification.FlowtriqDetails{
+					WebhookURL: "https://app.flowtriq.com/api/webhooks/created",
+					APIKey:     ptr.To("test_api_key"),
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				flowtriq, ok := n.(*notification.Flowtriq)
+				if !ok {
+					panic("failed to assert Flowtriq notification")
+				}
+
+				flowtriq.Name = "Test Flowtriq Updated"
+				flowtriq.WebhookURL = "https://app.flowtriq.com/api/webhooks/updated"
+				flowtriq.APIKey = nil
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Flowtriq)
+				require.True(t, ok)
+				var flowtriq notification.Flowtriq
+				err := actual.As(&flowtriq)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = flowtriq.UserID
+				require.EqualExportedValues(t, exp, flowtriq)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var flowtriq notification.Flowtriq
+				err := base.As(&flowtriq)
+				require.NoError(t, err)
+				return &flowtriq
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Flowtriq)
+				require.True(t, ok)
+				var flowtriq notification.Flowtriq
+				err := actual.As(&flowtriq)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, flowtriq)
+			},
+		},
+		{
 			name:         "EgoSMS",
 			expectedType: "egosms",
 			create: notification.EgoSMS{
