@@ -63,6 +63,28 @@ func TestNotificationFlowtriq_Unmarshal(t *testing.T) {
 			wantJSON: `{"active":true,"applyExisting":false,"flowtriqWebhookUrl":"https://app.flowtriq.com/api/webhooks/test","id":2,"isDefault":false,"name":"Simple Flowtriq","type":"Flowtriq","userId":1}`,
 		},
 		{
+			name: "empty api key",
+			data: []byte(
+				`{"id":3,"name":"Cleared Flowtriq","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"flowtriqApiKey\":\"\",\"flowtriqWebhookUrl\":\"https://app.flowtriq.com/api/webhooks/test\",\"isDefault\":false,\"name\":\"Cleared Flowtriq\",\"type\":\"Flowtriq\"}"}`,
+			),
+
+			want: notification.Flowtriq{
+				Base: notification.Base{
+					ID:            3,
+					Name:          "Cleared Flowtriq",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				FlowtriqDetails: notification.FlowtriqDetails{
+					WebhookURL: "https://app.flowtriq.com/api/webhooks/test",
+					APIKey:     ptr.To(""),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"flowtriqApiKey":"","flowtriqWebhookUrl":"https://app.flowtriq.com/api/webhooks/test","id":3,"isDefault":false,"name":"Cleared Flowtriq","type":"Flowtriq","userId":1}`,
+		},
+		{
 			name:    "missing config field",
 			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
 			wantErr: true,
@@ -70,6 +92,13 @@ func TestNotificationFlowtriq_Unmarshal(t *testing.T) {
 		{
 			name:    "invalid config json",
 			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"not-json"}`),
+			wantErr: true,
+		},
+		{
+			name: "invalid config detail type",
+			data: []byte(
+				`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"{\"flowtriqWebhookUrl\":123,\"type\":\"Flowtriq\"}"}`,
+			),
 			wantErr: true,
 		},
 	}

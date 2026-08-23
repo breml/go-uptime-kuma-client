@@ -17,8 +17,8 @@ type FlowtriqDetails struct {
 	// WebhookURL is the Flowtriq webhook endpoint the notification is posted
 	// to, for example https://app.flowtriq.com/api/webhooks/...
 	WebhookURL string `json:"flowtriqWebhookUrl"`
-	// APIKey authenticates the request against Flowtriq. If set, the server
-	// sends it as the "X-API-Key" header, otherwise the header is omitted.
+	// APIKey authenticates the request against Flowtriq. The server sends it
+	// as the "X-API-Key" header. If unset or empty, the header is omitted.
 	APIKey *string `json:"flowtriqApiKey,omitempty"`
 }
 
