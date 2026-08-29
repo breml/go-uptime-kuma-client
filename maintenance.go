@@ -2,6 +2,7 @@ package kuma
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/breml/go-uptime-kuma-client/maintenance"
@@ -44,6 +45,13 @@ func (c *Client) GetMaintenance(ctx context.Context, id int64) (*maintenance.Mai
 }
 
 // CreateMaintenance creates a new maintenance window.
+//
+// An error wrapping ErrUpdateEventTimeout means the maintenance window was
+// created and only the update event is missing; m.ID identifies it, as does the
+// ID an UpdateEventTimeoutError carries, so retrying the call would create a
+// duplicate. The context is spent at that point, so the complete object cannot
+// be fetched back: the returned value is m itself, carrying what the caller
+// passed in plus the ID the server assigned.
 func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenance) (*maintenance.Maintenance, error) {
 	maintenanceData, err := structToMap(m)
 	if err != nil {
@@ -52,6 +60,12 @@ func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenan
 
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addMaintenance", "maintenanceList", maintenanceData)
 	if err != nil {
+		if errors.Is(err, ErrUpdateEventTimeout) {
+			m.ID = response.MaintenanceID
+
+			return m, fmt.Errorf("create maintenance: %w", withCreatedID(err, response.MaintenanceID))
+		}
+
 		return nil, fmt.Errorf("create maintenance: %w", err)
 	}
 
@@ -63,6 +77,9 @@ func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenan
 }
 
 // UpdateMaintenance updates an existing maintenance window.
+//
+// An error wrapping ErrUpdateEventTimeout means the maintenance window was
+// updated and only the update event is missing.
 func (c *Client) UpdateMaintenance(ctx context.Context, m *maintenance.Maintenance) error {
 	maintenanceData, err := structToMap(m)
 	if err != nil {
@@ -78,6 +95,9 @@ func (c *Client) UpdateMaintenance(ctx context.Context, m *maintenance.Maintenan
 }
 
 // DeleteMaintenance deletes a maintenance window by ID.
+//
+// An error wrapping ErrUpdateEventTimeout means the maintenance window was
+// deleted and only the update event is missing.
 func (c *Client) DeleteMaintenance(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteMaintenance", "maintenanceList", id)
 	if err != nil {
@@ -88,6 +108,9 @@ func (c *Client) DeleteMaintenance(ctx context.Context, id int64) error {
 }
 
 // PauseMaintenance pauses (deactivates) a maintenance window.
+//
+// An error wrapping ErrUpdateEventTimeout means the maintenance window was
+// paused and only the update event is missing.
 func (c *Client) PauseMaintenance(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "pauseMaintenance", "maintenanceList", id)
 	if err != nil {
@@ -98,6 +121,9 @@ func (c *Client) PauseMaintenance(ctx context.Context, id int64) error {
 }
 
 // ResumeMaintenance resumes (activates) a maintenance window.
+//
+// An error wrapping ErrUpdateEventTimeout means the maintenance window was
+// resumed and only the update event is missing.
 func (c *Client) ResumeMaintenance(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "resumeMaintenance", "maintenanceList", id)
 	if err != nil {

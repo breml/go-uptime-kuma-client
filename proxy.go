@@ -9,6 +9,10 @@ import (
 )
 
 // GetProxyList returns all proxies for the authenticated user.
+//
+// They are served from the local state cache, which the server keeps up to
+// date. Resync rebuilds it if an update event was missed, see
+// ErrUpdateEventTimeout.
 func (c *Client) GetProxyList(_ context.Context) []proxy.Proxy {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -19,7 +23,9 @@ func (c *Client) GetProxyList(_ context.Context) []proxy.Proxy {
 	return proxies
 }
 
-// GetProxy returns a specific proxy by ID.
+// GetProxy returns a specific proxy by ID. Like GetProxyList it serves from the
+// local state cache, so a proxy whose update event was missed is reported as
+// ErrNotFound until Resync.
 func (c *Client) GetProxy(_ context.Context, id int64) (*proxy.Proxy, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -34,9 +40,18 @@ func (c *Client) GetProxy(_ context.Context, id int64) (*proxy.Proxy, error) {
 }
 
 // CreateProxy creates a new proxy.
+//
+// An error wrapping ErrUpdateEventTimeout means the proxy was created and only
+// the update event is missing; the returned ID identifies it, as does the ID an
+// UpdateEventTimeoutError carries, so retrying the call would create a
+// duplicate.
 func (c *Client) CreateProxy(ctx context.Context, config proxy.Config) (int64, error) {
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addProxy", "proxyList", config, nil)
 	if err != nil {
+		if errors.Is(err, ErrUpdateEventTimeout) {
+			return response.ID, fmt.Errorf("create proxy: %w", withCreatedID(err, response.ID))
+		}
+
 		return 0, fmt.Errorf("create proxy: %w", err)
 	}
 
@@ -44,6 +59,9 @@ func (c *Client) CreateProxy(ctx context.Context, config proxy.Config) (int64, e
 }
 
 // UpdateProxy updates an existing proxy.
+//
+// An error wrapping ErrUpdateEventTimeout means the proxy was updated and only
+// the update event is missing.
 func (c *Client) UpdateProxy(ctx context.Context, config proxy.Config) error {
 	if config.ID == 0 {
 		return errors.New("update proxy: config must have ID set")
@@ -58,6 +76,9 @@ func (c *Client) UpdateProxy(ctx context.Context, config proxy.Config) error {
 }
 
 // DeleteProxy deletes a proxy by ID.
+//
+// An error wrapping ErrUpdateEventTimeout means the proxy was deleted and only
+// the update event is missing.
 func (c *Client) DeleteProxy(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteProxy", "proxyList", id)
 	if err != nil {

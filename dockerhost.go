@@ -34,9 +34,18 @@ func (c *Client) GetDockerHost(_ context.Context, id int64) (*dockerhost.DockerH
 }
 
 // CreateDockerHost creates a new Docker host and returns its ID.
+//
+// An error wrapping ErrUpdateEventTimeout means the Docker host was created and
+// only the update event is missing; the returned ID identifies it, as does the
+// ID an UpdateEventTimeoutError carries, so retrying the call would create a
+// duplicate.
 func (c *Client) CreateDockerHost(ctx context.Context, config dockerhost.Config) (int64, error) {
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addDockerHost", "dockerHostList", config, nil)
 	if err != nil {
+		if errors.Is(err, ErrUpdateEventTimeout) {
+			return response.ID, fmt.Errorf("create docker host: %w", withCreatedID(err, response.ID))
+		}
+
 		return 0, fmt.Errorf("create docker host: %w", err)
 	}
 
@@ -44,6 +53,9 @@ func (c *Client) CreateDockerHost(ctx context.Context, config dockerhost.Config)
 }
 
 // UpdateDockerHost updates an existing Docker host.
+//
+// An error wrapping ErrUpdateEventTimeout means the Docker host was updated and
+// only the update event is missing.
 func (c *Client) UpdateDockerHost(ctx context.Context, config dockerhost.Config) error {
 	if config.ID == 0 {
 		return errors.New("update docker host: config must have ID set")
@@ -58,6 +70,9 @@ func (c *Client) UpdateDockerHost(ctx context.Context, config dockerhost.Config)
 }
 
 // DeleteDockerHost deletes a Docker host by ID.
+//
+// An error wrapping ErrUpdateEventTimeout means the Docker host was deleted and
+// only the update event is missing.
 func (c *Client) DeleteDockerHost(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteDockerHost", "dockerHostList", id)
 	if err != nil {

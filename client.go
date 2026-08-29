@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -30,6 +31,87 @@ import (
 
 // ErrNotFound is returned when a requested resource is not found.
 var ErrNotFound = errors.New("not found")
+
+// ErrUpdateEventTimeout is returned when the server acknowledged a mutating
+// command successfully, but the update event that carries the change did not
+// arrive before the context was done. The write landed on the server; what is
+// missing is only the broadcast.
+//
+// An error wrapping ErrUpdateEventTimeout also wraps the context error, so
+// errors.Is(err, context.DeadlineExceeded) still reports an expired deadline
+// and errors.Is(err, context.Canceled) a cancelled context. Use
+// errors.Is(err, ErrUpdateEventTimeout) to tell the two cases apart: a plain
+// context error means the server never confirmed the command and it may or may
+// not have been applied, while ErrUpdateEventTimeout means it was applied.
+//
+// The Create methods return the ID the server assigned alongside such an error,
+// so a caller can adopt the created resource instead of retrying and creating a
+// duplicate. That ID is zero only if the ack carried none, which the server does
+// not do for a command it reports as successful. Because the idiomatic way to
+// propagate an error drops the values next to it, the ID is also carried by the
+// error itself, see UpdateEventTimeoutError.
+//
+// The local state cache is refreshed from the update event, so on this path it
+// is not up to date yet. The cache is maintained by the socket.io event
+// handlers and not by the caller's context, so it catches up on its own once
+// the event arrives; if the event is lost for good, the cache stays stale until
+// the next broadcast for that resource. Until then a getter that serves from
+// the cache does not report the resource; Resync makes the server resend the
+// lists instead of waiting for that broadcast.
+var ErrUpdateEventTimeout = errors.New("update event not received")
+
+// UpdateEventTimeoutError is the error the client returns for a command that
+// the server acknowledged without the update event arriving, see
+// ErrUpdateEventTimeout. It wraps both ErrUpdateEventTimeout and the context
+// error, so errors.Is keeps reporting either.
+//
+// It exists so that the ID of a created resource survives the way errors are
+// usually propagated: a caller that writes the idiomatic
+//
+//	id, err := client.CreateNotification(ctx, notif)
+//	if err != nil {
+//		return 0, err
+//	}
+//
+// discards the returned ID, and with it the only handle on a notification the
+// server did create. Recovering the error keeps that handle:
+//
+//	var timeoutErr *kuma.UpdateEventTimeoutError
+//	if errors.As(err, &timeoutErr) && timeoutErr.ID != 0 {
+//		// The resource exists, adopt it instead of creating it again.
+//	}
+type UpdateEventTimeoutError struct {
+	// Command is the socket.io command the server acknowledged.
+	Command string
+
+	// ID is the ID the server assigned to the created resource. It is zero for
+	// a command that creates nothing, and for an ack that carried no ID.
+	ID int64
+
+	// Err is the error of the context that was done before the update event
+	// arrived.
+	Err error
+}
+
+func (e *UpdateEventTimeoutError) Error() string {
+	return fmt.Sprintf("%s: %s: %s", e.Command, ErrUpdateEventTimeout, e.Err)
+}
+
+func (e *UpdateEventTimeoutError) Unwrap() []error {
+	return []error{ErrUpdateEventTimeout, e.Err}
+}
+
+// withCreatedID records id in the UpdateEventTimeoutError err is wrapping, if it
+// is one, and returns err unchanged otherwise. The command layer knows which
+// field of the ack carries the ID, the layer that builds the error does not.
+func withCreatedID(err error, id int64) error {
+	var timeoutErr *UpdateEventTimeoutError
+	if errors.As(err, &timeoutErr) {
+		timeoutErr.ID = id
+	}
+
+	return err
+}
 
 // Log level constants for configuring socket.io client logging verbosity.
 const (
@@ -88,6 +170,22 @@ type state struct {
 	dockerHosts   []dockerhost.DockerHost
 }
 
+// pendingListEvents returns the update events that carry the lists the local
+// state cache is built from, as a set to strike them off as they arrive. The
+// server sends all of them after a login, which is what New waits for and what
+// Resync repeats.
+func pendingListEvents() map[string]struct{} {
+	return map[string]struct{}{
+		"monitorList":      empty,
+		"maintenanceList":  empty,
+		"notificationList": empty,
+		"statusPageList":   empty,
+		"proxyList":        empty,
+		"dockerHostList":   empty,
+		"apiKeyList":       empty,
+	}
+}
+
 // Client represents a connection to an Uptime Kuma server.
 type Client struct {
 	socketioClient               *socketio.Client
@@ -98,6 +196,10 @@ type Client struct {
 	mu      *sync.Mutex
 	updates signals.Signal[string]
 	state   state
+
+	// sessionToken is the JWT the server handed out at login. It is what
+	// Resync logs in with, see there.
+	sessionToken string
 }
 
 // Option is a functional option for configuring a Client.
@@ -338,15 +440,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	updateSeenMu := sync.Mutex{}
 	updateSeenMu.Lock()
-	updateSeen := map[string]struct{}{
-		"monitorList":      empty,
-		"maintenanceList":  empty,
-		"notificationList": empty,
-		"statusPageList":   empty,
-		"proxyList":        empty,
-		"dockerHostList":   empty,
-		"apiKeyList":       empty,
-	}
+	updateSeen := pendingListEvents()
 	updateSeenMu.Unlock()
 
 	ready := make(chan struct{})
@@ -538,11 +632,17 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}()
 
 	if username != "" && password != "" {
-		_, err = c.syncEmit(
+		var loginResponse ackResponse
+
+		loginResponse, err = c.syncEmit(
 			ctxWithConnectTimeout,
 			"login",
 			map[string]any{"username": username, "password": password, "token": ""},
 		)
+		if err == nil {
+			c.setSessionToken(loginResponse.Token)
+		}
+
 		if err != nil {
 			// Ensure we had the time to receive a potential setup event.
 			time.Sleep(10 * time.Millisecond)
@@ -580,7 +680,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 				return nil, fmt.Errorf("setup: %w", err)
 			}
 
-			_, err = c.syncEmit(
+			loginResponse, err := c.syncEmit(
 				ctxWithConnectTimeout,
 				"login",
 				map[string]any{"username": username, "password": password, "token": ""},
@@ -588,6 +688,8 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			if err != nil {
 				return nil, fmt.Errorf("login: %w", err)
 			}
+
+			c.setSessionToken(loginResponse.Token)
 
 		case <-ctx.Done():
 			return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
@@ -639,9 +741,88 @@ func (c *Client) Disconnect() error {
 	return nil
 }
 
+// Resync rebuilds the local state cache from the server and returns once the
+// server has resent every list the cache is built from.
+//
+// It is the way out of the stale cache an operation that failed with
+// ErrUpdateEventTimeout leaves behind: the getters that serve from the cache do
+// not report a resource until its list is broadcast again, and for
+// notifications, proxies and Docker hosts nothing else triggers that broadcast.
+//
+// The resync is all or nothing, because the server has no command to re-request
+// a single list. What it does have is a login, which answers with all of them,
+// so Resync logs in again with the token from the login New performed. A client
+// created without credentials therefore cannot resync.
+func (c *Client) Resync(ctx context.Context) error {
+	c.mu.Lock()
+	token := c.sessionToken
+	c.mu.Unlock()
+
+	if token == "" {
+		return errors.New("resync: no session token, the client was created without credentials")
+	}
+
+	pendingMu := sync.Mutex{}
+	pending := pendingListEvents()
+
+	done := make(chan struct{})
+	closeDone := sync.OnceFunc(func() {
+		close(done)
+	})
+	defer closeDone()
+
+	// Registered before the command is emitted, so that no list can arrive
+	// unnoticed between the two.
+	listenerID := uuid.New()
+	c.updates.AddListener(func(_ context.Context, update string) {
+		pendingMu.Lock()
+		defer pendingMu.Unlock()
+
+		delete(pending, update)
+
+		if len(pending) == 0 {
+			closeDone()
+		}
+	}, listenerID.String())
+
+	defer c.updates.RemoveListener(listenerID.String())
+
+	_, err := c.syncEmit(ctx, "loginByToken", token)
+	if err != nil {
+		return fmt.Errorf("resync: %w", err)
+	}
+
+	select {
+	case <-done:
+		return nil
+
+	case <-ctx.Done():
+		pendingMu.Lock()
+		missing := make([]string, 0, len(pending))
+
+		for event := range pending {
+			missing = append(missing, event)
+		}
+		pendingMu.Unlock()
+
+		slices.Sort(missing)
+
+		return fmt.Errorf("resync: %w (missing events: %s)", ctx.Err(), strings.Join(missing, ", "))
+	}
+}
+
+// setSessionToken records the JWT a login answered with, see Resync.
+func (c *Client) setSessionToken(token string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.sessionToken = token
+}
+
 type ackResponse struct {
 	Msg             string         `json:"msg"`
 	OK              bool           `json:"ok"`
+	Token           string         `json:"token"`
 	ID              int64          `json:"id"`
 	MonitorID       int64          `json:"monitorID"`
 	MaintenanceID   int64          `json:"maintenanceID"`
@@ -685,6 +866,16 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 	}
 }
 
+// syncEmitWithUpdateEvent emits command and returns once the server has
+// acknowledged it and has broadcast an updateEvent, which is what refreshes the
+// local state cache. The listener matches the event by name, so the client
+// cannot tell which write caused the broadcast it observes.
+//
+// If the ack reports success but no update event arrives before ctx is done,
+// the response is returned together with an error wrapping
+// ErrUpdateEventTimeout and the context error: the command was applied, only
+// the broadcast is missing. Discarding the response here would tell the caller
+// the write failed for a write the server performed.
 func (c *Client) syncEmitWithUpdateEvent(
 	ctx context.Context,
 	command string,
@@ -722,7 +913,30 @@ func (c *Client) syncEmitWithUpdateEvent(
 		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
 
-	var response ackResponse
+	return awaitAckAndUpdateEvent(ctx, command, done, res)
+}
+
+// awaitAckAndUpdateEvent waits for the ack delivered on res and for the update
+// event that closes done, and reports which of the two arrived before ctx was
+// done.
+//
+// An ack that reports a failure is returned as the server's error even when ctx
+// is done as well, because the rejection is the more useful answer and it is
+// what the caller would have received had the ack arrived a moment earlier. An
+// update event without an ack stays a plain context error: without the ack the
+// client knows neither the outcome of the command nor the ID the server
+// assigned.
+func awaitAckAndUpdateEvent(
+	ctx context.Context,
+	command string,
+	done <-chan struct{},
+	res <-chan ackResponse,
+) (ackResponse, error) {
+	var (
+		response ackResponse
+		acked    bool
+	)
+
 	// Ensure, we have received both signals: done and ack
 	// Setting channel to nil blocks forever, thisway we ensure, that
 	// we also receive the second signal.
@@ -736,12 +950,66 @@ func (c *Client) syncEmitWithUpdateEvent(
 				return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
 			}
 
+			acked = true
 			res = nil
 
 		case <-ctx.Done():
-			return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
+			// A signal that has already been delivered and the context being
+			// done can become ready in the same select, which picks between
+			// ready cases at random. Both signals are therefore collected
+			// explicitly, instead of letting that coin flip decide whether
+			// what they report is seen. Receiving from a nil channel is never
+			// ready, so the default case covers the signals already taken.
+			if !acked {
+				select {
+				case response = <-res:
+					acked = true
+
+				default:
+				}
+			}
+
+			select {
+			case <-done:
+				done = nil
+
+			default:
+			}
+
+			return resultOnContextDone(ctx, command, response, acked, done == nil)
 		}
 	}
 
 	return response, nil
+}
+
+// resultOnContextDone reports the outcome of a command whose context is done,
+// from the signals that are in hand: acked tells whether the ack in response
+// arrived, updated whether the update event did.
+func resultOnContextDone(
+	ctx context.Context,
+	command string,
+	response ackResponse,
+	acked bool,
+	updated bool,
+) (ackResponse, error) {
+	switch {
+	case acked && !response.OK:
+		return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
+
+	case acked && updated:
+		// Both signals are in hand and the context merely expired while they
+		// were collected. Nothing is missing, so this is the same success the
+		// caller's loop returns.
+		return response, nil
+
+	case acked:
+		// The server applied the command, only its broadcast is missing.
+		// Returning the response lets the caller keep what the ack carried,
+		// e.g. the ID of a created resource.
+		return response, &UpdateEventTimeoutError{Command: command, Err: ctx.Err()}
+
+	default:
+		return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
+	}
 }

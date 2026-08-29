@@ -10,6 +10,10 @@ import (
 )
 
 // GetNotifications returns all notifications for the authenticated user.
+//
+// They are served from the local state cache, which the server keeps up to
+// date. Resync rebuilds it if an update event was missed, see
+// ErrUpdateEventTimeout.
 func (c *Client) GetNotifications(_ context.Context) []notification.Base {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -20,7 +24,9 @@ func (c *Client) GetNotifications(_ context.Context) []notification.Base {
 	return notifications
 }
 
-// GetNotification returns a specific notification by ID.
+// GetNotification returns a specific notification by ID. Like GetNotifications
+// it serves from the local state cache, so a notification whose update event
+// was missed is reported as ErrNotFound until Resync.
 func (c *Client) GetNotification(_ context.Context, id int64) (notification.Base, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -50,9 +56,18 @@ func (c *Client) GetNotificationAs(ctx context.Context, id int64, target any) er
 }
 
 // CreateNotification creates a new notification.
+//
+// An error wrapping ErrUpdateEventTimeout means the notification was created and
+// only the update event is missing; the returned ID identifies it, as does the
+// ID an UpdateEventTimeoutError carries, so retrying the call would create a
+// duplicate.
 func (c *Client) CreateNotification(ctx context.Context, notif notification.Notification) (int64, error) {
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notif, nil)
 	if err != nil {
+		if errors.Is(err, ErrUpdateEventTimeout) {
+			return response.ID, withCreatedID(err, response.ID)
+		}
+
 		return 0, err
 	}
 
@@ -60,12 +75,18 @@ func (c *Client) CreateNotification(ctx context.Context, notif notification.Noti
 }
 
 // UpdateNotification updates an existing notification.
+//
+// An error wrapping ErrUpdateEventTimeout means the notification was updated and
+// only the update event is missing.
 func (c *Client) UpdateNotification(ctx context.Context, notif notification.Notification) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notif, notif.GetID())
 	return err
 }
 
 // DeleteNotification deletes a notification by ID.
+//
+// An error wrapping ErrUpdateEventTimeout means the notification was deleted and
+// only the update event is missing.
 func (c *Client) DeleteNotification(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteNotification", "notificationList", id)
 	return err

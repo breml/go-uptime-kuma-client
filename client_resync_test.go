@@ -1,0 +1,120 @@
+package kuma_test
+
+import (
+	"context"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
+	kuma "github.com/breml/go-uptime-kuma-client"
+	"github.com/breml/go-uptime-kuma-client/notification"
+)
+
+// newFakeAckClient connects a client to fake and returns it, with the server and
+// the connection torn down when the test ends.
+func newFakeAckClient(t *testing.T, fake *fakeAckServer) *kuma.Client {
+	t.Helper()
+
+	server := httptest.NewServer(fake)
+
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
+	t.Cleanup(func() {
+		cancel()
+		server.CloseClientConnections()
+		server.Close()
+	})
+
+	kumaClient, err := kuma.New(
+		ctx,
+		server.URL,
+		"admin", "admin1",
+		kuma.WithConnectTimeout(10*time.Second),
+	)
+	require.NoError(t, err)
+
+	return kumaClient
+}
+
+// TestResync covers the way out of the stale cache an ErrUpdateEventTimeout
+// leaves behind. The server has no command to re-request a single list, so
+// Resync logs in again with the token from the initial login and waits for the
+// lists that answers with.
+func TestResync(t *testing.T) {
+	t.Run("logs_in_again_with_the_token_from_the_first_login", func(t *testing.T) {
+		fake := &fakeAckServer{messages: make(chan []byte, 32)}
+		kumaClient := newFakeAckClient(t, fake)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		require.NoError(t, kumaClient.Resync(ctx))
+		require.Contains(t, fake.lastResyncPayload(), fakeSessionToken,
+			"the resync has to present the session the server handed out")
+	})
+
+	t.Run("waits_for_the_lists_and_names_the_ones_that_did_not_arrive", func(t *testing.T) {
+		fake := &fakeAckServer{messages: make(chan []byte, 32)}
+		kumaClient := newFakeAckClient(t, fake)
+
+		// A server that acknowledges the login without resending the lists
+		// leaves the cache exactly as stale as it was.
+		fake.setSuppressLists(true)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
+		defer cancel()
+
+		err := kumaClient.Resync(ctx)
+
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.ErrorContains(t, err, "notificationList")
+		require.ErrorContains(t, err, "proxyList")
+	})
+
+	t.Run("without_a_session_token_it_reports_that_instead_of_hanging", func(t *testing.T) {
+		fake := &fakeAckServer{messages: make(chan []byte, 32)}
+		fake.setOmitLoginToken(true)
+
+		kumaClient := newFakeAckClient(t, fake)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		err := kumaClient.Resync(ctx)
+
+		require.ErrorContains(t, err, "no session token")
+		require.Empty(t, fake.lastResyncPayload(),
+			"without a token there is nothing to log in with, so nothing is emitted")
+	})
+}
+
+// TestResyncAgainstServer runs the resync against a real Uptime Kuma instance,
+// which is what proves the token is the one loginByToken accepts.
+func TestResyncAgainstServer(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	id, err := client.CreateNotification(ctx, notification.Generic{
+		Base:           notification.Base{Name: "resync"},
+		GenericDetails: notification.GenericDetails{},
+		TypeName:       "generic",
+	})
+	require.NoError(t, err)
+
+	// Deferred rather than registered with t.Cleanup, which runs once
+	// t.Context() is already cancelled.
+	defer func() {
+		require.NoError(t, client.DeleteNotification(ctx, id))
+	}()
+
+	require.NoError(t, client.Resync(ctx))
+
+	notif, err := client.GetNotification(ctx, id)
+	require.NoError(t, err, "the resync has to leave the cache complete, not empty")
+	require.Equal(t, id, notif.GetID())
+}

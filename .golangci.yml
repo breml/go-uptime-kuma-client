@@ -737,7 +737,7 @@ linters:
       - path: '_test\.go'
         linters:
           - revive
-        text: '(add-constant|argument-limit|cognitive-complexity|comments-density|cyclomatic|function-length):'
+        text: '(add-constant|argument-limit|cognitive-complexity|comments-density|cyclomatic|file-length-limit|function-length):'
 
       - text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
         linters:
@@ -747,6 +747,12 @@ linters:
         linters:
           - revive
         text: '(deep-exit):'
+
+      # Tests the unexported awaitAckAndUpdateEvent, which has to be driven
+      # through states that the socket cannot reach reliably.
+      - path: 'client_await_test\.go'
+        linters:
+          - testpackage
 
       # These linters do not make sense for monitor and notification files.
       - path: (monitor|notification|proxy)/.*\.go

@@ -1,4 +1,3 @@
-//nolint:revive // Large test file with comprehensive test cases for all monitor types
 package kuma_test
 
 import (
