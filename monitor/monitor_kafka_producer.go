@@ -85,7 +85,7 @@ func (k KafkaProducer) MarshalJSON() ([]byte, error) {
 
 	// The monitor.timeout column is NOT NULL, so an unset Timeout is sent as
 	// the value a new monitor is created with instead of as null.
-	timeout := int64(defaultKafkaProducerTimeout)
+	timeout := float64(defaultKafkaProducerTimeout)
 	if k.Timeout != nil {
 		timeout = *k.Timeout
 	}
@@ -123,8 +123,10 @@ type KafkaProducerDetails struct {
 	// Timeout is the optional connection timeout in seconds. While unset the
 	// client sends 1, the value the UI assigns to a new Kafka Producer
 	// monitor, because the server stores the column as NOT NULL and passes it
-	// to kafkajs verbatim.
-	Timeout *int64 `json:"timeout"`
+	// to kafkajs verbatim. The column is a floating point column and the web
+	// UI enters the value in steps of a tenth of a second, so fractional
+	// values round-trip unchanged.
+	Timeout *float64 `json:"timeout"`
 }
 
 // Type returns the monitor type.

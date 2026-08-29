@@ -157,6 +157,52 @@ func TestMonitorGlobalping_Unmarshal(t *testing.T) {
 			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"basic","authWorkstation":"","basic_auth_pass":"p","basic_auth_user":"u","bearer_token":"globalping-bearer-token","body":"","cacheBust":false,"conditions":[],"description":"Globalping HTTP","dns_resolve_server":"1.1.1.1","dns_resolve_type":"A","expectedValue":"","expiryNotification":false,"headers":"X-Custom: test","hostname":"","httpBodyEncoding":"json","id":12,"ignoreTls":false,"interval":60,"invertKeyword":false,"ipFamily":"ipv6","jsonPath":"","jsonPathOperator":"","keyword":"success","location":"world","maxredirects":10,"maxretries":2,"method":"GET","name":"globalping-http","notificationIDList":{},"oauth_audience":"","oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":null,"ping_count":0,"port":0,"protocol":"HTTP2","proxyId":null,"resendInterval":0,"retryInterval":60,"subtype":"http","timeout":48,"tlsCa":"","tlsCert":"","tlsKey":"","type":"globalping","upsideDown":false,"url":"https://www.example.com"}`,
 		},
 		{
+			name: "http_fractional_timeout",
+			data: []byte(
+				`{"id":12,"name":"globalping-http","description":"Globalping HTTP","pathName":"globalping-http","parent":null,"childrenIDs":[],"url":"https://www.example.com","method":"GET","hostname":null,"port":null,"maxretries":2,"weight":2000,"active":true,"forceInactive":false,"type":"globalping","subtype":"http","timeout":0.5,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":"success","invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":"A","dns_resolve_server":"1.1.1.1","dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{},"tags":[],"maintenance":false,"location":"world","ipFamily":"ipv6","protocol":"HTTP2","ping_count":0,"mqttTopic":"","mqttSuccessMessage":"","databaseQuery":null,"authMethod":"basic","bearer_token":"globalping-bearer-token","grpcUrl":null,"grpcProtobuf":null,"grpcMethod":null,"grpcServiceName":null,"grpcEnableTls":false,"radiusCalledStationId":null,"radiusCallingStationId":null,"game":null,"gamedigGivenPortOnly":true,"httpBodyEncoding":"json","jsonPath":null,"expectedValue":null,"kafkaProducerTopic":null,"kafkaProducerBrokers":[],"kafkaProducerSsl":false,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerMessage":null,"screenshot":null,"headers":"X-Custom: test","body":"","grpcBody":null,"grpcMetadata":null,"basic_auth_user":"u","basic_auth_pass":"p","oauth_client_id":null,"oauth_client_secret":null,"oauth_token_url":null,"oauth_scopes":null,"oauth_audience":"","oauth_auth_method":"client_secret_basic","pushToken":null,"databaseConnectionString":null,"radiusUsername":null,"radiusPassword":null,"radiusSecret":null,"mqttUsername":"","mqttPassword":"","authWorkstation":null,"authDomain":null,"tlsCa":null,"tlsCert":null,"tlsKey":null,"kafkaProducerSaslOptions":{"mechanism":"None"},"includeSensitiveData":true}`,
+			),
+
+			want: monitor.Globalping{
+				Base: monitor.Base{
+					ID:             12,
+					Name:           "globalping-http",
+					Description:    ptr.To("Globalping HTTP"),
+					PathName:       "globalping-http",
+					Parent:         nil,
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     2,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				HTTPDetails: monitor.HTTPDetails{
+					URL:                 "https://www.example.com",
+					Timeout:             0.5,
+					MaxRedirects:        10,
+					AcceptedStatusCodes: []string{"200-299"},
+					Method:              "GET",
+					HTTPBodyEncoding:    "json",
+					Headers:             "X-Custom: test",
+					AuthMethod:          monitor.AuthMethodBasic,
+					BearerToken:         "globalping-bearer-token",
+					BasicAuthUser:       "u",
+					BasicAuthPass:       "p",
+					OAuthAuthMethod:     "client_secret_basic",
+				},
+				GlobalpingDetails: monitor.GlobalpingDetails{
+					Subtype:          monitor.GlobalpingSubtypeHTTP,
+					Location:         "world",
+					IPFamily:         monitor.GlobalpingIPFamilyIPv6,
+					Protocol:         "HTTP2",
+					Keyword:          "success",
+					DNSResolveType:   monitor.DNSResolveTypeA,
+					DNSResolveServer: "1.1.1.1",
+				},
+			},
+			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"basic","authWorkstation":"","basic_auth_pass":"p","basic_auth_user":"u","bearer_token":"globalping-bearer-token","body":"","cacheBust":false,"conditions":[],"description":"Globalping HTTP","dns_resolve_server":"1.1.1.1","dns_resolve_type":"A","expectedValue":"","expiryNotification":false,"headers":"X-Custom: test","hostname":"","httpBodyEncoding":"json","id":12,"ignoreTls":false,"interval":60,"invertKeyword":false,"ipFamily":"ipv6","jsonPath":"","jsonPathOperator":"","keyword":"success","location":"world","maxredirects":10,"maxretries":2,"method":"GET","name":"globalping-http","notificationIDList":{},"oauth_audience":"","oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":null,"ping_count":0,"port":0,"protocol":"HTTP2","proxyId":null,"resendInterval":0,"retryInterval":60,"subtype":"http","timeout":0.5,"tlsCa":"","tlsCert":"","tlsKey":"","type":"globalping","upsideDown":false,"url":"https://www.example.com"}`,
+		},
+		{
 			name: "dns",
 			data: []byte(
 				`{"id":13,"name":"globalping-dns","description":null,"pathName":"globalping-dns","parent":null,"childrenIDs":[],"url":null,"method":"GET","hostname":"example.com","port":53,"maxretries":2,"weight":2000,"active":true,"forceInactive":false,"type":"globalping","subtype":"dns","timeout":48,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":"127\\.0\\.0\\.1","invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":"AAAA","dns_resolve_server":"8.8.8.8","dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{},"tags":[],"maintenance":false,"location":"asia","ipFamily":"ipv4","protocol":"UDP","ping_count":0,"mqttTopic":"","mqttSuccessMessage":"","databaseQuery":null,"authMethod":null,"grpcUrl":null,"grpcProtobuf":null,"grpcMethod":null,"grpcServiceName":null,"grpcEnableTls":false,"radiusCalledStationId":null,"radiusCallingStationId":null,"game":null,"gamedigGivenPortOnly":true,"httpBodyEncoding":"json","jsonPath":null,"expectedValue":null,"kafkaProducerTopic":null,"kafkaProducerBrokers":[],"kafkaProducerSsl":false,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerMessage":null,"screenshot":null,"headers":null,"body":null,"grpcBody":null,"grpcMetadata":null,"basic_auth_user":null,"basic_auth_pass":null,"oauth_client_id":null,"oauth_client_secret":null,"oauth_token_url":null,"oauth_scopes":null,"oauth_audience":"","oauth_auth_method":"client_secret_basic","pushToken":null,"databaseConnectionString":null,"radiusUsername":null,"radiusPassword":null,"radiusSecret":null,"mqttUsername":"","mqttPassword":"","authWorkstation":null,"authDomain":null,"tlsCa":null,"tlsCert":null,"tlsKey":null,"kafkaProducerSaslOptions":{"mechanism":"None"},"includeSensitiveData":true}`,

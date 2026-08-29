@@ -95,8 +95,10 @@ type SteamDetails struct {
 	Hostname string `json:"hostname"`
 	// Port is the Steam game server port.
 	Port int `json:"port"`
-	// Timeout is the request timeout in seconds.
-	Timeout *int64 `json:"timeout"`
+	// Timeout is the request timeout in seconds. The server stores it in a
+	// floating point column and the web UI enters it in steps of a tenth of a
+	// second, so fractional values round-trip unchanged.
+	Timeout *float64 `json:"timeout"`
 	// DomainExpiryNotification enables domain expiry notifications
 	// for the monitored domain.
 	DomainExpiryNotification bool `json:"domainExpiryNotification"`

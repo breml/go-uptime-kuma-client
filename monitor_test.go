@@ -149,7 +149,7 @@ func TestMonitorCRUD(t *testing.T) {
 				PingDetails: monitor.PingDetails{
 					Hostname:   "8.8.8.8",
 					PacketSize: 56,
-					Timeout:    ptr.To(int64(48)),
+					Timeout:    ptr.To(float64(48)),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -1057,7 +1057,7 @@ func TestMonitorCRUD(t *testing.T) {
 				SteamDetails: monitor.SteamDetails{
 					Hostname: "192.168.1.100",
 					Port:     27015,
-					Timeout:  ptr.To(int64(48)),
+					Timeout:  ptr.To(float64(48)),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -1253,7 +1253,7 @@ func TestMonitorCRUD(t *testing.T) {
 					Nodes:    "[\"http://rabbitmq.example.com:15672/\"]",
 					Username: ptr.To("guest"),
 					Password: ptr.To("guest"),
-					Timeout:  ptr.To(int64(48)),
+					Timeout:  ptr.To(float64(48)),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -1266,7 +1266,7 @@ func TestMonitorCRUD(t *testing.T) {
 				rmq.Nodes = "[\"http://rabbitmq-new.example.com:15672/\"]"
 				rmq.Username = ptr.To("admin")
 				rmq.Password = ptr.To("newpassword")
-				rmq.Timeout = ptr.To(int64(60))
+				rmq.Timeout = ptr.To(float64(60))
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1292,7 +1292,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "[\"http://rabbitmq-new.example.com:15672/\"]", rmq.Nodes)
 				require.Equal(t, "admin", *rmq.Username)
 				require.Equal(t, "newpassword", *rmq.Password)
-				require.Equal(t, int64(60), *rmq.Timeout)
+				require.InEpsilon(t, float64(60), *rmq.Timeout, 0)
 			},
 			testPauseResume: true,
 		},
@@ -1331,7 +1331,9 @@ func TestMonitorCRUD(t *testing.T) {
 				kafka.Message = "updated message"
 				kafka.SSL = true
 				kafka.AllowAutoTopicCreation = true
-				kafka.Timeout = ptr.To(int64(5))
+				// The monitor.timeout column is a floating point column, so a
+				// fractional timeout survives the round-trip.
+				kafka.Timeout = ptr.To(5.5)
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1341,7 +1343,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, id, kafka.ID)
 				require.Equal(t, "Test Kafka Producer Monitor", kafka.Name)
 				require.NotNil(t, kafka.Timeout)
-				require.Equal(t, int64(1), *kafka.Timeout)
+				require.InEpsilon(t, float64(1), *kafka.Timeout, 0)
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()
@@ -1362,7 +1364,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.True(t, kafka.SSL)
 				require.True(t, kafka.AllowAutoTopicCreation)
 				require.NotNil(t, kafka.Timeout)
-				require.Equal(t, int64(5), *kafka.Timeout)
+				require.InEpsilon(t, 5.5, *kafka.Timeout, 0)
 			},
 			testPauseResume: true,
 		},
@@ -1946,7 +1948,7 @@ func TestMonitorCRUD(t *testing.T) {
 				ntp.Name = "Updated NTP Monitor"
 				ntp.Hostname = "time.cloudflare.com"
 				ntp.Port = ptr.To(int64(1123))
-				ntp.Timeout = ptr.To(int64(20))
+				ntp.Timeout = ptr.To(float64(20))
 				ntp.NTPStratumThreshold = ptr.To(int64(3))
 				ntp.NTPTimeOffsetThreshold = ptr.To(int64(250))
 				ntp.NTPRootDispersionThreshold = ptr.To(int64(100))
@@ -1962,7 +1964,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NotNil(t, ntp.Port)
 				require.Equal(t, int64(1123), *ntp.Port)
 				require.NotNil(t, ntp.Timeout)
-				require.Equal(t, int64(10), *ntp.Timeout)
+				require.InEpsilon(t, float64(10), *ntp.Timeout, 0)
 				require.NotNil(t, ntp.NTPStratumThreshold)
 				require.Equal(t, int64(4), *ntp.NTPStratumThreshold)
 				require.NotNil(t, ntp.NTPTimeOffsetThreshold)
@@ -1987,7 +1989,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NotNil(t, ntp.Port)
 				require.Equal(t, int64(1123), *ntp.Port)
 				require.NotNil(t, ntp.Timeout)
-				require.Equal(t, int64(20), *ntp.Timeout)
+				require.InEpsilon(t, float64(20), *ntp.Timeout, 0)
 				require.NotNil(t, ntp.NTPStratumThreshold)
 				require.Equal(t, int64(3), *ntp.NTPStratumThreshold)
 				require.NotNil(t, ntp.NTPTimeOffsetThreshold)

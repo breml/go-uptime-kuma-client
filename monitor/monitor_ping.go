@@ -93,8 +93,11 @@ func (p Ping) MarshalJSON() ([]byte, error) {
 type PingDetails struct {
 	Hostname   string `json:"hostname"`
 	PacketSize int    `json:"packetSize"`
-	// Timeout is an optional request timeout in seconds.
-	Timeout *int64 `json:"timeout"`
+	// Timeout is an optional request timeout in seconds. The server stores it
+	// in a floating point column, so fractional values round-trip unchanged.
+	// The web UI restricts ping monitors to whole seconds, the socket API
+	// does not.
+	Timeout *float64 `json:"timeout"`
 	// DomainExpiryNotification enables domain expiry notifications
 	// for the monitored domain.
 	DomainExpiryNotification bool `json:"domainExpiryNotification"`

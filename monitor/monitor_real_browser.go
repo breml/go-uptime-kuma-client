@@ -94,9 +94,13 @@ func (r RealBrowser) MarshalJSON() ([]byte, error) {
 }
 
 // RealBrowserDetails contains realbrowser-specific monitor configuration.
+//
+// Timeout is the request timeout in seconds. The server stores it in a
+// floating point column and the web UI enters it in steps of a tenth of a
+// second, so fractional values round-trip unchanged.
 type RealBrowserDetails struct {
 	URL                      string   `json:"url"`
-	Timeout                  int64    `json:"timeout"`
+	Timeout                  float64  `json:"timeout"`
 	IgnoreTLS                bool     `json:"ignoreTls"`
 	MaxRedirects             int      `json:"maxredirects"`
 	AcceptedStatusCodes      []string `json:"accepted_statuscodes"`
