@@ -3,19 +3,30 @@ package kuma_test
 
 import (
 	"context"
+	"errors"
+	"os"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	kuma "github.com/breml/go-uptime-kuma-client"
 	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
+// testNotificationTimeout bounds a single testNotification call. The server
+// dispatches the notification for real and some providers block until their own
+// outbound timeout, which would otherwise dominate the suite runtime. It also
+// bounds TestNotificationUnsupportedType, which dispatches nothing and only
+// needs a deadline so a hung call fails instead of blocking the suite.
+const testNotificationTimeout = 5 * time.Second
+
 // notificationTestCase defines a single notification type's CRUD test scenario.
 type notificationTestCase struct {
 	name              string                                                                                             // Test name (e.g., "Ntfy", "Slack")
-	expectedType      string                                                                                             // Expected type string from API
+	expectedType      string                                                                                             // Expected type string, round-tripped through the server config
 	create            notification.Notification                                                                          // Notification to create
 	updateFunc        func(notification.Notification)                                                                    // Function to modify notification for update test
 	verifyCreatedFunc func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) // Function to verify created notification
@@ -5162,6 +5173,15 @@ func TestNotificationCRUD(t *testing.T) {
 		},
 	}
 
+	// Dispatching all provider notifications for real costs about as much wall
+	// clock time as the rest of the suite, so this is limited to the end to end
+	// run.
+	e2eTest, _ := strconv.ParseBool(os.Getenv("E2E_TEST"))
+
+	// Counts the types that reached the server side type validation, so a run in
+	// which every provider timed out cannot pass as a run that validated them.
+	typesValidated := 0
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
@@ -5172,6 +5192,43 @@ func TestNotificationCRUD(t *testing.T) {
 			t.Run("initial_state", func(t *testing.T) {
 				notifications := client.GetNotifications(ctx)
 				t.Logf("Initial notifications count: %d", len(notifications))
+			})
+
+			t.Run("test_notification", func(t *testing.T) {
+				if !e2eTest {
+					t.Skip(`skipping end to end test, "E2E_TEST" env var not set`)
+				}
+
+				testCtx, testCancel := context.WithTimeout(ctx, testNotificationTimeout)
+				defer testCancel()
+
+				_, err := client.TestNotification(testCtx, tc.create)
+
+				// A provider blocking on an unroutable endpoint until the
+				// deadline never reached the provider lookup, so it says
+				// nothing about the type and is not a failure. Checking the
+				// returned error rather than testCtx keeps a real error that
+				// happens to arrive around the deadline from taking this
+				// branch.
+				if errors.Is(err, context.DeadlineExceeded) {
+					t.Logf(
+						"test notification did not complete within %s, type %q not validated",
+						testNotificationTimeout,
+						tc.expectedType,
+					)
+
+					return
+				}
+
+				// The server dispatches the notification for real, so the
+				// provider fails with a network or authentication error for
+				// the fake credentials used here. Such a failure is expected
+				// and must not be asserted on. The provider lookup in
+				// Notification.send is the only thing the testNotification
+				// handler checks about the type.
+				require.NotErrorIs(t, err, kuma.ErrNotificationTypeNotSupported)
+
+				typesValidated++
 			})
 
 			var id int64
@@ -5228,6 +5285,15 @@ func TestNotificationCRUD(t *testing.T) {
 				require.Error(t, err)
 			})
 		})
+	}
+
+	// Every test_notification subtest tolerates a provider that blocks until
+	// the deadline, so in an environment without outbound network all of them
+	// tolerate their way to green without asserting anything. Requiring at
+	// least one validated type turns that silent degradation into a failure.
+	if e2eTest {
+		require.Positive(t, typesValidated,
+			"no notification type reached the server side type validation")
 	}
 }
 
@@ -5321,4 +5387,29 @@ func TestWebhookNotificationVariants(t *testing.T) {
 		err = client.DeleteNotification(ctx, id)
 		require.NoError(t, err)
 	})
+}
+
+// TestNotificationUnsupportedType asserts that the server rejects a type it
+// cannot dispatch on. It guards the negative assertion made by the
+// test_notification subtest of TestNotificationCRUD: without it, that assertion
+// would also hold if the message TestNotification matches on ever changed
+// upstream.
+func TestNotificationUnsupportedType(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), testNotificationTimeout)
+	defer cancel()
+
+	_, err := client.TestNotification(ctx, notification.Generic{
+		Base: notification.Base{
+			IsActive: true,
+			Name:     "Test Unsupported Type",
+		},
+		GenericDetails: notification.GenericDetails{},
+		TypeName:       "definitely-not-a-notification-provider",
+	})
+
+	require.ErrorIs(t, err, kuma.ErrNotificationTypeNotSupported)
 }
