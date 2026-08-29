@@ -25,7 +25,7 @@ func (f FortySixElks) Type() string {
 
 // Type returns the notification type.
 func (FortySixElksDetails) Type() string {
-	return "46elks"
+	return "Elks"
 }
 
 // String returns a string representation of the notification.

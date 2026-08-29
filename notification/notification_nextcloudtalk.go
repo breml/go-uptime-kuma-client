@@ -32,7 +32,7 @@ func (n NextcloudTalk) Type() string {
 
 // Type returns the notification type identifier for NextcloudTalkDetails.
 func (NextcloudTalkDetails) Type() string {
-	return "NextcloudTalk"
+	return "nextcloudtalk"
 }
 
 // String returns a string representation of the NextcloudTalk notification.

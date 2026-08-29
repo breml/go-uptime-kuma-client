@@ -20,7 +20,7 @@ func TestNotificationSevenIO_Unmarshal(t *testing.T) {
 		{
 			name: "success with all fields",
 			data: []byte(
-				`{"id":1,"name":"My Seven.io Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Seven.io Alert\",\"sevenioApiKey\":\"test-api-key\",\"sevenioSender\":\"UptimeKuma\",\"sevenioTo\":\"49123456789\",\"type\":\"sevenio\"}"}`,
+				`{"id":1,"name":"My Seven.io Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Seven.io Alert\",\"sevenioApiKey\":\"test-api-key\",\"sevenioSender\":\"UptimeKuma\",\"sevenioTo\":\"49123456789\",\"type\":\"SevenIO\"}"}`,
 			),
 
 			want: notification.SevenIO{
@@ -38,12 +38,12 @@ func TestNotificationSevenIO_Unmarshal(t *testing.T) {
 					To:     "49123456789",
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My Seven.io Alert","sevenioApiKey":"test-api-key","sevenioSender":"UptimeKuma","sevenioTo":"49123456789","type":"sevenio","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My Seven.io Alert","sevenioApiKey":"test-api-key","sevenioSender":"UptimeKuma","sevenioTo":"49123456789","type":"SevenIO","userId":1}`,
 		},
 		{
 			name: "minimal configuration",
 			data: []byte(
-				`{"id":2,"name":"Simple Seven.io","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Seven.io\",\"sevenioApiKey\":\"minimal-key\",\"sevenioSender\":\"\",\"sevenioTo\":\"49999999999\",\"type\":\"sevenio\"}"}`,
+				`{"id":2,"name":"Simple Seven.io","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Seven.io\",\"sevenioApiKey\":\"minimal-key\",\"sevenioSender\":\"\",\"sevenioTo\":\"49999999999\",\"type\":\"SevenIO\"}"}`,
 			),
 
 			want: notification.SevenIO{
@@ -61,12 +61,12 @@ func TestNotificationSevenIO_Unmarshal(t *testing.T) {
 					To:     "49999999999",
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Seven.io","sevenioApiKey":"minimal-key","sevenioSender":"","sevenioTo":"49999999999","type":"sevenio","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Seven.io","sevenioApiKey":"minimal-key","sevenioSender":"","sevenioTo":"49999999999","type":"SevenIO","userId":1}`,
 		},
 		{
 			name: "with custom sender",
 			data: []byte(
-				`{"id":3,"name":"Seven.io Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Seven.io Custom\",\"sevenioApiKey\":\"custom-key\",\"sevenioSender\":\"CustomAlert\",\"sevenioTo\":\"358501234567\",\"type\":\"sevenio\"}"}`,
+				`{"id":3,"name":"Seven.io Custom","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Seven.io Custom\",\"sevenioApiKey\":\"custom-key\",\"sevenioSender\":\"CustomAlert\",\"sevenioTo\":\"358501234567\",\"type\":\"SevenIO\"}"}`,
 			),
 
 			want: notification.SevenIO{
@@ -84,7 +84,7 @@ func TestNotificationSevenIO_Unmarshal(t *testing.T) {
 					To:     "358501234567",
 				},
 			},
-			wantJSON: `{"active":false,"applyExisting":false,"id":3,"isDefault":false,"name":"Seven.io Custom","sevenioApiKey":"custom-key","sevenioSender":"CustomAlert","sevenioTo":"358501234567","type":"sevenio","userId":1}`,
+			wantJSON: `{"active":false,"applyExisting":false,"id":3,"isDefault":false,"name":"Seven.io Custom","sevenioApiKey":"custom-key","sevenioSender":"CustomAlert","sevenioTo":"358501234567","type":"SevenIO","userId":1}`,
 		},
 	}
 

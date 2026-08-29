@@ -30,7 +30,7 @@ func (o OneSender) Type() string {
 
 // Type returns the notification type identifier for OneSenderDetails.
 func (OneSenderDetails) Type() string {
-	return "onesender"
+	return "Onesender"
 }
 
 // String returns a string representation of the OneSender notification.

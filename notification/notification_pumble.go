@@ -23,7 +23,7 @@ func (p Pumble) Type() string {
 
 // Type returns the notification type identifier for Pumble details.
 func (PumbleDetails) Type() string {
-	return "Pumble"
+	return "pumble"
 }
 
 // String returns a human-readable representation of the Pumble notification.

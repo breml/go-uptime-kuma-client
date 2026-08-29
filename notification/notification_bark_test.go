@@ -20,7 +20,7 @@ func TestNotificationBark_Unmarshal(t *testing.T) {
 		{
 			name: "success with all fields",
 			data: []byte(
-				`{"id":1,"name":"My Bark Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Bark Alert\",\"barkEndpoint\":\"https://bark.example.com\",\"barkGroup\":\"Monitoring\",\"barkSound\":\"alarm\",\"apiVersion\":\"v1\",\"type\":\"bark\"}"}`,
+				`{"id":1,"name":"My Bark Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Bark Alert\",\"barkEndpoint\":\"https://bark.example.com\",\"barkGroup\":\"Monitoring\",\"barkSound\":\"alarm\",\"apiVersion\":\"v1\",\"type\":\"Bark\"}"}`,
 			),
 
 			want: notification.Bark{
@@ -39,12 +39,12 @@ func TestNotificationBark_Unmarshal(t *testing.T) {
 					APIVersion: "v1",
 				},
 			},
-			wantJSON: `{"active":true,"apiVersion":"v1","applyExisting":true,"barkEndpoint":"https://bark.example.com","barkGroup":"Monitoring","barkSound":"alarm","id":1,"isDefault":true,"name":"My Bark Alert","type":"bark","userId":1}`,
+			wantJSON: `{"active":true,"apiVersion":"v1","applyExisting":true,"barkEndpoint":"https://bark.example.com","barkGroup":"Monitoring","barkSound":"alarm","id":1,"isDefault":true,"name":"My Bark Alert","type":"Bark","userId":1}`,
 		},
 		{
 			name: "minimal configuration",
 			data: []byte(
-				`{"id":2,"name":"Simple Bark","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Bark\",\"barkEndpoint\":\"https://bark.example.com\",\"type\":\"bark\"}"}`,
+				`{"id":2,"name":"Simple Bark","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Bark\",\"barkEndpoint\":\"https://bark.example.com\",\"type\":\"Bark\"}"}`,
 			),
 
 			want: notification.Bark{
@@ -60,12 +60,12 @@ func TestNotificationBark_Unmarshal(t *testing.T) {
 					Endpoint: "https://bark.example.com",
 				},
 			},
-			wantJSON: `{"active":true,"apiVersion":"","applyExisting":false,"barkEndpoint":"https://bark.example.com","barkGroup":"","barkSound":"","id":2,"isDefault":false,"name":"Simple Bark","type":"bark","userId":1}`,
+			wantJSON: `{"active":true,"apiVersion":"","applyExisting":false,"barkEndpoint":"https://bark.example.com","barkGroup":"","barkSound":"","id":2,"isDefault":false,"name":"Simple Bark","type":"Bark","userId":1}`,
 		},
 		{
 			name: "with v2 API version",
 			data: []byte(
-				`{"id":3,"name":"Bark v2","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Bark v2\",\"barkEndpoint\":\"https://bark.example.com\",\"barkGroup\":\"UptimeKuma\",\"barkSound\":\"telegraph\",\"apiVersion\":\"v2\",\"type\":\"bark\"}"}`,
+				`{"id":3,"name":"Bark v2","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Bark v2\",\"barkEndpoint\":\"https://bark.example.com\",\"barkGroup\":\"UptimeKuma\",\"barkSound\":\"telegraph\",\"apiVersion\":\"v2\",\"type\":\"Bark\"}"}`,
 			),
 
 			want: notification.Bark{
@@ -84,7 +84,7 @@ func TestNotificationBark_Unmarshal(t *testing.T) {
 					APIVersion: "v2",
 				},
 			},
-			wantJSON: `{"active":true,"apiVersion":"v2","applyExisting":false,"barkEndpoint":"https://bark.example.com","barkGroup":"UptimeKuma","barkSound":"telegraph","id":3,"isDefault":false,"name":"Bark v2","type":"bark","userId":1}`,
+			wantJSON: `{"active":true,"apiVersion":"v2","applyExisting":false,"barkEndpoint":"https://bark.example.com","barkGroup":"UptimeKuma","barkSound":"telegraph","id":3,"isDefault":false,"name":"Bark v2","type":"Bark","userId":1}`,
 		},
 	}
 

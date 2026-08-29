@@ -21,7 +21,7 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 		{
 			name: "success with all fields",
 			data: []byte(
-				`{"id":1,"name":"My Evolution Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Evolution Alert\",\"evolutionApiUrl\":\"https://evolapicloud.com\",\"evolutionInstanceName\":\"myinstance\",\"evolutionAuthToken\":\"token123\",\"evolutionRecipient\":\"5511999999999\",\"type\":\"EvolutionApi\"}"}`,
+				`{"id":1,"name":"My Evolution Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Evolution Alert\",\"evolutionApiUrl\":\"https://evolapicloud.com\",\"evolutionInstanceName\":\"myinstance\",\"evolutionAuthToken\":\"token123\",\"evolutionRecipient\":\"5511999999999\",\"type\":\"evolution\"}"}`,
 			),
 
 			want: notification.Evolution{
@@ -40,12 +40,12 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					Recipient:    "5511999999999",
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":true,"evolutionApiUrl":"https://evolapicloud.com","evolutionAuthToken":"token123","evolutionInstanceName":"myinstance","evolutionRecipient":"5511999999999","id":1,"isDefault":true,"name":"My Evolution Alert","type":"EvolutionApi","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":true,"evolutionApiUrl":"https://evolapicloud.com","evolutionAuthToken":"token123","evolutionInstanceName":"myinstance","evolutionRecipient":"5511999999999","id":1,"isDefault":true,"name":"My Evolution Alert","type":"evolution","userId":1}`,
 		},
 		{
 			name: "minimal configuration",
 			data: []byte(
-				`{"id":2,"name":"Simple Evolution","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Evolution\",\"evolutionApiUrl\":\"https://api.example.com\",\"evolutionInstanceName\":\"instance1\",\"evolutionAuthToken\":\"key\",\"evolutionRecipient\":\"551187654321\",\"type\":\"EvolutionApi\"}"}`,
+				`{"id":2,"name":"Simple Evolution","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Evolution\",\"evolutionApiUrl\":\"https://api.example.com\",\"evolutionInstanceName\":\"instance1\",\"evolutionAuthToken\":\"key\",\"evolutionRecipient\":\"551187654321\",\"type\":\"evolution\"}"}`,
 			),
 
 			want: notification.Evolution{
@@ -64,12 +64,12 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					Recipient:    "551187654321",
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":false,"evolutionApiUrl":"https://api.example.com","evolutionAuthToken":"key","evolutionInstanceName":"instance1","evolutionRecipient":"551187654321","id":2,"isDefault":false,"name":"Simple Evolution","type":"EvolutionApi","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":false,"evolutionApiUrl":"https://api.example.com","evolutionAuthToken":"key","evolutionInstanceName":"instance1","evolutionRecipient":"551187654321","id":2,"isDefault":false,"name":"Simple Evolution","type":"evolution","userId":1}`,
 		},
 		{
 			name: "with different recipient",
 			data: []byte(
-				`{"id":3,"name":"Evolution US","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Evolution US\",\"evolutionApiUrl\":\"https://custom.api.com\",\"evolutionInstanceName\":\"usinstance\",\"evolutionAuthToken\":\"ustoken\",\"evolutionRecipient\":\"12025551234\",\"type\":\"EvolutionApi\"}"}`,
+				`{"id":3,"name":"Evolution US","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Evolution US\",\"evolutionApiUrl\":\"https://custom.api.com\",\"evolutionInstanceName\":\"usinstance\",\"evolutionAuthToken\":\"ustoken\",\"evolutionRecipient\":\"12025551234\",\"type\":\"evolution\"}"}`,
 			),
 
 			want: notification.Evolution{
@@ -88,12 +88,12 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					Recipient:    "12025551234",
 				},
 			},
-			wantJSON: `{"active":false,"applyExisting":false,"evolutionApiUrl":"https://custom.api.com","evolutionAuthToken":"ustoken","evolutionInstanceName":"usinstance","evolutionRecipient":"12025551234","id":3,"isDefault":false,"name":"Evolution US","type":"EvolutionApi","userId":1}`,
+			wantJSON: `{"active":false,"applyExisting":false,"evolutionApiUrl":"https://custom.api.com","evolutionAuthToken":"ustoken","evolutionInstanceName":"usinstance","evolutionRecipient":"12025551234","id":3,"isDefault":false,"name":"Evolution US","type":"evolution","userId":1}`,
 		},
 		{
 			name: "with custom message template",
 			data: []byte(
-				`{"id":4,"name":"Evolution Template","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Evolution Template\",\"evolutionApiUrl\":\"https://evolapicloud.com\",\"evolutionInstanceName\":\"myinstance\",\"evolutionAuthToken\":\"token123\",\"evolutionRecipient\":\"5511999999999\",\"evolutionUseCustomMessage\":true,\"evolutionCustomMessage\":\"Alert: {{ msg }}\",\"type\":\"EvolutionApi\"}"}`,
+				`{"id":4,"name":"Evolution Template","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Evolution Template\",\"evolutionApiUrl\":\"https://evolapicloud.com\",\"evolutionInstanceName\":\"myinstance\",\"evolutionAuthToken\":\"token123\",\"evolutionRecipient\":\"5511999999999\",\"evolutionUseCustomMessage\":true,\"evolutionCustomMessage\":\"Alert: {{ msg }}\",\"type\":\"evolution\"}"}`,
 			),
 
 			want: notification.Evolution{
@@ -114,12 +114,12 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					CustomMessage:    ptr.To("Alert: {{ msg }}"),
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":false,"evolutionApiUrl":"https://evolapicloud.com","evolutionAuthToken":"token123","evolutionCustomMessage":"Alert: {{ msg }}","evolutionInstanceName":"myinstance","evolutionRecipient":"5511999999999","evolutionUseCustomMessage":true,"id":4,"isDefault":false,"name":"Evolution Template","type":"EvolutionApi","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":false,"evolutionApiUrl":"https://evolapicloud.com","evolutionAuthToken":"token123","evolutionCustomMessage":"Alert: {{ msg }}","evolutionInstanceName":"myinstance","evolutionRecipient":"5511999999999","evolutionUseCustomMessage":true,"id":4,"isDefault":false,"name":"Evolution Template","type":"evolution","userId":1}`,
 		},
 		{
 			name: "pointer to false and empty string are serialized",
 			data: []byte(
-				`{"id":5,"name":"Evolution Explicit False","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Evolution Explicit False\",\"evolutionApiUrl\":\"https://evolapicloud.com\",\"evolutionInstanceName\":\"myinstance\",\"evolutionAuthToken\":\"token123\",\"evolutionRecipient\":\"5511999999999\",\"evolutionUseCustomMessage\":false,\"evolutionCustomMessage\":\"\",\"type\":\"EvolutionApi\"}"}`,
+				`{"id":5,"name":"Evolution Explicit False","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Evolution Explicit False\",\"evolutionApiUrl\":\"https://evolapicloud.com\",\"evolutionInstanceName\":\"myinstance\",\"evolutionAuthToken\":\"token123\",\"evolutionRecipient\":\"5511999999999\",\"evolutionUseCustomMessage\":false,\"evolutionCustomMessage\":\"\",\"type\":\"evolution\"}"}`,
 			),
 
 			want: notification.Evolution{
@@ -140,7 +140,7 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					CustomMessage:    ptr.To(""),
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":false,"evolutionApiUrl":"https://evolapicloud.com","evolutionAuthToken":"token123","evolutionCustomMessage":"","evolutionInstanceName":"myinstance","evolutionRecipient":"5511999999999","evolutionUseCustomMessage":false,"id":5,"isDefault":false,"name":"Evolution Explicit False","type":"EvolutionApi","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":false,"evolutionApiUrl":"https://evolapicloud.com","evolutionAuthToken":"token123","evolutionCustomMessage":"","evolutionInstanceName":"myinstance","evolutionRecipient":"5511999999999","evolutionUseCustomMessage":false,"id":5,"isDefault":false,"name":"Evolution Explicit False","type":"evolution","userId":1}`,
 		},
 	}
 
