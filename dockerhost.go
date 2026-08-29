@@ -36,13 +36,14 @@ func (c *Client) GetDockerHost(_ context.Context, id int64) (*dockerhost.DockerH
 // CreateDockerHost creates a new Docker host and returns its ID.
 //
 // An error wrapping ErrUpdateEventTimeout means the Docker host was created and
-// only the update event is missing; the returned ID identifies it, so retrying
-// the call would create a duplicate.
+// only the update event is missing; the returned ID identifies it, as does the
+// ID an UpdateEventTimeoutError carries, so retrying the call would create a
+// duplicate.
 func (c *Client) CreateDockerHost(ctx context.Context, config dockerhost.Config) (int64, error) {
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addDockerHost", "dockerHostList", config, nil)
 	if err != nil {
 		if errors.Is(err, ErrUpdateEventTimeout) {
-			return response.ID, fmt.Errorf("create docker host: %w", err)
+			return response.ID, fmt.Errorf("create docker host: %w", withCreatedID(err, response.ID))
 		}
 
 		return 0, fmt.Errorf("create docker host: %w", err)

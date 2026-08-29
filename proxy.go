@@ -36,13 +36,14 @@ func (c *Client) GetProxy(_ context.Context, id int64) (*proxy.Proxy, error) {
 // CreateProxy creates a new proxy.
 //
 // An error wrapping ErrUpdateEventTimeout means the proxy was created and only
-// the update event is missing; the returned ID identifies it, so retrying the
-// call would create a duplicate.
+// the update event is missing; the returned ID identifies it, as does the ID an
+// UpdateEventTimeoutError carries, so retrying the call would create a
+// duplicate.
 func (c *Client) CreateProxy(ctx context.Context, config proxy.Config) (int64, error) {
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addProxy", "proxyList", config, nil)
 	if err != nil {
 		if errors.Is(err, ErrUpdateEventTimeout) {
-			return response.ID, fmt.Errorf("create proxy: %w", err)
+			return response.ID, fmt.Errorf("create proxy: %w", withCreatedID(err, response.ID))
 		}
 
 		return 0, fmt.Errorf("create proxy: %w", err)

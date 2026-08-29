@@ -46,7 +46,9 @@ var ErrNotFound = errors.New("not found")
 // The Create methods return the ID the server assigned alongside such an error,
 // so a caller can adopt the created resource instead of retrying and creating a
 // duplicate. That ID is zero only if the ack carried none, which the server does
-// not do for a command it reports as successful.
+// not do for a command it reports as successful. Because the idiomatic way to
+// propagate an error drops the values next to it, the ID is also carried by the
+// error itself, see UpdateEventTimeoutError.
 //
 // The local state cache is refreshed from the update event, so on this path it
 // is not up to date yet. The cache is maintained by the socket.io event
@@ -55,6 +57,59 @@ var ErrNotFound = errors.New("not found")
 // the next broadcast for that resource. Until then a getter that serves from
 // the cache does not report the resource.
 var ErrUpdateEventTimeout = errors.New("update event not received")
+
+// UpdateEventTimeoutError is the error the client returns for a command that
+// the server acknowledged without the update event arriving, see
+// ErrUpdateEventTimeout. It wraps both ErrUpdateEventTimeout and the context
+// error, so errors.Is keeps reporting either.
+//
+// It exists so that the ID of a created resource survives the way errors are
+// usually propagated: a caller that writes the idiomatic
+//
+//	id, err := client.CreateNotification(ctx, notif)
+//	if err != nil {
+//		return 0, err
+//	}
+//
+// discards the returned ID, and with it the only handle on a notification the
+// server did create. Recovering the error keeps that handle:
+//
+//	var timeoutErr *kuma.UpdateEventTimeoutError
+//	if errors.As(err, &timeoutErr) && timeoutErr.ID != 0 {
+//		// The resource exists, adopt it instead of creating it again.
+//	}
+type UpdateEventTimeoutError struct {
+	// Command is the socket.io command the server acknowledged.
+	Command string
+
+	// ID is the ID the server assigned to the created resource. It is zero for
+	// a command that creates nothing, and for an ack that carried no ID.
+	ID int64
+
+	// Err is the error of the context that was done before the update event
+	// arrived.
+	Err error
+}
+
+func (e *UpdateEventTimeoutError) Error() string {
+	return fmt.Sprintf("%s: %s: %s", e.Command, ErrUpdateEventTimeout, e.Err)
+}
+
+func (e *UpdateEventTimeoutError) Unwrap() []error {
+	return []error{ErrUpdateEventTimeout, e.Err}
+}
+
+// withCreatedID records id in the UpdateEventTimeoutError err is wrapping, if it
+// is one, and returns err unchanged otherwise. The command layer knows which
+// field of the ack carries the ID, the layer that builds the error does not.
+func withCreatedID(err error, id int64) error {
+	var timeoutErr *UpdateEventTimeoutError
+	if errors.As(err, &timeoutErr) {
+		timeoutErr.ID = id
+	}
+
+	return err
+}
 
 // Log level constants for configuring socket.io client logging verbosity.
 const (
@@ -851,7 +906,7 @@ func resultOnContextDone(
 		// The server applied the command, only its broadcast is missing.
 		// Returning the response lets the caller keep what the ack carried,
 		// e.g. the ID of a created resource.
-		return response, fmt.Errorf("%s: %w: %w", command, ErrUpdateEventTimeout, ctx.Err())
+		return response, &UpdateEventTimeoutError{Command: command, Err: ctx.Err()}
 
 	default:
 		return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())

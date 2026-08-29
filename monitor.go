@@ -64,8 +64,9 @@ func (c *Client) GetMonitorAs(ctx context.Context, monitorID int64, target any) 
 // CreateMonitor creates a new monitor.
 //
 // An error wrapping ErrUpdateEventTimeout means the monitor was created and only
-// the update event is missing; the returned ID identifies it, so retrying the
-// call would create a duplicate.
+// the update event is missing; the returned ID identifies it, as does the ID an
+// UpdateEventTimeoutError carries, so retrying the call would create a
+// duplicate.
 func (c *Client) CreateMonitor(ctx context.Context, mon monitor.Monitor) (int64, error) {
 	monitorData, err := structToMap(mon)
 	if err != nil {
@@ -83,7 +84,7 @@ func (c *Client) CreateMonitor(ctx context.Context, mon monitor.Monitor) (int64,
 	response, err := c.syncEmitWithUpdateEvent(ctx, "add", "updateMonitorIntoList", monitorData)
 	if err != nil {
 		if errors.Is(err, ErrUpdateEventTimeout) {
-			return response.MonitorID, fmt.Errorf("create monitor: %w", err)
+			return response.MonitorID, fmt.Errorf("create monitor: %w", withCreatedID(err, response.MonitorID))
 		}
 
 		return 0, fmt.Errorf("create monitor: %w", err)

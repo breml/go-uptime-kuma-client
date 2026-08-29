@@ -311,6 +311,32 @@ func TestUpdateEventTimeoutKeepsSuccessfulAck(t *testing.T) {
 			"the notification exists on the server, so its ID must survive the missing update event")
 	})
 
+	t.Run("the_id_survives_a_caller_that_propagates_only_the_error", func(t *testing.T) {
+		callCtx, callCancel := context.WithTimeout(ctx, callTimeout)
+		defer callCancel()
+
+		// The reflex of every caller is to return the error and nothing else,
+		// which drops the ID that sits next to it. Recovering the error has to
+		// give that ID back, or the created notification is unreachable.
+		_, err := func() (int64, error) {
+			id, err := kumaClient.CreateNotification(callCtx, notification.Generic{
+				Base:           notification.Base{Name: "propagated error"},
+				GenericDetails: notification.GenericDetails{},
+				TypeName:       "generic",
+			})
+			if err != nil {
+				return 0, err
+			}
+
+			return id, nil
+		}()
+
+		var timeoutErr *kuma.UpdateEventTimeoutError
+		require.ErrorAs(t, err, &timeoutErr)
+		require.Equal(t, int64(fakeAckCreatedID), timeoutErr.ID)
+		require.Equal(t, "addNotification", timeoutErr.Command)
+	})
+
 	t.Run("delete_is_distinguishable_from_a_plain_timeout", func(t *testing.T) {
 		callCtx, callCancel := context.WithTimeout(ctx, callTimeout)
 		defer callCancel()

@@ -47,7 +47,8 @@ func (c *Client) GetMaintenance(ctx context.Context, id int64) (*maintenance.Mai
 // CreateMaintenance creates a new maintenance window.
 //
 // An error wrapping ErrUpdateEventTimeout means the maintenance window was
-// created and only the update event is missing; retrying the call would create a
+// created and only the update event is missing; m.ID identifies it, as does the
+// ID an UpdateEventTimeoutError carries, so retrying the call would create a
 // duplicate. The context is spent at that point, so the complete object cannot
 // be fetched back: the returned value is m itself, carrying what the caller
 // passed in plus the ID the server assigned.
@@ -62,7 +63,7 @@ func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenan
 		if errors.Is(err, ErrUpdateEventTimeout) {
 			m.ID = response.MaintenanceID
 
-			return m, fmt.Errorf("create maintenance: %w", err)
+			return m, fmt.Errorf("create maintenance: %w", withCreatedID(err, response.MaintenanceID))
 		}
 
 		return nil, fmt.Errorf("create maintenance: %w", err)

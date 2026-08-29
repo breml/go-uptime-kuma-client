@@ -116,6 +116,24 @@ func TestAwaitAckAndUpdateEvent(t *testing.T) {
 		}
 	})
 
+	t.Run("the_error_carries_the_command_and_keeps_its_message", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := expiredContext(t)
+
+		for range awaitIterations {
+			_, err := awaitWith(ctx, awaitSignals{ack: &okAck})
+
+			var timeoutErr *UpdateEventTimeoutError
+			require.ErrorAs(t, err, &timeoutErr)
+			require.Equal(t, "addNotification", timeoutErr.Command)
+			require.Zero(t, timeoutErr.ID,
+				"the ID is filled in by the layer that knows which field of the ack carries it")
+			require.EqualError(t, err,
+				"addNotification: update event not received: context deadline exceeded")
+		}
+	})
+
 	t.Run("update_event_missing_after_cancellation", func(t *testing.T) {
 		t.Parallel()
 
