@@ -30,7 +30,7 @@ func (b Bark) Type() string {
 
 // Type returns the notification type identifier for BarkDetails.
 func (BarkDetails) Type() string {
-	return "bark"
+	return "Bark"
 }
 
 // String returns a string representation of the Bark notification.

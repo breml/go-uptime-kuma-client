@@ -1587,7 +1587,7 @@ func TestNotificationCRUD(t *testing.T) {
 		},
 		{
 			name:         "FortySixElks",
-			expectedType: "46elks",
+			expectedType: "Elks",
 			create: notification.FortySixElks{
 				Base: notification.Base{
 					ApplyExisting: false,
@@ -2014,7 +2014,7 @@ func TestNotificationCRUD(t *testing.T) {
 		},
 		{
 			name:         "Bark",
-			expectedType: "bark",
+			expectedType: "Bark",
 			create: notification.Bark{
 				Base: notification.Base{
 					ApplyExisting: false,
@@ -2121,7 +2121,7 @@ func TestNotificationCRUD(t *testing.T) {
 		},
 		{
 			name:         "Brevo",
-			expectedType: "brevo",
+			expectedType: "Brevo",
 			create: notification.Brevo{
 				Base: notification.Base{
 					ApplyExisting: false,
@@ -2345,7 +2345,7 @@ func TestNotificationCRUD(t *testing.T) {
 		},
 		{
 			name:         "Evolution",
-			expectedType: "EvolutionApi",
+			expectedType: "evolution",
 			create: notification.Evolution{
 				Base: notification.Base{
 					ApplyExisting: false,
@@ -2933,7 +2933,7 @@ func TestNotificationCRUD(t *testing.T) {
 		},
 		{
 			name:         "NextcloudTalk",
-			expectedType: "NextcloudTalk",
+			expectedType: "nextcloudtalk",
 			create: notification.NextcloudTalk{
 				Base: notification.Base{
 					ApplyExisting: false,
@@ -3270,7 +3270,7 @@ func TestNotificationCRUD(t *testing.T) {
 		},
 		{
 			name:         "OneSender",
-			expectedType: "onesender",
+			expectedType: "Onesender",
 			create: notification.OneSender{
 				Base: notification.Base{
 					ApplyExisting: false,
@@ -3438,7 +3438,7 @@ func TestNotificationCRUD(t *testing.T) {
 		},
 		{
 			name:         "Pumble",
-			expectedType: "Pumble",
+			expectedType: "pumble",
 			create: notification.Pumble{
 				Base: notification.Base{
 					ApplyExisting: false,
@@ -3868,7 +3868,7 @@ func TestNotificationCRUD(t *testing.T) {
 		},
 		{
 			name:         "SevenIO",
-			expectedType: "sevenio",
+			expectedType: "SevenIO",
 			create: notification.SevenIO{
 				Base: notification.Base{
 					ApplyExisting: false,

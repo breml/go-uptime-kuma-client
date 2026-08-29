@@ -19,7 +19,7 @@ func TestNotificationNextcloudTalk_Unmarshal(t *testing.T) {
 		{
 			name: "success with all fields",
 			data: []byte(
-				`{"id":1,"name":"My Nextcloud Talk Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Nextcloud Talk Alert\",\"host\":\"https://nextcloud.example.com\",\"conversationToken\":\"token123\",\"botSecret\":\"secret-key-123\",\"sendSilentUp\":true,\"sendSilentDown\":false,\"type\":\"NextcloudTalk\"}"}`,
+				`{"id":1,"name":"My Nextcloud Talk Alert","active":true,"userId":1,"isDefault":true,"config":"{\"applyExisting\":true,\"isDefault\":true,\"name\":\"My Nextcloud Talk Alert\",\"host\":\"https://nextcloud.example.com\",\"conversationToken\":\"token123\",\"botSecret\":\"secret-key-123\",\"sendSilentUp\":true,\"sendSilentDown\":false,\"type\":\"nextcloudtalk\"}"}`,
 			),
 
 			want: notification.NextcloudTalk{
@@ -39,12 +39,12 @@ func TestNotificationNextcloudTalk_Unmarshal(t *testing.T) {
 					SendSilentDown:    false,
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":true,"botSecret":"secret-key-123","conversationToken":"token123","host":"https://nextcloud.example.com","id":1,"isDefault":true,"name":"My Nextcloud Talk Alert","sendSilentDown":false,"sendSilentUp":true,"type":"NextcloudTalk","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":true,"botSecret":"secret-key-123","conversationToken":"token123","host":"https://nextcloud.example.com","id":1,"isDefault":true,"name":"My Nextcloud Talk Alert","sendSilentDown":false,"sendSilentUp":true,"type":"nextcloudtalk","userId":1}`,
 		},
 		{
 			name: "minimal configuration",
 			data: []byte(
-				`{"id":2,"name":"Simple Nextcloud Talk","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Nextcloud Talk\",\"host\":\"https://nc.example.com\",\"conversationToken\":\"abc123\",\"botSecret\":\"secret-abc\",\"sendSilentUp\":false,\"sendSilentDown\":false,\"type\":\"NextcloudTalk\"}"}`,
+				`{"id":2,"name":"Simple Nextcloud Talk","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Simple Nextcloud Talk\",\"host\":\"https://nc.example.com\",\"conversationToken\":\"abc123\",\"botSecret\":\"secret-abc\",\"sendSilentUp\":false,\"sendSilentDown\":false,\"type\":\"nextcloudtalk\"}"}`,
 			),
 
 			want: notification.NextcloudTalk{
@@ -64,12 +64,12 @@ func TestNotificationNextcloudTalk_Unmarshal(t *testing.T) {
 					SendSilentDown:    false,
 				},
 			},
-			wantJSON: `{"active":true,"applyExisting":false,"botSecret":"secret-abc","conversationToken":"abc123","host":"https://nc.example.com","id":2,"isDefault":false,"name":"Simple Nextcloud Talk","sendSilentDown":false,"sendSilentUp":false,"type":"NextcloudTalk","userId":1}`,
+			wantJSON: `{"active":true,"applyExisting":false,"botSecret":"secret-abc","conversationToken":"abc123","host":"https://nc.example.com","id":2,"isDefault":false,"name":"Simple Nextcloud Talk","sendSilentDown":false,"sendSilentUp":false,"type":"nextcloudtalk","userId":1}`,
 		},
 		{
 			name: "with silent down enabled",
 			data: []byte(
-				`{"id":3,"name":"Nextcloud Talk Silent","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Nextcloud Talk Silent\",\"host\":\"https://cloud.example.com\",\"conversationToken\":\"xyz789\",\"botSecret\":\"prod-secret\",\"sendSilentUp\":false,\"sendSilentDown\":true,\"type\":\"NextcloudTalk\"}"}`,
+				`{"id":3,"name":"Nextcloud Talk Silent","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Nextcloud Talk Silent\",\"host\":\"https://cloud.example.com\",\"conversationToken\":\"xyz789\",\"botSecret\":\"prod-secret\",\"sendSilentUp\":false,\"sendSilentDown\":true,\"type\":\"nextcloudtalk\"}"}`,
 			),
 
 			want: notification.NextcloudTalk{
@@ -89,7 +89,7 @@ func TestNotificationNextcloudTalk_Unmarshal(t *testing.T) {
 					SendSilentDown:    true,
 				},
 			},
-			wantJSON: `{"active":false,"applyExisting":false,"botSecret":"prod-secret","conversationToken":"xyz789","host":"https://cloud.example.com","id":3,"isDefault":false,"name":"Nextcloud Talk Silent","sendSilentDown":true,"sendSilentUp":false,"type":"NextcloudTalk","userId":1}`,
+			wantJSON: `{"active":false,"applyExisting":false,"botSecret":"prod-secret","conversationToken":"xyz789","host":"https://cloud.example.com","id":3,"isDefault":false,"name":"Nextcloud Talk Silent","sendSilentDown":true,"sendSilentUp":false,"type":"nextcloudtalk","userId":1}`,
 		},
 	}
 

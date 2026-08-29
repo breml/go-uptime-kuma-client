@@ -22,8 +22,13 @@ func (p Pumble) Type() string {
 }
 
 // Type returns the notification type identifier for Pumble details.
+//
+// Note: this is the provider name of Uptime Kuma
+// (server/notification-providers/pumble.js) and deliberately does not follow the
+// casing of the Go type. Do not "fix" it, the server dispatches on this exact
+// string.
 func (PumbleDetails) Type() string {
-	return "Pumble"
+	return "pumble"
 }
 
 // String returns a human-readable representation of the Pumble notification.

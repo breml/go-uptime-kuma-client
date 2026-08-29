@@ -24,8 +24,13 @@ func (f FortySixElks) Type() string {
 }
 
 // Type returns the notification type.
+//
+// Note: this is the provider name of Uptime Kuma
+// (server/notification-providers/46elks.js) and deliberately does not follow the
+// casing of the Go type. Do not "fix" it, the server dispatches on this exact
+// string.
 func (FortySixElksDetails) Type() string {
-	return "46elks"
+	return "Elks"
 }
 
 // String returns a string representation of the notification.

@@ -33,8 +33,13 @@ func (e Evolution) Type() string {
 }
 
 // Type returns the notification type identifier for EvolutionDetails.
+//
+// Note: this is the provider name of Uptime Kuma
+// (server/notification-providers/evolution.js) and deliberately does not follow the
+// casing of the Go type. Do not "fix" it, the server dispatches on this exact
+// string.
 func (EvolutionDetails) Type() string {
-	return "EvolutionApi"
+	return "evolution"
 }
 
 // String returns a string representation of the Evolution notification.
