@@ -4895,6 +4895,57 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "WxPusher",
+			expectedType: "WxPusher",
+			create: notification.WxPusher{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test WxPusher Created",
+				},
+				WxPusherDetails: notification.WxPusherDetails{
+					SPT: "SPT_xxxxxxxxxxxx",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				wxpusher, ok := n.(*notification.WxPusher)
+				if !ok {
+					panic("failed to assert WxPusher notification")
+				}
+
+				wxpusher.Name = "Test WxPusher Updated"
+				wxpusher.SPT = "SPT_aaaaaaaaaaaa,SPT_bbbbbbbbbbbb"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.WxPusher)
+				require.True(t, ok)
+				var wxpusher notification.WxPusher
+				err := actual.As(&wxpusher)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = wxpusher.UserID
+				require.EqualExportedValues(t, exp, wxpusher)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var wxpusher notification.WxPusher
+				err := base.As(&wxpusher)
+				require.NoError(t, err)
+				return &wxpusher
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.WxPusher)
+				require.True(t, ok)
+				var wxpusher notification.WxPusher
+				err := actual.As(&wxpusher)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, wxpusher)
+			},
+		},
+		{
 			name:         "YZJ",
 			expectedType: "YZJ",
 			create: notification.YZJ{
