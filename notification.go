@@ -2,7 +2,9 @@ package kuma
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
@@ -69,12 +71,35 @@ func (c *Client) DeleteNotification(ctx context.Context, id int64) error {
 	return err
 }
 
+// ErrNotificationTypeNotSupported is returned by TestNotification if the server
+// has no notification provider registered for the given notification type.
+var ErrNotificationTypeNotSupported = errors.New("notification type is not supported")
+
+// serverMsgNotificationTypeNotSupported is the message the server reports when
+// the provider lookup for a notification type fails. It is matched here, in the
+// single place that knows about it, so callers can use
+// ErrNotificationTypeNotSupported instead of matching on the message themselves.
+const serverMsgNotificationTypeNotSupported = "Notification type is not supported"
+
 // TestNotification asks the server to dispatch a test message with the given
-// notification. It reports the error returned by the notification provider, so
-// a failure to reach the provider (e.g. invalid credentials or an unreachable
-// endpoint) is reported as an error as well. An unsupported notification type
-// is reported as "testNotification: Notification type is not supported".
-func (c *Client) TestNotification(ctx context.Context, notif notification.Notification) error {
-	_, err := c.syncEmit(ctx, "testNotification", notif)
-	return err
+// notification and returns the message the notification provider reported.
+//
+// If the server has no provider for the type of notif, the returned error wraps
+// ErrNotificationTypeNotSupported. A provider that fails while dispatching (e.g.
+// invalid credentials or an unreachable endpoint) is reported as an error too,
+// but only if it raises one: some providers report a delivery failure in their
+// message and let the server report success regardless. A nil error therefore
+// does not prove the notification was delivered, and callers that need to know
+// have to inspect the returned message.
+func (c *Client) TestNotification(ctx context.Context, notif notification.Notification) (string, error) {
+	response, err := c.syncEmit(ctx, "testNotification", notif)
+	if err != nil {
+		if strings.Contains(err.Error(), serverMsgNotificationTypeNotSupported) {
+			return "", fmt.Errorf("testNotification: %w", ErrNotificationTypeNotSupported)
+		}
+
+		return "", err
+	}
+
+	return response.Msg, nil
 }
