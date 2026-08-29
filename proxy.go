@@ -35,8 +35,9 @@ func (c *Client) GetProxy(_ context.Context, id int64) (*proxy.Proxy, error) {
 
 // CreateProxy creates a new proxy.
 //
-// If the returned error wraps ErrUpdateEventTimeout, the proxy was created and
-// the returned ID identifies it; retrying the call would create a duplicate.
+// An error wrapping ErrUpdateEventTimeout means the proxy was created and only
+// the update event is missing; the returned ID identifies it, so retrying the
+// call would create a duplicate.
 func (c *Client) CreateProxy(ctx context.Context, config proxy.Config) (int64, error) {
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addProxy", "proxyList", config, nil)
 	if err != nil {
@@ -51,6 +52,9 @@ func (c *Client) CreateProxy(ctx context.Context, config proxy.Config) (int64, e
 }
 
 // UpdateProxy updates an existing proxy.
+//
+// An error wrapping ErrUpdateEventTimeout means the proxy was updated and only
+// the update event is missing.
 func (c *Client) UpdateProxy(ctx context.Context, config proxy.Config) error {
 	if config.ID == 0 {
 		return errors.New("update proxy: config must have ID set")
@@ -65,6 +69,9 @@ func (c *Client) UpdateProxy(ctx context.Context, config proxy.Config) error {
 }
 
 // DeleteProxy deletes a proxy by ID.
+//
+// An error wrapping ErrUpdateEventTimeout means the proxy was deleted and only
+// the update event is missing.
 func (c *Client) DeleteProxy(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteProxy", "proxyList", id)
 	if err != nil {

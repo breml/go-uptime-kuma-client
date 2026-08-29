@@ -32,25 +32,28 @@ import (
 var ErrNotFound = errors.New("not found")
 
 // ErrUpdateEventTimeout is returned when the server acknowledged a mutating
-// command successfully, but the update event it broadcasts afterwards did not
-// arrive before the context expired. The write landed on the server; what is
+// command successfully, but the update event that carries the change did not
+// arrive before the context was done. The write landed on the server; what is
 // missing is only the broadcast.
 //
 // An error wrapping ErrUpdateEventTimeout also wraps the context error, so
-// errors.Is(err, context.DeadlineExceeded) keeps reporting the timeout. Use
+// errors.Is(err, context.DeadlineExceeded) still reports an expired deadline
+// and errors.Is(err, context.Canceled) a cancelled context. Use
 // errors.Is(err, ErrUpdateEventTimeout) to tell the two cases apart: a plain
 // context error means the server never confirmed the command and it may or may
 // not have been applied, while ErrUpdateEventTimeout means it was applied.
 //
-// Methods that hand out a server assigned ID return it alongside such an error,
+// The Create methods return the ID the server assigned alongside such an error,
 // so a caller can adopt the created resource instead of retrying and creating a
-// duplicate.
+// duplicate. That ID is zero only if the ack carried none, which the server does
+// not do for a command it reports as successful.
 //
 // The local state cache is refreshed from the update event, so on this path it
 // is not up to date yet. The cache is maintained by the socket.io event
 // handlers and not by the caller's context, so it catches up on its own once
 // the event arrives; if the event is lost for good, the cache stays stale until
-// the next broadcast for that resource.
+// the next broadcast for that resource. Until then a getter that serves from
+// the cache does not report the resource.
 var ErrUpdateEventTimeout = errors.New("update event not received")
 
 // Log level constants for configuring socket.io client logging verbosity.
@@ -707,12 +710,13 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 	}
 }
 
-// syncEmitWithUpdateEvent emits command and returns once the server has both
-// acknowledged it and broadcast updateEvent, which is what refreshes the local
-// state cache.
+// syncEmitWithUpdateEvent emits command and returns once the server has
+// acknowledged it and has broadcast an updateEvent, which is what refreshes the
+// local state cache. The listener matches the event by name, so the client
+// cannot tell which write caused the broadcast it observes.
 //
-// If the ack reports success but the update event does not arrive before ctx
-// expires, the response is returned together with an error wrapping
+// If the ack reports success but no update event arrives before ctx is done,
+// the response is returned together with an error wrapping
 // ErrUpdateEventTimeout and the context error: the command was applied, only
 // the broadcast is missing. Discarding the response here would tell the caller
 // the write failed for a write the server performed.
@@ -757,7 +761,15 @@ func (c *Client) syncEmitWithUpdateEvent(
 }
 
 // awaitAckAndUpdateEvent waits for the ack delivered on res and for the update
-// event that closes done, and reports what arrived before ctx expired.
+// event that closes done, and reports which of the two arrived before ctx was
+// done.
+//
+// An ack that reports a failure is returned as the server's error even when ctx
+// is done as well, because the rejection is the more useful answer and it is
+// what the caller would have received had the ack arrived a moment earlier. An
+// update event without an ack stays a plain context error: without the ack the
+// client knows neither the outcome of the command nor the ID the server
+// assigned.
 func awaitAckAndUpdateEvent(
 	ctx context.Context,
 	command string,
@@ -786,43 +798,62 @@ func awaitAckAndUpdateEvent(
 			res = nil
 
 		case <-ctx.Done():
+			// A signal that has already been delivered and the context being
+			// done can become ready in the same select, which picks between
+			// ready cases at random. Both signals are therefore collected
+			// explicitly, instead of letting that coin flip decide whether
+			// what they report is seen. Receiving from a nil channel is never
+			// ready, so the default case covers the signals already taken.
 			if !acked {
-				response, acked = pollAck(res)
+				select {
+				case response = <-res:
+					acked = true
+
+				default:
+				}
 			}
 
-			switch {
-			case acked && !response.OK:
-				return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
-
-			case acked:
-				// The server applied the command, only its broadcast is
-				// missing. Returning the response lets the caller keep what
-				// the ack carried, e.g. the ID of a created resource.
-				return response, fmt.Errorf("%s: %w: %w", command, ErrUpdateEventTimeout, ctx.Err())
+			select {
+			case <-done:
+				done = nil
 
 			default:
-				return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
 			}
+
+			return resultOnContextDone(ctx, command, response, acked, done == nil)
 		}
 	}
 
 	return response, nil
 }
 
-// pollAck takes an ack that has already been delivered, without blocking. The
-// ack and the context deadline can become ready in the same instant, and select
-// picks between ready cases at random, so a delivered ack has to be collected
-// explicitly instead of being lost to that coin flip.
-func pollAck(res <-chan ackResponse) (ackResponse, bool) {
-	if res == nil {
-		return ackResponse{}, false
-	}
+// resultOnContextDone reports the outcome of a command whose context is done,
+// from the signals that are in hand: acked tells whether the ack in response
+// arrived, updated whether the update event did.
+func resultOnContextDone(
+	ctx context.Context,
+	command string,
+	response ackResponse,
+	acked bool,
+	updated bool,
+) (ackResponse, error) {
+	switch {
+	case acked && !response.OK:
+		return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
 
-	select {
-	case response := <-res:
-		return response, true
+	case acked && updated:
+		// Both signals are in hand and the context merely expired while they
+		// were collected. Nothing is missing, so this is the same success the
+		// caller's loop returns.
+		return response, nil
+
+	case acked:
+		// The server applied the command, only its broadcast is missing.
+		// Returning the response lets the caller keep what the ack carried,
+		// e.g. the ID of a created resource.
+		return response, fmt.Errorf("%s: %w: %w", command, ErrUpdateEventTimeout, ctx.Err())
 
 	default:
-		return ackResponse{}, false
+		return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
 	}
 }

@@ -51,9 +51,9 @@ func (c *Client) GetNotificationAs(ctx context.Context, id int64, target any) er
 
 // CreateNotification creates a new notification.
 //
-// If the returned error wraps ErrUpdateEventTimeout, the notification was
-// created and the returned ID identifies it; retrying the call would create a
-// duplicate.
+// An error wrapping ErrUpdateEventTimeout means the notification was created and
+// only the update event is missing; the returned ID identifies it, so retrying
+// the call would create a duplicate.
 func (c *Client) CreateNotification(ctx context.Context, notif notification.Notification) (int64, error) {
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notif, nil)
 	if err != nil {
@@ -68,12 +68,18 @@ func (c *Client) CreateNotification(ctx context.Context, notif notification.Noti
 }
 
 // UpdateNotification updates an existing notification.
+//
+// An error wrapping ErrUpdateEventTimeout means the notification was updated and
+// only the update event is missing.
 func (c *Client) UpdateNotification(ctx context.Context, notif notification.Notification) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notif, notif.GetID())
 	return err
 }
 
 // DeleteNotification deletes a notification by ID.
+//
+// An error wrapping ErrUpdateEventTimeout means the notification was deleted and
+// only the update event is missing.
 func (c *Client) DeleteNotification(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteNotification", "notificationList", id)
 	return err

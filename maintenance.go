@@ -46,11 +46,11 @@ func (c *Client) GetMaintenance(ctx context.Context, id int64) (*maintenance.Mai
 
 // CreateMaintenance creates a new maintenance window.
 //
-// If the returned error wraps ErrUpdateEventTimeout, the maintenance window was
-// created and m.ID identifies it; the context is spent at that point, so the
-// complete object cannot be fetched back and the returned value carries only
-// what the caller passed in plus the ID. Retrying the call would create a
-// duplicate.
+// An error wrapping ErrUpdateEventTimeout means the maintenance window was
+// created and only the update event is missing; retrying the call would create a
+// duplicate. The context is spent at that point, so the complete object cannot
+// be fetched back: the returned value is m itself, carrying what the caller
+// passed in plus the ID the server assigned.
 func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenance) (*maintenance.Maintenance, error) {
 	maintenanceData, err := structToMap(m)
 	if err != nil {
@@ -76,6 +76,9 @@ func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenan
 }
 
 // UpdateMaintenance updates an existing maintenance window.
+//
+// An error wrapping ErrUpdateEventTimeout means the maintenance window was
+// updated and only the update event is missing.
 func (c *Client) UpdateMaintenance(ctx context.Context, m *maintenance.Maintenance) error {
 	maintenanceData, err := structToMap(m)
 	if err != nil {
@@ -91,6 +94,9 @@ func (c *Client) UpdateMaintenance(ctx context.Context, m *maintenance.Maintenan
 }
 
 // DeleteMaintenance deletes a maintenance window by ID.
+//
+// An error wrapping ErrUpdateEventTimeout means the maintenance window was
+// deleted and only the update event is missing.
 func (c *Client) DeleteMaintenance(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteMaintenance", "maintenanceList", id)
 	if err != nil {
@@ -101,6 +107,9 @@ func (c *Client) DeleteMaintenance(ctx context.Context, id int64) error {
 }
 
 // PauseMaintenance pauses (deactivates) a maintenance window.
+//
+// An error wrapping ErrUpdateEventTimeout means the maintenance window was
+// paused and only the update event is missing.
 func (c *Client) PauseMaintenance(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "pauseMaintenance", "maintenanceList", id)
 	if err != nil {
@@ -111,6 +120,9 @@ func (c *Client) PauseMaintenance(ctx context.Context, id int64) error {
 }
 
 // ResumeMaintenance resumes (activates) a maintenance window.
+//
+// An error wrapping ErrUpdateEventTimeout means the maintenance window was
+// resumed and only the update event is missing.
 func (c *Client) ResumeMaintenance(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "resumeMaintenance", "maintenanceList", id)
 	if err != nil {

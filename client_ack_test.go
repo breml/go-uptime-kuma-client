@@ -32,6 +32,10 @@ var readyEvents = []string{
 	`42["apiKeyList",[]]`,
 }
 
+// fakeAckCreatedID is the ID the fake server reports for a created
+// notification.
+const fakeAckCreatedID = 4242
+
 // fakeAckServer is a minimal socket.io server over HTTP long-polling that
 // completes the handshake, CONNECT, login and ready phases, so kuma.New()
 // returns a usable client. Unlike fakeSocketIOServer it then keeps serving:
@@ -41,10 +45,6 @@ var readyEvents = []string{
 // It never emits an update event for those commands, so a caller using
 // syncEmitWithUpdateEvent keeps waiting after its ack arrived — the state in
 // which the deadline and the ack collide.
-// fakeAckCreatedID is the ID the fake server reports for a created
-// notification.
-const fakeAckCreatedID = 4242
-
 type fakeAckServer struct {
 	messages chan []byte
 
@@ -227,8 +227,8 @@ func TestAckDeliveryAroundDeadline(t *testing.T) {
 			// won it produces ErrUpdateEventTimeout wrapping the same
 			// deadline error. Which one a given delay yields depends on
 			// scheduling, so only the shared part is asserted here;
-			// TestUpdateEventTimeoutKeepsSuccessfulAck pins the ack-wins case
-			// down deterministically.
+			// TestAwaitAckAndUpdateEvent pins the ack-wins case down
+			// deterministically.
 			require.ErrorIs(t, err, context.DeadlineExceeded,
 				"ack delay %s should leave the call waiting on its update event", fake.currentAckDelay())
 		}
@@ -269,9 +269,11 @@ func TestAckDeliveryAroundDeadline(t *testing.T) {
 // it would also drop the ID the server assigned, leaving a retry to produce a
 // duplicate.
 func TestUpdateEventTimeoutKeepsSuccessfulAck(t *testing.T) {
-	// Long enough that the ack, which the fake sends without delay, always
+	// Long enough that the ack, which the fake sends without delay, reliably
 	// arrives first; the call then runs into the deadline waiting for the
-	// update event the fake never emits.
+	// update event the fake never emits. It travels over HTTP long-polling, so
+	// this is a generous margin rather than a guarantee: raise callTimeout if
+	// a loaded machine ever makes it flake.
 	const callTimeout = 500 * time.Millisecond
 
 	fake := &fakeAckServer{messages: make(chan []byte, 32)}

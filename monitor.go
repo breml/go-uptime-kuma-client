@@ -63,8 +63,9 @@ func (c *Client) GetMonitorAs(ctx context.Context, monitorID int64, target any) 
 
 // CreateMonitor creates a new monitor.
 //
-// If the returned error wraps ErrUpdateEventTimeout, the monitor was created and
-// the returned ID identifies it; retrying the call would create a duplicate.
+// An error wrapping ErrUpdateEventTimeout means the monitor was created and only
+// the update event is missing; the returned ID identifies it, so retrying the
+// call would create a duplicate.
 func (c *Client) CreateMonitor(ctx context.Context, mon monitor.Monitor) (int64, error) {
 	monitorData, err := structToMap(mon)
 	if err != nil {
@@ -97,6 +98,9 @@ func (c *Client) CreateMonitor(ctx context.Context, mon monitor.Monitor) (int64,
 }
 
 // UpdateMonitor updates an existing monitor.
+//
+// An error wrapping ErrUpdateEventTimeout means the monitor was updated and only
+// the update event is missing.
 func (c *Client) UpdateMonitor(ctx context.Context, mon monitor.Monitor) error {
 	monitorData, err := structToMap(mon)
 	if err != nil {
@@ -120,6 +124,9 @@ func (c *Client) UpdateMonitor(ctx context.Context, mon monitor.Monitor) error {
 }
 
 // DeleteMonitor deletes a monitor by ID.
+//
+// An error wrapping ErrUpdateEventTimeout means the monitor was deleted and only
+// the update event is missing.
 func (c *Client) DeleteMonitor(ctx context.Context, monitorID int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteMonitor", "deleteMonitorFromList", monitorID)
 	if err != nil {
@@ -130,6 +137,9 @@ func (c *Client) DeleteMonitor(ctx context.Context, monitorID int64) error {
 }
 
 // PauseMonitor pauses a monitor by ID.
+//
+// An error wrapping ErrUpdateEventTimeout means the monitor was paused and only
+// the update event is missing.
 func (c *Client) PauseMonitor(ctx context.Context, monitorID int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "pauseMonitor", "updateMonitorIntoList", monitorID)
 	if err != nil {
@@ -140,6 +150,9 @@ func (c *Client) PauseMonitor(ctx context.Context, monitorID int64) error {
 }
 
 // ResumeMonitor resumes a monitor by ID.
+//
+// An error wrapping ErrUpdateEventTimeout means the monitor was resumed and only
+// the update event is missing.
 func (c *Client) ResumeMonitor(ctx context.Context, monitorID int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "resumeMonitor", "updateMonitorIntoList", monitorID)
 	if err != nil {
