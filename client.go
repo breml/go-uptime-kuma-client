@@ -659,8 +659,8 @@ type ackResponse struct {
 
 func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
 	// Buffered and never closed, so a late ack (e.g. after the context
-	// expired) neither blocks the socket.io callback nor sends on a closed
-	// channel.
+	// expired) neither leaks the ack goroutine forever nor panics sending on
+	// a closed channel.
 	res := make(chan ackResponse, 1)
 
 	args = append(args, emit.WithAck(func(response ackResponse) {
@@ -702,19 +702,19 @@ func (c *Client) syncEmitWithUpdateEvent(
 	listenerID := uuid.New()
 	c.updates.AddListener(func(_ context.Context, update string) {
 		if update == updateEvent {
-			c.updates.RemoveListener(listenerID.String())
 			closeDone()
 		}
 	}, listenerID.String())
+	defer c.updates.RemoveListener(listenerID.String())
 
-	res := make(chan ackResponse)
-	defer close(res)
+	// Buffered and never closed, for the same reason as in syncEmit: the ack
+	// runs on a goroutine of its own, so a send with no receiver left leaks it,
+	// and closing the channel underneath it panics the whole process. Checking
+	// ctx.Err() in the callback does not help, because the context can expire
+	// while the send is already blocked.
+	res := make(chan ackResponse, 1)
 
 	args = append(args, emit.WithAck(func(response ackResponse) {
-		if ctx.Err() != nil {
-			return
-		}
-
 		res <- response
 	}))
 	err := c.socketioClient.Emit(command, args...)
