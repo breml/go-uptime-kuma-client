@@ -271,15 +271,16 @@ func TestNotificationCRUD(t *testing.T) {
 					Name:          "Test SMTP Created",
 				},
 				SMTPDetails: notification.SMTPDetails{
-					Host:           "smtp.gmail.com",
-					Port:           587,
-					Secure:         false,
-					IgnoreTLSError: false,
-					From:           "noreply@example.com",
-					To:             "alerts@example.com",
-					CustomSubject:  "Alert: {{ monitorJSON['name'] }}",
-					CustomBody:     "Status: {{ msg }}",
-					HTMLBody:       true,
+					Host:              "smtp.gmail.com",
+					Port:              587,
+					Secure:            false,
+					IgnoreTLSError:    false,
+					From:              "noreply@example.com",
+					To:                "alerts@example.com",
+					CustomSubject:     "Alert: {{ monitorJSON['name'] }}",
+					CustomBody:        "Status: {{ msg }}",
+					HTMLBody:          true,
+					AdditionalHeaders: ptr.To(`{"X-Custom-Header": "Additional Header"}`),
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -297,7 +298,7 @@ func TestNotificationCRUD(t *testing.T) {
 				smtp.BCC = "bcc@example.com"
 				smtp.Secure = false
 				smtp.IgnoreSTARTTLS = true
-				smtp.AdditionalHeaders = ptr.To(`{"X-Custom-Header": "Additional Header"}`)
+				smtp.AdditionalHeaders = nil
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
 				t.Helper()

@@ -12,27 +12,32 @@ type SMTP struct {
 
 // SMTPDetails contains smtp-specific notification configuration.
 type SMTPDetails struct {
-	Host                 string  `json:"smtpHost"`
-	Port                 int     `json:"smtpPort"`
-	Secure               bool    `json:"smtpSecure"`
-	IgnoreSTARTTLS       bool    `json:"smtpIgnoreSTARTTLS"`
-	IgnoreTLSError       bool    `json:"smtpIgnoreTLSError"`
-	DkimDomain           string  `json:"smtpDkimDomain"`
-	DkimKeySelector      string  `json:"smtpDkimKeySelector"`
-	DkimPrivateKey       string  `json:"smtpDkimPrivateKey"`
-	DkimHashAlgo         string  `json:"smtpDkimHashAlgo"`
-	DkimHeaderFieldNames string  `json:"smtpDkimheaderFieldNames"`
-	DkimSkipFields       string  `json:"smtpDkimskipFields"`
-	Username             string  `json:"smtpUsername"`
-	Password             string  `json:"smtpPassword"`
-	From                 string  `json:"smtpFrom"`
-	CC                   string  `json:"smtpCC"`
-	BCC                  string  `json:"smtpBCC"`
-	To                   string  `json:"smtpTo"`
-	CustomSubject        string  `json:"customSubject"`
-	CustomBody           string  `json:"customBody"`
-	HTMLBody             bool    `json:"htmlBody"`
-	AdditionalHeaders    *string `json:"smtpAdditionalHeaders,omitempty"`
+	Host                 string `json:"smtpHost"`
+	Port                 int    `json:"smtpPort"`
+	Secure               bool   `json:"smtpSecure"`
+	IgnoreSTARTTLS       bool   `json:"smtpIgnoreSTARTTLS"`
+	IgnoreTLSError       bool   `json:"smtpIgnoreTLSError"`
+	DkimDomain           string `json:"smtpDkimDomain"`
+	DkimKeySelector      string `json:"smtpDkimKeySelector"`
+	DkimPrivateKey       string `json:"smtpDkimPrivateKey"`
+	DkimHashAlgo         string `json:"smtpDkimHashAlgo"`
+	DkimHeaderFieldNames string `json:"smtpDkimheaderFieldNames"`
+	DkimSkipFields       string `json:"smtpDkimskipFields"`
+	Username             string `json:"smtpUsername"`
+	Password             string `json:"smtpPassword"`
+	From                 string `json:"smtpFrom"`
+	CC                   string `json:"smtpCC"`
+	BCC                  string `json:"smtpBCC"`
+	To                   string `json:"smtpTo"`
+	CustomSubject        string `json:"customSubject"`
+	CustomBody           string `json:"customBody"`
+	HTMLBody             bool   `json:"htmlBody"`
+	// AdditionalHeaders holds a JSON object encoded as a string, which the
+	// server merges into the headers of the outgoing mail, for example
+	// `{"X-Custom-Header": "Additional Header"}`. A nil value omits the
+	// field, while a pointer to the empty string keeps it present but
+	// unset, which the server distinguishes.
+	AdditionalHeaders *string `json:"smtpAdditionalHeaders,omitempty"`
 }
 
 // Type returns the notification type.
