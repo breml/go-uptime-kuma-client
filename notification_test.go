@@ -3,6 +3,9 @@ package kuma_test
 
 import (
 	"context"
+	"errors"
+	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -12,10 +15,15 @@ import (
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
+// testNotificationTimeout bounds a single testNotification call. The server
+// dispatches the notification for real and some providers block until their
+// own outbound timeout, which would otherwise dominate the suite runtime.
+const testNotificationTimeout = 5 * time.Second
+
 // notificationTestCase defines a single notification type's CRUD test scenario.
 type notificationTestCase struct {
 	name              string                                                                                             // Test name (e.g., "Ntfy", "Slack")
-	expectedType      string                                                                                             // Expected type string from API
+	expectedType      string                                                                                             // Expected type string, round-tripped through the server config (see test_notification for the server side validation)
 	create            notification.Notification                                                                          // Notification to create
 	updateFunc        func(notification.Notification)                                                                    // Function to modify notification for update test
 	verifyCreatedFunc func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) // Function to verify created notification
@@ -5174,6 +5182,45 @@ func TestNotificationCRUD(t *testing.T) {
 				t.Logf("Initial notifications count: %d", len(notifications))
 			})
 
+			t.Run("test_notification", func(t *testing.T) {
+				// Dispatching all provider notifications for real costs about
+				// as much wall clock time as the rest of the suite, so this is
+				// limited to the end to end run.
+				e2eTest, _ := strconv.ParseBool(os.Getenv("E2E_TEST"))
+				if !e2eTest {
+					t.Skip(`skipping end to end test, "E2E_TEST" env var not set`)
+				}
+
+				// The server actually dispatches the notification, so the
+				// provider fails with a network or authentication error for
+				// the fake credentials used here. Such a failure is expected
+				// and must not be asserted on. The only assertion the server
+				// makes about the type is the provider lookup in
+				// Notification.send, which reports the message below and is
+				// the sole server side validation of Type().
+				testCtx, testCancel := context.WithTimeout(ctx, testNotificationTimeout)
+				defer testCancel()
+
+				err := client.TestNotification(testCtx, tc.create)
+				if err == nil {
+					return
+				}
+
+				// A provider blocking on an unroutable endpoint until the
+				// deadline tells us nothing about the type, so it is not a
+				// failure either.
+				if errors.Is(testCtx.Err(), context.DeadlineExceeded) {
+					t.Logf(
+						"test notification did not complete within %s, type %q not validated",
+						testNotificationTimeout,
+						tc.expectedType,
+					)
+					return
+				}
+
+				require.NotContains(t, err.Error(), "Notification type is not supported")
+			})
+
 			var id int64
 			t.Run("create", func(t *testing.T) {
 				initialNotifications := client.GetNotifications(ctx)
@@ -5321,4 +5368,28 @@ func TestWebhookNotificationVariants(t *testing.T) {
 		err = client.DeleteNotification(ctx, id)
 		require.NoError(t, err)
 	})
+}
+
+// TestNotificationUnsupportedType asserts that the server rejects a type it
+// cannot dispatch on. It guards the negative assertion made by the
+// test_notification subtest of TestNotificationCRUD: without it, that
+// assertion would also hold if the message ever changed upstream.
+func TestNotificationUnsupportedType(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), testNotificationTimeout)
+	defer cancel()
+
+	err := client.TestNotification(ctx, notification.Generic{
+		Base: notification.Base{
+			IsActive: true,
+			Name:     "Test Unsupported Type",
+		},
+		GenericDetails: notification.GenericDetails{},
+		TypeName:       "definitely-not-a-notification-provider",
+	})
+
+	require.ErrorContains(t, err, "Notification type is not supported")
 }

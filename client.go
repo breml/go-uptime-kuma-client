@@ -658,14 +658,12 @@ type ackResponse struct {
 }
 
 func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
-	res := make(chan ackResponse)
-	defer close(res)
+	// Buffered and never closed, so a late ack (e.g. after the context
+	// expired) neither blocks the socket.io callback nor sends on a closed
+	// channel.
+	res := make(chan ackResponse, 1)
 
 	args = append(args, emit.WithAck(func(response ackResponse) {
-		if ctx.Err() != nil {
-			return
-		}
-
 		res <- response
 	}))
 

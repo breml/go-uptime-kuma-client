@@ -68,3 +68,13 @@ func (c *Client) DeleteNotification(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteNotification", "notificationList", id)
 	return err
 }
+
+// TestNotification asks the server to dispatch a test message with the given
+// notification. It reports the error returned by the notification provider, so
+// a failure to reach the provider (e.g. invalid credentials or an unreachable
+// endpoint) is reported as an error as well. An unsupported notification type
+// is reported as "testNotification: Notification type is not supported".
+func (c *Client) TestNotification(ctx context.Context, notif notification.Notification) error {
+	_, err := c.syncEmit(ctx, "testNotification", notif)
+	return err
+}
