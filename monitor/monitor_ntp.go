@@ -135,8 +135,7 @@ type NTPDetails struct {
 	// Timeout is the query timeout in seconds. The column is NOT NULL, so
 	// unlike the other optional fields a nil value is not sent as null:
 	// MarshalJSON substitutes 10, the value the check itself falls back to.
-	// The column is a floating point column and the web UI enters the value
-	// in steps of a tenth of a second, so fractional values round-trip
+	// The column is a floating point column, so fractional values round-trip
 	// unchanged.
 	Timeout *float64 `json:"timeout"`
 	// NTPStratumThreshold is the stratum at which the monitor is considered

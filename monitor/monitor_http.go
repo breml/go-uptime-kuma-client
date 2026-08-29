@@ -104,12 +104,13 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 }
 
 // HTTPDetails contains http-specific monitor configuration.
-//
-// Timeout is the request timeout in seconds. The server stores it in a
-// floating point column and the web UI enters it in steps of a tenth of a
-// second, so fractional values round-trip unchanged.
 type HTTPDetails struct {
-	URL                      string     `json:"url"`
+	URL string `json:"url"`
+	// Timeout is the request timeout in seconds. The server stores it in a
+	// floating point column, so fractional values round-trip unchanged. The
+	// column is NOT NULL and has no unset representation: a zero value is
+	// stored verbatim and the check falls back to 80 percent of the interval
+	// per heartbeat, so the fallback never round-trips.
 	Timeout                  float64    `json:"timeout"`
 	ExpiryNotification       bool       `json:"expiryNotification"`
 	DomainExpiryNotification bool       `json:"domainExpiryNotification"`
