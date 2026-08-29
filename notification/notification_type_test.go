@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -13,15 +14,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestTypeMatchesUpstreamProviderName ensures that every Type() implementation
-// of this package, which returns a constant string, reports a notification type
-// known to Uptime Kuma.
+// TestTypeMatchesUpstreamProviderName ensures that the notification types
+// reported by this package are exactly the provider names known to Uptime Kuma.
 //
 // Uptime Kuma builds its provider registry from the `name` class field of the
 // notification providers (server/notification-providers/*.js) and dispatches on
-// the stored notification type. A type not present in this registry results in
-// a notification, which can not be sent.
+// the stored notification type (server/notification.js, Notification.send). A
+// type absent from this registry is still accepted on create, so the mismatch
+// only surfaces when a notification is sent, which fails with "Notification
+// type is not supported".
+//
+// Only a Type() implemented as a single return of a string literal is
+// collected. Wrapper types delegating to their details counterpart are covered
+// transitively, Base and Generic report a type read from the notification
+// itself and have none to check.
 func TestTypeMatchesUpstreamProviderName(t *testing.T) {
+	// Provider names of Uptime Kuma 2.5.0, the `name` field of every class in
+	// server/notification-providers/*.js. Regenerate after an upstream bump by
+	// running the following in a checkout of Uptime Kuma:
+	//
+	//	grep -hoP '^\s*name = "\K[^"]+' server/notification-providers/*.js | sort -f
 	upstreamProviderNames := []string{
 		"alerta",
 		"AlertNow",
@@ -148,23 +160,31 @@ func TestTypeMatchesUpstreamProviderName(t *testing.T) {
 				continue
 			}
 
-			types[receiverTypeName(funcDecl)] = value
+			receiver := receiverTypeName(funcDecl)
+			require.NotEmpty(t, receiver, "Type() in %s has an unsupported receiver", name)
+
+			types[receiver] = value
 		}
 	}
 
-	require.NotEmpty(t, types)
-
 	for receiver, notificationType := range types {
 		t.Run(receiver, func(t *testing.T) {
-			require.True(t, slices.Contains(upstreamProviderNames, notificationType),
+			require.Contains(t, upstreamProviderNames, notificationType,
 				"Type() returns %q, which is not a provider name known to Uptime Kuma", notificationType)
 		})
 	}
+
+	// Assert the two sets are equal, not just that every collected type is
+	// known upstream. This catches a provider whose Type() is no longer a
+	// string literal and therefore silently escapes collection, two providers
+	// reporting the same type, and a provider added upstream but not
+	// implemented here.
+	require.ElementsMatch(t, upstreamProviderNames, slices.Collect(maps.Values(types)),
+		"the notification types of this package do not match the upstream provider names one to one")
 }
 
-// constantReturnValue returns the constant string returned by the given
-// function, if its body consists of a single return statement returning a
-// string literal.
+// constantReturnValue returns the string returned by the given function, if its
+// body consists of a single return statement returning a string literal.
 func constantReturnValue(funcDecl *ast.FuncDecl) (string, bool) {
 	if funcDecl.Body == nil || len(funcDecl.Body.List) != 1 {
 		return "", false
@@ -188,7 +208,9 @@ func constantReturnValue(funcDecl *ast.FuncDecl) (string, bool) {
 	return value, true
 }
 
-// receiverTypeName returns the name of the receiver type of the given method.
+// receiverTypeName returns the name of the receiver type of the given method,
+// dereferencing a pointer receiver. It returns an empty string, if the receiver
+// is not a plain identifier, for example a generic type.
 func receiverTypeName(funcDecl *ast.FuncDecl) string {
 	expr := funcDecl.Recv.List[0].Type
 

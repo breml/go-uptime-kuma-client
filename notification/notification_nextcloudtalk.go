@@ -31,6 +31,11 @@ func (n NextcloudTalk) Type() string {
 }
 
 // Type returns the notification type identifier for NextcloudTalkDetails.
+//
+// Note: this is the provider name of Uptime Kuma
+// (server/notification-providers/nextcloudtalk.js) and deliberately does not follow the
+// casing of the Go type. Do not "fix" it, the server dispatches on this exact
+// string.
 func (NextcloudTalkDetails) Type() string {
 	return "nextcloudtalk"
 }

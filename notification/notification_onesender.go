@@ -29,6 +29,11 @@ func (o OneSender) Type() string {
 }
 
 // Type returns the notification type identifier for OneSenderDetails.
+//
+// Note: this is the provider name of Uptime Kuma
+// (server/notification-providers/onesender.js) and deliberately does not follow the
+// casing of the Go type. Do not "fix" it, the server dispatches on this exact
+// string.
 func (OneSenderDetails) Type() string {
 	return "Onesender"
 }
