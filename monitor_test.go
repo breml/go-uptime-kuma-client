@@ -1315,6 +1315,8 @@ func TestMonitorCRUD(t *testing.T) {
 					SSL:                    false,
 					AllowAutoTopicCreation: false,
 					SASLOptions:            nil,
+					// Timeout is left unset on purpose: the server column is
+					// NOT NULL, so MarshalJSON has to substitute a value.
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -1329,6 +1331,7 @@ func TestMonitorCRUD(t *testing.T) {
 				kafka.Message = "updated message"
 				kafka.SSL = true
 				kafka.AllowAutoTopicCreation = true
+				kafka.Timeout = ptr.To(int64(5))
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1337,6 +1340,8 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, id, kafka.ID)
 				require.Equal(t, "Test Kafka Producer Monitor", kafka.Name)
+				require.NotNil(t, kafka.Timeout)
+				require.Equal(t, int64(1), *kafka.Timeout)
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()
@@ -1356,6 +1361,8 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "updated message", kafka.Message)
 				require.True(t, kafka.SSL)
 				require.True(t, kafka.AllowAutoTopicCreation)
+				require.NotNil(t, kafka.Timeout)
+				require.Equal(t, int64(5), *kafka.Timeout)
 			},
 			testPauseResume: true,
 		},

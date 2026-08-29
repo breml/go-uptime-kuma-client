@@ -6,6 +6,12 @@ import (
 	"strconv"
 )
 
+// defaultKafkaProducerTimeout is the connection timeout in seconds the UI
+// assigns to a new Kafka Producer monitor. The client sends it explicitly,
+// because the monitor.timeout column is NOT NULL and the server rejects an
+// explicit null.
+const defaultKafkaProducerTimeout = 1
+
 // KafkaProducer represents a Kafka Producer monitor for testing Kafka connectivity.
 type KafkaProducer struct {
 	Base
@@ -77,6 +83,15 @@ func (k KafkaProducer) MarshalJSON() ([]byte, error) {
 	raw["kafkaProducerAllowAutoTopicCreation"] = k.AllowAutoTopicCreation
 	raw["kafkaProducerSaslOptions"] = k.SASLOptions
 
+	// The monitor.timeout column is NOT NULL, so an unset Timeout is sent as
+	// the value a new monitor is created with instead of as null.
+	timeout := int64(defaultKafkaProducerTimeout)
+	if k.Timeout != nil {
+		timeout = *k.Timeout
+	}
+
+	raw["timeout"] = timeout
+
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
 
@@ -105,6 +120,11 @@ type KafkaProducerDetails struct {
 	AllowAutoTopicCreation bool `json:"kafkaProducerAllowAutoTopicCreation"`
 	// SASLOptions is an optional map containing string with SASL configuration.
 	SASLOptions *map[string]any `json:"kafkaProducerSaslOptions"`
+	// Timeout is the optional connection timeout in seconds. While unset the
+	// client sends 1, the value the UI assigns to a new Kafka Producer
+	// monitor, because the server stores the column as NOT NULL and passes it
+	// to kafkajs verbatim.
+	Timeout *int64 `json:"timeout"`
 }
 
 // Type returns the monitor type.
