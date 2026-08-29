@@ -88,7 +88,7 @@ func (n NTP) MarshalJSON() ([]byte, error) {
 
 	// The monitor.timeout column is NOT NULL, so an unset Timeout is sent as
 	// the value the check would fall back to instead of as null.
-	timeout := int64(defaultNTPTimeout)
+	timeout := float64(defaultNTPTimeout)
 	if n.Timeout != nil {
 		timeout = *n.Timeout
 	}
@@ -135,7 +135,9 @@ type NTPDetails struct {
 	// Timeout is the query timeout in seconds. The column is NOT NULL, so
 	// unlike the other optional fields a nil value is not sent as null:
 	// MarshalJSON substitutes 10, the value the check itself falls back to.
-	Timeout *int64 `json:"timeout"`
+	// The column is a floating point column, so fractional values round-trip
+	// unchanged.
+	Timeout *float64 `json:"timeout"`
 	// NTPStratumThreshold is the stratum at which the monitor is considered
 	// down. The check fails when the reported stratum is greater than or
 	// equal to this value, so a threshold of 5 already rejects stratum 5.

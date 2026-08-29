@@ -42,10 +42,37 @@ func TestMonitorNTP_Unmarshal(t *testing.T) {
 				NTPDetails: monitor.NTPDetails{
 					Hostname: "pool.ntp.org",
 					Port:     ptr.To(int64(123)),
-					Timeout:  ptr.To(int64(10)),
+					Timeout:  ptr.To(float64(10)),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test NTP monitor","hostname":"pool.ntp.org","id":4,"interval":300,"maxretries":2,"name":"ntp-monitor","notificationIDList":{},"ntpRootDispersionThreshold":null,"ntpStratumThreshold":null,"ntpTimeOffsetThreshold":null,"parent":null,"port":123,"resendInterval":0,"retryInterval":60,"timeout":10,"type":"ntp","upsideDown":false}`,
+		},
+		{
+			name: "success with fractional timeout",
+			data: []byte(
+				`{"id":4,"name":"ntp-monitor","description":"Test NTP monitor","pathName":"ntp-monitor","parent":null,"childrenIDs":[],"url":null,"method":"GET","hostname":"pool.ntp.org","port":123,"maxretries":2,"weight":2000,"active":true,"forceInactive":false,"type":"ntp","timeout":0.5,"interval":300,"retryInterval":60,"resendInterval":0,"upsideDown":false,"accepted_statuscodes":["200-299"],"notificationIDList":{},"tags":[],"maintenance":false,"conditions":[],"ntpStratumThreshold":null,"ntpTimeOffsetThreshold":null,"ntpRootDispersionThreshold":null}`,
+			),
+
+			want: monitor.NTP{
+				Base: monitor.Base{
+					ID:             4,
+					Name:           "ntp-monitor",
+					Description:    ptr.To("Test NTP monitor"),
+					PathName:       "ntp-monitor",
+					Interval:       300,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     2,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				NTPDetails: monitor.NTPDetails{
+					Hostname: "pool.ntp.org",
+					Port:     ptr.To(int64(123)),
+					Timeout:  ptr.To(0.5),
+				},
+			},
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test NTP monitor","hostname":"pool.ntp.org","id":4,"interval":300,"maxretries":2,"name":"ntp-monitor","notificationIDList":{},"ntpRootDispersionThreshold":null,"ntpStratumThreshold":null,"ntpTimeOffsetThreshold":null,"parent":null,"port":123,"resendInterval":0,"retryInterval":60,"timeout":0.5,"type":"ntp","upsideDown":false}`,
 		},
 		{
 			name: "with thresholds",
@@ -71,7 +98,7 @@ func TestMonitorNTP_Unmarshal(t *testing.T) {
 				NTPDetails: monitor.NTPDetails{
 					Hostname:                   "time.cloudflare.com",
 					Port:                       ptr.To(int64(1123)),
-					Timeout:                    ptr.To(int64(20)),
+					Timeout:                    ptr.To(float64(20)),
 					NTPStratumThreshold:        ptr.To(int64(3)),
 					NTPTimeOffsetThreshold:     ptr.To(int64(250)),
 					NTPRootDispersionThreshold: ptr.To(int64(100)),
