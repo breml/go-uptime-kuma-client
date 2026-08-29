@@ -5,8 +5,8 @@ import (
 )
 
 // WxPusher represents a WxPusher notification provider.
-// WxPusher delivers notifications to WeChat via the WxPusher simple push
-// (极简推送) endpoint.
+// WxPusher delivers notifications through the standalone WxPusher app via
+// the simple push (极简推送) endpoint.
 type WxPusher struct {
 	Base
 	WxPusherDetails
@@ -15,8 +15,10 @@ type WxPusher struct {
 // WxPusherDetails contains the configuration fields for WxPusher notifications.
 type WxPusherDetails struct {
 	// SPT is the WxPusher simple push token, for example SPT_xxxxxxxxxxxx.
-	// Multiple tokens are supported and have to be separated by commas, the
-	// server trims the individual tokens and sends at most 10 per request.
+	// Required: the server rejects the notification at send time if no token
+	// remains. Multiple tokens are separated by commas, the server trims each
+	// one, discards empty entries and delivers to all of them, batching at
+	// most 10 tokens per request.
 	SPT string `json:"wxpusherSPT"`
 }
 

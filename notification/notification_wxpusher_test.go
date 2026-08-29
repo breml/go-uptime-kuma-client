@@ -40,7 +40,7 @@ func TestNotificationWxPusher_Unmarshal(t *testing.T) {
 			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My WxPusher Alert","type":"WxPusher","userId":1,"wxpusherSPT":"SPT_xxxxxxxxxxxx"}`,
 		},
 		{
-			name: "success with multiple spts",
+			name: "comma separated spt list is preserved verbatim",
 			data: []byte(
 				`{"id":2,"name":"WxPusher Team","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"WxPusher Team\",\"type\":\"WxPusher\",\"wxpusherSPT\":\"SPT_aaaaaaaaaaaa, SPT_bbbbbbbbbbbb,SPT_cccccccccccc\"}"}`,
 			),
@@ -80,6 +80,48 @@ func TestNotificationWxPusher_Unmarshal(t *testing.T) {
 				},
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"id":3,"isDefault":false,"name":"Disabled WxPusher","type":"WxPusher","userId":1,"wxpusherSPT":"SPT_dddddddddddd"}`,
+		},
+		{
+			name: "empty spt",
+			data: []byte(
+				`{"id":4,"name":"Empty WxPusher","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Empty WxPusher\",\"type\":\"WxPusher\",\"wxpusherSPT\":\"\"}"}`,
+			),
+
+			want: notification.WxPusher{
+				Base: notification.Base{
+					ID:            4,
+					Name:          "Empty WxPusher",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				WxPusherDetails: notification.WxPusherDetails{
+					SPT: "",
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":4,"isDefault":false,"name":"Empty WxPusher","type":"WxPusher","userId":1,"wxpusherSPT":""}`,
+		},
+		{
+			name: "spt missing from config is marshaled back as empty",
+			data: []byte(
+				`{"id":5,"name":"No SPT WxPusher","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"No SPT WxPusher\",\"type\":\"WxPusher\"}"}`,
+			),
+
+			want: notification.WxPusher{
+				Base: notification.Base{
+					ID:            5,
+					Name:          "No SPT WxPusher",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				WxPusherDetails: notification.WxPusherDetails{
+					SPT: "",
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":5,"isDefault":false,"name":"No SPT WxPusher","type":"WxPusher","userId":1,"wxpusherSPT":""}`,
 		},
 		{
 			name:    "missing config field",
