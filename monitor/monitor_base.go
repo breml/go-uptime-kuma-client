@@ -23,13 +23,18 @@ type Monitor interface {
 
 // Base contains the common fields for all monitor types.
 type Base struct {
-	ID              int64            `json:"id"`
-	Name            string           `json:"name"`
-	Description     *string          `json:"description"`
-	PathName        string           `json:"pathName"`
-	Parent          *int64           `json:"parent"`
-	ProxyID         *int64           `json:"proxyId"`
-	Interval        int64            `json:"interval"`
+	ID          int64   `json:"id"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+	PathName    string  `json:"pathName"`
+	Parent      *int64  `json:"parent"`
+	ProxyID     *int64  `json:"proxyId"`
+	// Interval is the check interval in seconds. The server only enforces a
+	// minimum of 1 second; the 24 day maximum was removed in Uptime Kuma 2.5.0,
+	// so no maximum is enforced as of that version.
+	Interval int64 `json:"interval"`
+	// RetryInterval is the interval in seconds between retries after a failed
+	// check. Like Interval, it is only bounded by a minimum of 1 second.
 	RetryInterval   int64            `json:"retryInterval"`
 	ResendInterval  int64            `json:"resendInterval"`
 	MaxRetries      int64            `json:"maxretries"`

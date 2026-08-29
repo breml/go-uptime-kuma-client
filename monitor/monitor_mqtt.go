@@ -98,7 +98,8 @@ func (m MQTT) MarshalJSON() ([]byte, error) {
 
 // MQTTDetails contains MQTT monitor specific fields.
 type MQTTDetails struct {
-	// Hostname is the MQTT broker address (supports mqtt://, ws://, wss:// protocols).
+	// Hostname is the MQTT broker address (supports mqtt://, mqtts://, ws://, wss:// protocols).
+	// A hostname without a scheme is treated as mqtt:// by the server.
 	Hostname string `json:"hostname"`
 	// Port is the MQTT broker port.
 	Port *int64 `json:"port"`
@@ -109,6 +110,9 @@ type MQTTDetails struct {
 	// MQTTPassword is the optional password for MQTT authentication.
 	MQTTPassword *string `json:"mqttPassword"`
 	// MQTTWebsocketPath is the optional WebSocket path for WebSocket connections.
+	// It is only applied when Hostname uses ws:// or wss://; the server ignores
+	// it for mqtt:// and mqtts:// hostnames, even though the Uptime Kuma 2.5.0
+	// UI renders the input for those schemes as well.
 	MQTTWebsocketPath *string `json:"mqttWebsocketPath"`
 	// MQTTCheckType is the check type: keyword or json-query.
 	MQTTCheckType MQTTCheckType `json:"mqttCheckType"`
