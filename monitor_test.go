@@ -666,6 +666,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, id, browser.ID)
 				require.Equal(t, "Test RealBrowser Monitor", browser.Name)
+				require.Equal(t, ptr.To(1500), browser.ScreenshotDelay)
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()
@@ -681,6 +682,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "Updated RealBrowser Monitor", browser.Name)
 				require.Equal(t, "https://httpbin.org/status/201", browser.URL)
+				require.Equal(t, ptr.To(2500), browser.ScreenshotDelay)
 				require.True(t, browser.DomainExpiryNotification)
 			},
 			testPauseResume: true,

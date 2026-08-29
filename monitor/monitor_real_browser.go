@@ -100,13 +100,18 @@ type RealBrowserDetails struct {
 	// floating point column, so fractional values round-trip unchanged, but
 	// the realbrowser check never reads the column: it derives its timeout
 	// from 80 percent of the interval instead.
-	Timeout                  float64  `json:"timeout"`
-	IgnoreTLS                bool     `json:"ignoreTls"`
-	MaxRedirects             int      `json:"maxredirects"`
-	AcceptedStatusCodes      []string `json:"accepted_statuscodes"`
-	RemoteBrowser            *int64   `json:"remote_browser,omitempty"`
-	ScreenshotDelay          *int     `json:"screenshot_delay,omitempty"`
-	DomainExpiryNotification bool     `json:"domainExpiryNotification"`
+	Timeout             float64  `json:"timeout"`
+	IgnoreTLS           bool     `json:"ignoreTls"`
+	MaxRedirects        int      `json:"maxredirects"`
+	AcceptedStatusCodes []string `json:"accepted_statuscodes"`
+	RemoteBrowser       *int64   `json:"remote_browser,omitempty"`
+	// ScreenshotDelay is the delay in milliseconds the browser waits before
+	// taking the screenshot. Uptime Kuma persists and returns the value since
+	// 2.5.0, before that any value sent by the client was silently dropped.
+	// The server rejects negative values and values greater than or equal to
+	// 50 percent of the interval (in milliseconds).
+	ScreenshotDelay          *int `json:"screenshot_delay,omitempty"`
+	DomainExpiryNotification bool `json:"domainExpiryNotification"`
 }
 
 // Type returns the monitor type.
