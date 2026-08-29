@@ -9,6 +9,10 @@ import (
 )
 
 // GetProxyList returns all proxies for the authenticated user.
+//
+// They are served from the local state cache, which the server keeps up to
+// date. Resync rebuilds it if an update event was missed, see
+// ErrUpdateEventTimeout.
 func (c *Client) GetProxyList(_ context.Context) []proxy.Proxy {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -19,7 +23,9 @@ func (c *Client) GetProxyList(_ context.Context) []proxy.Proxy {
 	return proxies
 }
 
-// GetProxy returns a specific proxy by ID.
+// GetProxy returns a specific proxy by ID. Like GetProxyList it serves from the
+// local state cache, so a proxy whose update event was missed is reported as
+// ErrNotFound until Resync.
 func (c *Client) GetProxy(_ context.Context, id int64) (*proxy.Proxy, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

@@ -36,6 +36,10 @@ var readyEvents = []string{
 // notification.
 const fakeAckCreatedID = 4242
 
+// fakeSessionToken is the JWT the fake server hands out at login, and the one it
+// expects to see again in a loginByToken.
+const fakeSessionToken = "fake-session-token"
+
 // fakeAckServer is a minimal socket.io server over HTTP long-polling that
 // completes the handshake, CONNECT, login and ready phases, so kuma.New()
 // returns a usable client. Unlike fakeSocketIOServer it then keeps serving:
@@ -50,6 +54,14 @@ type fakeAckServer struct {
 
 	mu       sync.Mutex
 	ackDelay time.Duration
+	// omitLoginToken drops the token from the login ack, as a server that
+	// hands out none would.
+	omitLoginToken bool
+	// suppressLists answers a loginByToken without resending the lists, which
+	// leaves a Resync waiting.
+	suppressLists bool
+	// resyncPayload is the last loginByToken frame received.
+	resyncPayload string
 }
 
 func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -114,6 +126,53 @@ func (s *fakeAckServer) currentAckDelay() time.Duration {
 	return s.ackDelay
 }
 
+func (s *fakeAckServer) setOmitLoginToken(omit bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.omitLoginToken = omit
+}
+
+func (s *fakeAckServer) setSuppressLists(suppress bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.suppressLists = suppress
+}
+
+func (s *fakeAckServer) recordResync(payload string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.resyncPayload = payload
+
+	return !s.suppressLists
+}
+
+func (s *fakeAckServer) lastResyncPayload() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.resyncPayload
+}
+
+func (s *fakeAckServer) loginAck() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.omitLoginToken {
+		return `{"ok":true,"msg":"Logged in successfully."}`
+	}
+
+	return fmt.Sprintf(`{"ok":true,"msg":"Logged in successfully.","token":%q}`, fakeSessionToken)
+}
+
+func (s *fakeAckServer) sendReadyEvents() {
+	for _, event := range readyEvents {
+		s.messages <- []byte(event)
+	}
+}
+
 func (s *fakeAckServer) handleClientMessage(body []byte) {
 	if len(body) < 2 {
 		return
@@ -134,12 +193,21 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 		ackID := string(socketIOData[1:i])
 		payload := string(socketIOData[i:])
 
-		if strings.Contains(payload, `"login"`) {
-			s.messages <- fmt.Appendf(nil, `43%s[{"ok":true,"msg":"Logged in successfully."}]`, ackID)
+		// A resync logs in again, which is what makes the server resend the
+		// lists. Checked before "login", which is a prefix of it.
+		if strings.Contains(payload, `"loginByToken"`) {
+			s.messages <- fmt.Appendf(nil, `43%s[{"ok":true}]`, ackID)
 
-			for _, event := range readyEvents {
-				s.messages <- []byte(event)
+			if s.recordResync(payload) {
+				s.sendReadyEvents()
 			}
+
+			return
+		}
+
+		if strings.Contains(payload, `"login"`) {
+			s.messages <- fmt.Appendf(nil, `43%s[%s]`, ackID, s.loginAck())
+			s.sendReadyEvents()
 
 			return
 		}

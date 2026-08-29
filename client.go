@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -55,7 +56,8 @@ var ErrNotFound = errors.New("not found")
 // handlers and not by the caller's context, so it catches up on its own once
 // the event arrives; if the event is lost for good, the cache stays stale until
 // the next broadcast for that resource. Until then a getter that serves from
-// the cache does not report the resource.
+// the cache does not report the resource; Resync makes the server resend the
+// lists instead of waiting for that broadcast.
 var ErrUpdateEventTimeout = errors.New("update event not received")
 
 // UpdateEventTimeoutError is the error the client returns for a command that
@@ -168,6 +170,22 @@ type state struct {
 	dockerHosts   []dockerhost.DockerHost
 }
 
+// pendingListEvents returns the update events that carry the lists the local
+// state cache is built from, as a set to strike them off as they arrive. The
+// server sends all of them after a login, which is what New waits for and what
+// Resync repeats.
+func pendingListEvents() map[string]struct{} {
+	return map[string]struct{}{
+		"monitorList":      empty,
+		"maintenanceList":  empty,
+		"notificationList": empty,
+		"statusPageList":   empty,
+		"proxyList":        empty,
+		"dockerHostList":   empty,
+		"apiKeyList":       empty,
+	}
+}
+
 // Client represents a connection to an Uptime Kuma server.
 type Client struct {
 	socketioClient               *socketio.Client
@@ -178,6 +196,10 @@ type Client struct {
 	mu      *sync.Mutex
 	updates signals.Signal[string]
 	state   state
+
+	// sessionToken is the JWT the server handed out at login. It is what
+	// Resync logs in with, see there.
+	sessionToken string
 }
 
 // Option is a functional option for configuring a Client.
@@ -418,15 +440,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	updateSeenMu := sync.Mutex{}
 	updateSeenMu.Lock()
-	updateSeen := map[string]struct{}{
-		"monitorList":      empty,
-		"maintenanceList":  empty,
-		"notificationList": empty,
-		"statusPageList":   empty,
-		"proxyList":        empty,
-		"dockerHostList":   empty,
-		"apiKeyList":       empty,
-	}
+	updateSeen := pendingListEvents()
 	updateSeenMu.Unlock()
 
 	ready := make(chan struct{})
@@ -618,11 +632,17 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}()
 
 	if username != "" && password != "" {
-		_, err = c.syncEmit(
+		var loginResponse ackResponse
+
+		loginResponse, err = c.syncEmit(
 			ctxWithConnectTimeout,
 			"login",
 			map[string]any{"username": username, "password": password, "token": ""},
 		)
+		if err == nil {
+			c.setSessionToken(loginResponse.Token)
+		}
+
 		if err != nil {
 			// Ensure we had the time to receive a potential setup event.
 			time.Sleep(10 * time.Millisecond)
@@ -660,7 +680,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 				return nil, fmt.Errorf("setup: %w", err)
 			}
 
-			_, err = c.syncEmit(
+			loginResponse, err := c.syncEmit(
 				ctxWithConnectTimeout,
 				"login",
 				map[string]any{"username": username, "password": password, "token": ""},
@@ -668,6 +688,8 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			if err != nil {
 				return nil, fmt.Errorf("login: %w", err)
 			}
+
+			c.setSessionToken(loginResponse.Token)
 
 		case <-ctx.Done():
 			return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
@@ -719,9 +741,88 @@ func (c *Client) Disconnect() error {
 	return nil
 }
 
+// Resync rebuilds the local state cache from the server and returns once the
+// server has resent every list the cache is built from.
+//
+// It is the way out of the stale cache an operation that failed with
+// ErrUpdateEventTimeout leaves behind: the getters that serve from the cache do
+// not report a resource until its list is broadcast again, and for
+// notifications, proxies and Docker hosts nothing else triggers that broadcast.
+//
+// The resync is all or nothing, because the server has no command to re-request
+// a single list. What it does have is a login, which answers with all of them,
+// so Resync logs in again with the token from the login New performed. A client
+// created without credentials therefore cannot resync.
+func (c *Client) Resync(ctx context.Context) error {
+	c.mu.Lock()
+	token := c.sessionToken
+	c.mu.Unlock()
+
+	if token == "" {
+		return errors.New("resync: no session token, the client was created without credentials")
+	}
+
+	pendingMu := sync.Mutex{}
+	pending := pendingListEvents()
+
+	done := make(chan struct{})
+	closeDone := sync.OnceFunc(func() {
+		close(done)
+	})
+	defer closeDone()
+
+	// Registered before the command is emitted, so that no list can arrive
+	// unnoticed between the two.
+	listenerID := uuid.New()
+	c.updates.AddListener(func(_ context.Context, update string) {
+		pendingMu.Lock()
+		defer pendingMu.Unlock()
+
+		delete(pending, update)
+
+		if len(pending) == 0 {
+			closeDone()
+		}
+	}, listenerID.String())
+
+	defer c.updates.RemoveListener(listenerID.String())
+
+	_, err := c.syncEmit(ctx, "loginByToken", token)
+	if err != nil {
+		return fmt.Errorf("resync: %w", err)
+	}
+
+	select {
+	case <-done:
+		return nil
+
+	case <-ctx.Done():
+		pendingMu.Lock()
+		missing := make([]string, 0, len(pending))
+
+		for event := range pending {
+			missing = append(missing, event)
+		}
+		pendingMu.Unlock()
+
+		slices.Sort(missing)
+
+		return fmt.Errorf("resync: %w (missing events: %s)", ctx.Err(), strings.Join(missing, ", "))
+	}
+}
+
+// setSessionToken records the JWT a login answered with, see Resync.
+func (c *Client) setSessionToken(token string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.sessionToken = token
+}
+
 type ackResponse struct {
 	Msg             string         `json:"msg"`
 	OK              bool           `json:"ok"`
+	Token           string         `json:"token"`
 	ID              int64          `json:"id"`
 	MonitorID       int64          `json:"monitorID"`
 	MaintenanceID   int64          `json:"maintenanceID"`

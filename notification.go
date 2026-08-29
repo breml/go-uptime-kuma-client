@@ -10,6 +10,10 @@ import (
 )
 
 // GetNotifications returns all notifications for the authenticated user.
+//
+// They are served from the local state cache, which the server keeps up to
+// date. Resync rebuilds it if an update event was missed, see
+// ErrUpdateEventTimeout.
 func (c *Client) GetNotifications(_ context.Context) []notification.Base {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -20,7 +24,9 @@ func (c *Client) GetNotifications(_ context.Context) []notification.Base {
 	return notifications
 }
 
-// GetNotification returns a specific notification by ID.
+// GetNotification returns a specific notification by ID. Like GetNotifications
+// it serves from the local state cache, so a notification whose update event
+// was missed is reported as ErrNotFound until Resync.
 func (c *Client) GetNotification(_ context.Context, id int64) (notification.Base, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
