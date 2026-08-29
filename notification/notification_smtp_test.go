@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -108,6 +109,62 @@ func TestNotificationSMTP_Unmarshal(t *testing.T) {
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"customBody":"","customSubject":"","htmlBody":false,"id":3,"isDefault":false,"name":"SMTP No STARTTLS","smtpBCC":"","smtpCC":"","smtpDkimDomain":"","smtpDkimHashAlgo":"","smtpDkimKeySelector":"","smtpDkimPrivateKey":"","smtpDkimheaderFieldNames":"","smtpDkimskipFields":"","smtpFrom":"sender@example.com","smtpHost":"legacy.example.com","smtpIgnoreSTARTTLS":true,"smtpIgnoreTLSError":false,"smtpPassword":"","smtpPort":25,"smtpSecure":false,"smtpTo":"recipient@example.com","smtpUsername":"","type":"smtp","userId":1}`,
+		},
+		{
+			name: "with additional headers",
+			data: []byte(
+				`{"id":4,"name":"SMTP Additional Headers","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMTP Additional Headers\",\"smtpHost\":\"smtp.example.com\",\"smtpPort\":587,\"smtpSecure\":false,\"smtpIgnoreTLSError\":false,\"smtpFrom\":\"sender@example.com\",\"smtpTo\":\"recipient@example.com\",\"smtpAdditionalHeaders\":\"{\\\"X-Custom-Header\\\": \\\"Additional Header\\\"}\",\"htmlBody\":false,\"type\":\"smtp\"}"}`,
+			),
+
+			want: notification.SMTP{
+				Base: notification.Base{
+					ID:            4,
+					Name:          "SMTP Additional Headers",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				SMTPDetails: notification.SMTPDetails{
+					Host:              "smtp.example.com",
+					Port:              587,
+					Secure:            false,
+					IgnoreTLSError:    false,
+					From:              "sender@example.com",
+					To:                "recipient@example.com",
+					AdditionalHeaders: ptr.To(`{"X-Custom-Header": "Additional Header"}`),
+					HTMLBody:          false,
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"customBody":"","customSubject":"","htmlBody":false,"id":4,"isDefault":false,"name":"SMTP Additional Headers","smtpAdditionalHeaders":"{\"X-Custom-Header\": \"Additional Header\"}","smtpBCC":"","smtpCC":"","smtpDkimDomain":"","smtpDkimHashAlgo":"","smtpDkimKeySelector":"","smtpDkimPrivateKey":"","smtpDkimheaderFieldNames":"","smtpDkimskipFields":"","smtpFrom":"sender@example.com","smtpHost":"smtp.example.com","smtpIgnoreSTARTTLS":false,"smtpIgnoreTLSError":false,"smtpPassword":"","smtpPort":587,"smtpSecure":false,"smtpTo":"recipient@example.com","smtpUsername":"","type":"smtp","userId":1}`,
+		},
+		{
+			name: "with empty additional headers",
+			data: []byte(
+				`{"id":5,"name":"SMTP Empty Additional Headers","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"SMTP Empty Additional Headers\",\"smtpHost\":\"smtp.example.com\",\"smtpPort\":587,\"smtpSecure\":false,\"smtpIgnoreTLSError\":false,\"smtpFrom\":\"sender@example.com\",\"smtpTo\":\"recipient@example.com\",\"smtpAdditionalHeaders\":\"\",\"htmlBody\":false,\"type\":\"smtp\"}"}`,
+			),
+
+			want: notification.SMTP{
+				Base: notification.Base{
+					ID:            5,
+					Name:          "SMTP Empty Additional Headers",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				SMTPDetails: notification.SMTPDetails{
+					Host:              "smtp.example.com",
+					Port:              587,
+					Secure:            false,
+					IgnoreTLSError:    false,
+					From:              "sender@example.com",
+					To:                "recipient@example.com",
+					AdditionalHeaders: ptr.To(""),
+					HTMLBody:          false,
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"customBody":"","customSubject":"","htmlBody":false,"id":5,"isDefault":false,"name":"SMTP Empty Additional Headers","smtpAdditionalHeaders":"","smtpBCC":"","smtpCC":"","smtpDkimDomain":"","smtpDkimHashAlgo":"","smtpDkimKeySelector":"","smtpDkimPrivateKey":"","smtpDkimheaderFieldNames":"","smtpDkimskipFields":"","smtpFrom":"sender@example.com","smtpHost":"smtp.example.com","smtpIgnoreSTARTTLS":false,"smtpIgnoreTLSError":false,"smtpPassword":"","smtpPort":587,"smtpSecure":false,"smtpTo":"recipient@example.com","smtpUsername":"","type":"smtp","userId":1}`,
 		},
 	}
 

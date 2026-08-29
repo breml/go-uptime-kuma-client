@@ -32,6 +32,12 @@ type SMTPDetails struct {
 	CustomSubject        string `json:"customSubject"`
 	CustomBody           string `json:"customBody"`
 	HTMLBody             bool   `json:"htmlBody"`
+	// AdditionalHeaders holds a JSON object encoded as a string, which the
+	// server merges into the headers of the outgoing mail, for example
+	// `{"X-Custom-Header": "Additional Header"}`. A nil value omits the
+	// field, while a pointer to the empty string keeps it present but
+	// unset, which the server distinguishes.
+	AdditionalHeaders *string `json:"smtpAdditionalHeaders,omitempty"`
 }
 
 // Type returns the notification type.
