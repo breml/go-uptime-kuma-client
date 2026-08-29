@@ -41,6 +41,10 @@ var readyEvents = []string{
 // It never emits an update event for those commands, so a caller using
 // syncEmitWithUpdateEvent keeps waiting after its ack arrived — the state in
 // which the deadline and the ack collide.
+// fakeAckCreatedID is the ID the fake server reports for a created
+// notification.
+const fakeAckCreatedID = 4242
+
 type fakeAckServer struct {
 	messages chan []byte
 
@@ -140,12 +144,19 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 			return
 		}
 
+		// The server assigns the ID of a created resource in the ack, which
+		// is the value a caller loses if a successful ack is discarded.
+		ack := `{"ok":true,"msg":"ok"}`
+		if strings.Contains(payload, `"addNotification"`) {
+			ack = fmt.Sprintf(`{"ok":true,"msg":"ok","id":%d}`, fakeAckCreatedID)
+		}
+
 		// Acknowledge out of band: blocking here would stall the client's
 		// send path instead of only delaying the ack.
 		delay := s.currentAckDelay()
 		go func() {
 			time.Sleep(delay)
-			s.messages <- fmt.Appendf(nil, `43%s[{"ok":true,"msg":"ok"}]`, ackID)
+			s.messages <- fmt.Appendf(nil, `43%s[%s]`, ackID, ack)
 		}()
 
 	default:
@@ -211,6 +222,13 @@ func TestAckDeliveryAroundDeadline(t *testing.T) {
 			err := kumaClient.DeleteNotification(callCtx, 1)
 			callCancel()
 
+			// Both outcomes of the race keep wrapping the context error: the
+			// ack that lost it produces a bare deadline error, the ack that
+			// won it produces ErrUpdateEventTimeout wrapping the same
+			// deadline error. Which one a given delay yields depends on
+			// scheduling, so only the shared part is asserted here;
+			// TestUpdateEventTimeoutKeepsSuccessfulAck pins the ack-wins case
+			// down deterministically.
 			require.ErrorIs(t, err, context.DeadlineExceeded,
 				"ack delay %s should leave the call waiting on its update event", fake.currentAckDelay())
 		}
@@ -239,5 +257,81 @@ func TestAckDeliveryAroundDeadline(t *testing.T) {
 
 			require.Equal(t, "ok", msg)
 		}
+	})
+}
+
+// TestUpdateEventTimeoutKeepsSuccessfulAck covers the case the sweep above can
+// only hit by chance: the server acknowledges the command well before the
+// deadline and never emits the update event that follows it.
+//
+// The command was applied, so reporting a bare context error would tell the
+// caller the write failed for a write the server performed — and for a create,
+// it would also drop the ID the server assigned, leaving a retry to produce a
+// duplicate.
+func TestUpdateEventTimeoutKeepsSuccessfulAck(t *testing.T) {
+	// Long enough that the ack, which the fake sends without delay, always
+	// arrives first; the call then runs into the deadline waiting for the
+	// update event the fake never emits.
+	const callTimeout = 500 * time.Millisecond
+
+	fake := &fakeAckServer{messages: make(chan []byte, 32)}
+	server := httptest.NewServer(fake)
+
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
+	t.Cleanup(func() {
+		cancel()
+		server.CloseClientConnections()
+		server.Close()
+	})
+
+	kumaClient, err := kuma.New(
+		ctx,
+		server.URL,
+		"admin", "admin1",
+		kuma.WithConnectTimeout(10*time.Second),
+	)
+	require.NoError(t, err)
+
+	t.Run("create_reports_the_id_the_server_assigned", func(t *testing.T) {
+		callCtx, callCancel := context.WithTimeout(ctx, callTimeout)
+		defer callCancel()
+
+		id, err := kumaClient.CreateNotification(callCtx, notification.Generic{
+			Base:           notification.Base{Name: "update event timeout"},
+			GenericDetails: notification.GenericDetails{},
+			TypeName:       "generic",
+		})
+
+		require.ErrorIs(t, err, kuma.ErrUpdateEventTimeout)
+		require.ErrorIs(t, err, context.DeadlineExceeded,
+			"the sentinel must not hide the timeout from callers matching on it")
+		require.Equal(t, int64(fakeAckCreatedID), id,
+			"the notification exists on the server, so its ID must survive the missing update event")
+	})
+
+	t.Run("delete_is_distinguishable_from_a_plain_timeout", func(t *testing.T) {
+		callCtx, callCancel := context.WithTimeout(ctx, callTimeout)
+		defer callCancel()
+
+		err := kumaClient.DeleteNotification(callCtx, 1)
+
+		require.ErrorIs(t, err, kuma.ErrUpdateEventTimeout)
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+	})
+
+	t.Run("an_unacknowledged_command_stays_a_plain_timeout", func(t *testing.T) {
+		// No ack at all before the deadline: nothing is known about the write,
+		// so the sentinel must not be reported.
+		fake.setAckDelay(2 * callTimeout)
+		t.Cleanup(func() { fake.setAckDelay(0) })
+
+		callCtx, callCancel := context.WithTimeout(ctx, callTimeout)
+		defer callCancel()
+
+		err := kumaClient.DeleteNotification(callCtx, 1)
+
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.NotErrorIs(t, err, kuma.ErrUpdateEventTimeout,
+			"without an ack the client cannot claim the command was applied")
 	})
 }

@@ -2,6 +2,7 @@ package kuma
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/breml/go-uptime-kuma-client/maintenance"
@@ -44,6 +45,12 @@ func (c *Client) GetMaintenance(ctx context.Context, id int64) (*maintenance.Mai
 }
 
 // CreateMaintenance creates a new maintenance window.
+//
+// If the returned error wraps ErrUpdateEventTimeout, the maintenance window was
+// created and m.ID identifies it; the context is spent at that point, so the
+// complete object cannot be fetched back and the returned value carries only
+// what the caller passed in plus the ID. Retrying the call would create a
+// duplicate.
 func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenance) (*maintenance.Maintenance, error) {
 	maintenanceData, err := structToMap(m)
 	if err != nil {
@@ -52,6 +59,12 @@ func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenan
 
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addMaintenance", "maintenanceList", maintenanceData)
 	if err != nil {
+		if errors.Is(err, ErrUpdateEventTimeout) {
+			m.ID = response.MaintenanceID
+
+			return m, fmt.Errorf("create maintenance: %w", err)
+		}
+
 		return nil, fmt.Errorf("create maintenance: %w", err)
 	}
 

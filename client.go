@@ -31,6 +31,28 @@ import (
 // ErrNotFound is returned when a requested resource is not found.
 var ErrNotFound = errors.New("not found")
 
+// ErrUpdateEventTimeout is returned when the server acknowledged a mutating
+// command successfully, but the update event it broadcasts afterwards did not
+// arrive before the context expired. The write landed on the server; what is
+// missing is only the broadcast.
+//
+// An error wrapping ErrUpdateEventTimeout also wraps the context error, so
+// errors.Is(err, context.DeadlineExceeded) keeps reporting the timeout. Use
+// errors.Is(err, ErrUpdateEventTimeout) to tell the two cases apart: a plain
+// context error means the server never confirmed the command and it may or may
+// not have been applied, while ErrUpdateEventTimeout means it was applied.
+//
+// Methods that hand out a server assigned ID return it alongside such an error,
+// so a caller can adopt the created resource instead of retrying and creating a
+// duplicate.
+//
+// The local state cache is refreshed from the update event, so on this path it
+// is not up to date yet. The cache is maintained by the socket.io event
+// handlers and not by the caller's context, so it catches up on its own once
+// the event arrives; if the event is lost for good, the cache stays stale until
+// the next broadcast for that resource.
+var ErrUpdateEventTimeout = errors.New("update event not received")
+
 // Log level constants for configuring socket.io client logging verbosity.
 const (
 	LogLevelDebug = utils.DEBUG
@@ -685,6 +707,15 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 	}
 }
 
+// syncEmitWithUpdateEvent emits command and returns once the server has both
+// acknowledged it and broadcast updateEvent, which is what refreshes the local
+// state cache.
+//
+// If the ack reports success but the update event does not arrive before ctx
+// expires, the response is returned together with an error wrapping
+// ErrUpdateEventTimeout and the context error: the command was applied, only
+// the broadcast is missing. Discarding the response here would tell the caller
+// the write failed for a write the server performed.
 func (c *Client) syncEmitWithUpdateEvent(
 	ctx context.Context,
 	command string,
@@ -722,7 +753,22 @@ func (c *Client) syncEmitWithUpdateEvent(
 		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
 
-	var response ackResponse
+	return awaitAckAndUpdateEvent(ctx, command, done, res)
+}
+
+// awaitAckAndUpdateEvent waits for the ack delivered on res and for the update
+// event that closes done, and reports what arrived before ctx expired.
+func awaitAckAndUpdateEvent(
+	ctx context.Context,
+	command string,
+	done <-chan struct{},
+	res <-chan ackResponse,
+) (ackResponse, error) {
+	var (
+		response ackResponse
+		acked    bool
+	)
+
 	// Ensure, we have received both signals: done and ack
 	// Setting channel to nil blocks forever, thisway we ensure, that
 	// we also receive the second signal.
@@ -736,12 +782,47 @@ func (c *Client) syncEmitWithUpdateEvent(
 				return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
 			}
 
+			acked = true
 			res = nil
 
 		case <-ctx.Done():
-			return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
+			if !acked {
+				response, acked = pollAck(res)
+			}
+
+			switch {
+			case acked && !response.OK:
+				return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
+
+			case acked:
+				// The server applied the command, only its broadcast is
+				// missing. Returning the response lets the caller keep what
+				// the ack carried, e.g. the ID of a created resource.
+				return response, fmt.Errorf("%s: %w: %w", command, ErrUpdateEventTimeout, ctx.Err())
+
+			default:
+				return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
+			}
 		}
 	}
 
 	return response, nil
+}
+
+// pollAck takes an ack that has already been delivered, without blocking. The
+// ack and the context deadline can become ready in the same instant, and select
+// picks between ready cases at random, so a delivered ack has to be collected
+// explicitly instead of being lost to that coin flip.
+func pollAck(res <-chan ackResponse) (ackResponse, bool) {
+	if res == nil {
+		return ackResponse{}, false
+	}
+
+	select {
+	case response := <-res:
+		return response, true
+
+	default:
+		return ackResponse{}, false
+	}
 }

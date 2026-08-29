@@ -50,9 +50,17 @@ func (c *Client) GetNotificationAs(ctx context.Context, id int64, target any) er
 }
 
 // CreateNotification creates a new notification.
+//
+// If the returned error wraps ErrUpdateEventTimeout, the notification was
+// created and the returned ID identifies it; retrying the call would create a
+// duplicate.
 func (c *Client) CreateNotification(ctx context.Context, notif notification.Notification) (int64, error) {
 	response, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notif, nil)
 	if err != nil {
+		if errors.Is(err, ErrUpdateEventTimeout) {
+			return response.ID, err
+		}
+
 		return 0, err
 	}
 
