@@ -14,6 +14,7 @@ const (
 	analyticsTypeUmami     = "umami"
 	analyticsTypePlausible = "plausible"
 	analyticsTypeMatomo    = "matomo"
+	analyticsTypeRybbit    = "rybbit"
 )
 
 // ThemeLight returns the "light" theme identifier.
@@ -81,8 +82,17 @@ func AnalyticsTypeMatomo() string {
 	return analyticsTypeMatomo
 }
 
+// AnalyticsTypeRybbit returns the "rybbit" analytics type identifier.
+func AnalyticsTypeRybbit() string {
+	return analyticsTypeRybbit
+}
+
 // ValidAnalyticsType checks if the provided analytics type is valid.
 // A nil value is considered valid, as Uptime Kuma accepts null for this field.
+// The check is an allowlist of the analytics types supported by Uptime Kuma.
+// While the status_page.analytics_type column is a free-form string since
+// Uptime Kuma v2.5.0, the server still rejects any other value, so the
+// allowlist is kept in sync with the server side validation.
 func ValidAnalyticsType(analyticsType *string) bool {
 	if analyticsType == nil {
 		return true
@@ -91,5 +101,6 @@ func ValidAnalyticsType(analyticsType *string) bool {
 	at := *analyticsType
 	return at == analyticsTypeGoogle || at == analyticsTypeUmami ||
 		at == analyticsTypePlausible ||
-		at == analyticsTypeMatomo
+		at == analyticsTypeMatomo ||
+		at == analyticsTypeRybbit
 }

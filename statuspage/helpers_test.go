@@ -191,6 +191,11 @@ func TestAnalyticsTypeHelpers(t *testing.T) {
 			analyticsType: "matomo",
 			wantFunc:      statuspage.AnalyticsTypeMatomo,
 		},
+		{
+			name:          "rybbit analytics type",
+			analyticsType: "rybbit",
+			wantFunc:      statuspage.AnalyticsTypeRybbit,
+		},
 	}
 
 	for _, tt := range tests {
@@ -231,6 +236,11 @@ func TestValidAnalyticsType(t *testing.T) {
 		{
 			name:          "matomo is valid",
 			analyticsType: ptr.To("matomo"),
+			want:          true,
+		},
+		{
+			name:          "rybbit is valid",
+			analyticsType: ptr.To("rybbit"),
 			want:          true,
 		},
 		{
