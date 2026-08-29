@@ -25,7 +25,7 @@ func TestMonitorKafkaProducer_Unmarshal(t *testing.T) {
 		{
 			name: "success with single broker and SSL",
 			data: []byte(
-				`{"id":1,"name":"kafka-monitor","description":"Test Kafka monitor","pathName":"group / kafka-monitor","parent":1,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":2,"weight":2000,"active":true,"forceInactive":false,"type":"kafka-producer","timeout":48,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":null,"dns_resolve_server":null,"dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{"1":true,"2":true},"tags":[],"maintenance":false,"mqttTopic":"","mqttSuccessMessage":"","databaseQuery":null,"authMethod":null,"grpcUrl":null,"grpcProtobuf":null,"grpcMethod":null,"grpcServiceName":null,"grpcEnableTls":false,"radiusCalledStationId":null,"radiusCallingStationId":null,"game":null,"gamedigGivenPortOnly":true,"httpBodyEncoding":"json","jsonPath":null,"expectedValue":null,"kafkaProducerTopic":"test-topic","kafkaProducerBrokers":["localhost:9092"],"kafkaProducerSsl":true,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerMessage":"test message","screenshot":null,"headers":null,"body":null,"grpcBody":null,"grpcMetadata":null,"basic_auth_user":null,"basic_auth_pass":null,"oauth_client_id":null,"oauth_client_secret":null,"oauth_token_url":null,"oauth_scopes":null,"oauth_auth_method":"client_secret_basic","pushToken":null,"databaseConnectionString":null,"radiusUsername":null,"radiusPassword":null,"radiusSecret":null,"mqttUsername":"","mqttPassword":"","authWorkstation":null,"authDomain":null,"tlsCa":null,"tlsCert":null,"tlsKey":null,"kafkaProducerSaslOptions":{"mechanism":"None"},"includeSensitiveData":true}`,
+				`{"id":1,"name":"kafka-monitor","description":"Test Kafka monitor","pathName":"group / kafka-monitor","parent":1,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":2,"weight":2000,"active":true,"forceInactive":false,"type":"kafka-producer","timeout":1,"interval":60,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":null,"dns_resolve_server":null,"dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{"1":true,"2":true},"tags":[],"maintenance":false,"mqttTopic":"","mqttSuccessMessage":"","databaseQuery":null,"authMethod":null,"grpcUrl":null,"grpcProtobuf":null,"grpcMethod":null,"grpcServiceName":null,"grpcEnableTls":false,"radiusCalledStationId":null,"radiusCallingStationId":null,"game":null,"gamedigGivenPortOnly":true,"httpBodyEncoding":"json","jsonPath":null,"expectedValue":null,"kafkaProducerTopic":"test-topic","kafkaProducerBrokers":["localhost:9092"],"kafkaProducerSsl":true,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerMessage":"test message","screenshot":null,"headers":null,"body":null,"grpcBody":null,"grpcMetadata":null,"basic_auth_user":null,"basic_auth_pass":null,"oauth_client_id":null,"oauth_client_secret":null,"oauth_token_url":null,"oauth_scopes":null,"oauth_auth_method":"client_secret_basic","pushToken":null,"databaseConnectionString":null,"radiusUsername":null,"radiusPassword":null,"radiusSecret":null,"mqttUsername":"","mqttPassword":"","authWorkstation":null,"authDomain":null,"tlsCa":null,"tlsCert":null,"tlsKey":null,"kafkaProducerSaslOptions":{"mechanism":"None"},"includeSensitiveData":true}`,
 			),
 
 			want: monitor.KafkaProducer{
@@ -50,15 +50,15 @@ func TestMonitorKafkaProducer_Unmarshal(t *testing.T) {
 					SSL:                    true,
 					AllowAutoTopicCreation: false,
 					SASLOptions:            &saslOptionsNone,
-					Timeout:                ptr.To(int64(48)),
+					Timeout:                ptr.To(int64(1)),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Kafka monitor","id":1,"interval":60,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerBrokers":["localhost:9092"],"kafkaProducerMessage":"test message","kafkaProducerSaslOptions":{"mechanism":"None"},"kafkaProducerSsl":true,"kafkaProducerTopic":"test-topic","maxretries":2,"name":"kafka-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"timeout":48,"type":"kafka-producer","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Kafka monitor","id":1,"interval":60,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerBrokers":["localhost:9092"],"kafkaProducerMessage":"test message","kafkaProducerSaslOptions":{"mechanism":"None"},"kafkaProducerSsl":true,"kafkaProducerTopic":"test-topic","maxretries":2,"name":"kafka-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"timeout":1,"type":"kafka-producer","upsideDown":false}`,
 		},
 		{
 			name: "success with multiple brokers and SASL",
 			data: []byte(
-				`{"id":2,"name":"kafka-cluster","description":"Test Kafka cluster","pathName":"group / kafka-cluster","parent":1,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":3,"weight":2000,"active":true,"forceInactive":false,"type":"kafka-producer","timeout":30,"interval":120,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":null,"dns_resolve_server":null,"dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{},"tags":[],"maintenance":false,"mqttTopic":"","mqttSuccessMessage":"","databaseQuery":null,"authMethod":null,"grpcUrl":null,"grpcProtobuf":null,"grpcMethod":null,"grpcServiceName":null,"grpcEnableTls":false,"radiusCalledStationId":null,"radiusCallingStationId":null,"game":null,"gamedigGivenPortOnly":true,"httpBodyEncoding":"json","jsonPath":null,"expectedValue":null,"kafkaProducerTopic":"events","kafkaProducerBrokers":["kafka1:9092","kafka2:9092","kafka3:9092"],"kafkaProducerSsl":false,"kafkaProducerAllowAutoTopicCreation":true,"kafkaProducerMessage":"health check","screenshot":null,"headers":null,"body":null,"grpcBody":null,"grpcMetadata":null,"basic_auth_user":null,"basic_auth_pass":null,"oauth_client_id":null,"oauth_client_secret":null,"oauth_token_url":null,"oauth_scopes":null,"oauth_auth_method":"client_secret_basic","pushToken":null,"databaseConnectionString":null,"radiusUsername":null,"radiusPassword":null,"radiusSecret":null,"mqttUsername":"","mqttPassword":"","authWorkstation":null,"authDomain":null,"tlsCa":null,"tlsCert":null,"tlsKey":null,"kafkaProducerSaslOptions":{"mechanism":"plain","username":"user","password":"pass"},"includeSensitiveData":true}`,
+				`{"id":2,"name":"kafka-cluster","description":"Test Kafka cluster","pathName":"group / kafka-cluster","parent":1,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":3,"weight":2000,"active":true,"forceInactive":false,"type":"kafka-producer","timeout":5,"interval":120,"retryInterval":60,"resendInterval":0,"keyword":null,"invertKeyword":false,"expiryNotification":false,"ignoreTls":false,"upsideDown":false,"packetSize":56,"maxredirects":10,"accepted_statuscodes":["200-299"],"dns_resolve_type":null,"dns_resolve_server":null,"dns_last_result":null,"docker_container":"","docker_host":null,"proxyId":null,"notificationIDList":{},"tags":[],"maintenance":false,"mqttTopic":"","mqttSuccessMessage":"","databaseQuery":null,"authMethod":null,"grpcUrl":null,"grpcProtobuf":null,"grpcMethod":null,"grpcServiceName":null,"grpcEnableTls":false,"radiusCalledStationId":null,"radiusCallingStationId":null,"game":null,"gamedigGivenPortOnly":true,"httpBodyEncoding":"json","jsonPath":null,"expectedValue":null,"kafkaProducerTopic":"events","kafkaProducerBrokers":["kafka1:9092","kafka2:9092","kafka3:9092"],"kafkaProducerSsl":false,"kafkaProducerAllowAutoTopicCreation":true,"kafkaProducerMessage":"health check","screenshot":null,"headers":null,"body":null,"grpcBody":null,"grpcMetadata":null,"basic_auth_user":null,"basic_auth_pass":null,"oauth_client_id":null,"oauth_client_secret":null,"oauth_token_url":null,"oauth_scopes":null,"oauth_auth_method":"client_secret_basic","pushToken":null,"databaseConnectionString":null,"radiusUsername":null,"radiusPassword":null,"radiusSecret":null,"mqttUsername":"","mqttPassword":"","authWorkstation":null,"authDomain":null,"tlsCa":null,"tlsCert":null,"tlsKey":null,"kafkaProducerSaslOptions":{"mechanism":"plain","username":"user","password":"pass"},"includeSensitiveData":true}`,
 			),
 
 			want: monitor.KafkaProducer{
@@ -83,10 +83,42 @@ func TestMonitorKafkaProducer_Unmarshal(t *testing.T) {
 					SSL:                    false,
 					AllowAutoTopicCreation: true,
 					SASLOptions:            &saslOptionsBasic,
-					Timeout:                ptr.To(int64(30)),
+					Timeout:                ptr.To(int64(5)),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Kafka cluster","id":2,"interval":120,"kafkaProducerAllowAutoTopicCreation":true,"kafkaProducerBrokers":["kafka1:9092","kafka2:9092","kafka3:9092"],"kafkaProducerMessage":"health check","kafkaProducerSaslOptions":{"mechanism":"plain","password":"pass","username":"user"},"kafkaProducerSsl":false,"kafkaProducerTopic":"events","maxretries":3,"name":"kafka-cluster","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"timeout":30,"type":"kafka-producer","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Kafka cluster","id":2,"interval":120,"kafkaProducerAllowAutoTopicCreation":true,"kafkaProducerBrokers":["kafka1:9092","kafka2:9092","kafka3:9092"],"kafkaProducerMessage":"health check","kafkaProducerSaslOptions":{"mechanism":"plain","password":"pass","username":"user"},"kafkaProducerSsl":false,"kafkaProducerTopic":"events","maxretries":3,"name":"kafka-cluster","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"timeout":5,"type":"kafka-producer","upsideDown":false}`,
+		},
+		{
+			name: "success with unset timeout",
+			data: []byte(
+				`{"id":3,"name":"kafka-minimal","description":null,"pathName":"kafka-minimal","parent":null,"childrenIDs":[],"url":null,"method":"GET","hostname":null,"port":null,"maxretries":0,"weight":2000,"active":true,"forceInactive":false,"type":"kafka-producer","timeout":null,"interval":60,"retryInterval":60,"resendInterval":0,"upsideDown":false,"accepted_statuscodes":["200-299"],"notificationIDList":{},"tags":[],"maintenance":false,"conditions":[],"kafkaProducerTopic":"events","kafkaProducerBrokers":["localhost:9092"],"kafkaProducerSsl":false,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerMessage":"health check","kafkaProducerSaslOptions":null}`,
+			),
+
+			want: monitor.KafkaProducer{
+				Base: monitor.Base{
+					ID:             3,
+					Name:           "kafka-minimal",
+					PathName:       "kafka-minimal",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     0,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				KafkaProducerDetails: monitor.KafkaProducerDetails{
+					Brokers:                []string{"localhost:9092"},
+					Topic:                  "events",
+					Message:                "health check",
+					SSL:                    false,
+					AllowAutoTopicCreation: false,
+					SASLOptions:            nil,
+					Timeout:                nil,
+				},
+			},
+			// The monitor.timeout column is NOT NULL, so timeout is substituted
+			// on marshal while the SASL options stay null.
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"id":3,"interval":60,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerBrokers":["localhost:9092"],"kafkaProducerMessage":"health check","kafkaProducerSaslOptions":null,"kafkaProducerSsl":false,"kafkaProducerTopic":"events","maxretries":0,"name":"kafka-minimal","notificationIDList":{},"parent":null,"resendInterval":0,"retryInterval":60,"timeout":1,"type":"kafka-producer","upsideDown":false}`,
 		},
 	}
 
