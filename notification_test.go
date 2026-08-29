@@ -297,6 +297,7 @@ func TestNotificationCRUD(t *testing.T) {
 				smtp.BCC = "bcc@example.com"
 				smtp.Secure = false
 				smtp.IgnoreSTARTTLS = true
+				smtp.AdditionalHeaders = ptr.To(`{"X-Custom-Header": "Additional Header"}`)
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
 				t.Helper()

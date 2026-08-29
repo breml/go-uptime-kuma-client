@@ -12,26 +12,27 @@ type SMTP struct {
 
 // SMTPDetails contains smtp-specific notification configuration.
 type SMTPDetails struct {
-	Host                 string `json:"smtpHost"`
-	Port                 int    `json:"smtpPort"`
-	Secure               bool   `json:"smtpSecure"`
-	IgnoreSTARTTLS       bool   `json:"smtpIgnoreSTARTTLS"`
-	IgnoreTLSError       bool   `json:"smtpIgnoreTLSError"`
-	DkimDomain           string `json:"smtpDkimDomain"`
-	DkimKeySelector      string `json:"smtpDkimKeySelector"`
-	DkimPrivateKey       string `json:"smtpDkimPrivateKey"`
-	DkimHashAlgo         string `json:"smtpDkimHashAlgo"`
-	DkimHeaderFieldNames string `json:"smtpDkimheaderFieldNames"`
-	DkimSkipFields       string `json:"smtpDkimskipFields"`
-	Username             string `json:"smtpUsername"`
-	Password             string `json:"smtpPassword"`
-	From                 string `json:"smtpFrom"`
-	CC                   string `json:"smtpCC"`
-	BCC                  string `json:"smtpBCC"`
-	To                   string `json:"smtpTo"`
-	CustomSubject        string `json:"customSubject"`
-	CustomBody           string `json:"customBody"`
-	HTMLBody             bool   `json:"htmlBody"`
+	Host                 string  `json:"smtpHost"`
+	Port                 int     `json:"smtpPort"`
+	Secure               bool    `json:"smtpSecure"`
+	IgnoreSTARTTLS       bool    `json:"smtpIgnoreSTARTTLS"`
+	IgnoreTLSError       bool    `json:"smtpIgnoreTLSError"`
+	DkimDomain           string  `json:"smtpDkimDomain"`
+	DkimKeySelector      string  `json:"smtpDkimKeySelector"`
+	DkimPrivateKey       string  `json:"smtpDkimPrivateKey"`
+	DkimHashAlgo         string  `json:"smtpDkimHashAlgo"`
+	DkimHeaderFieldNames string  `json:"smtpDkimheaderFieldNames"`
+	DkimSkipFields       string  `json:"smtpDkimskipFields"`
+	Username             string  `json:"smtpUsername"`
+	Password             string  `json:"smtpPassword"`
+	From                 string  `json:"smtpFrom"`
+	CC                   string  `json:"smtpCC"`
+	BCC                  string  `json:"smtpBCC"`
+	To                   string  `json:"smtpTo"`
+	CustomSubject        string  `json:"customSubject"`
+	CustomBody           string  `json:"customBody"`
+	HTMLBody             bool    `json:"htmlBody"`
+	AdditionalHeaders    *string `json:"smtpAdditionalHeaders,omitempty"`
 }
 
 // Type returns the notification type.
