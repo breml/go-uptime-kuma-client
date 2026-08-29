@@ -89,11 +89,13 @@ func (s SystemService) MarshalJSON() ([]byte, error) {
 // SystemServiceDetails contains system-service-specific monitor configuration.
 type SystemServiceDetails struct {
 	// SystemServiceName is the name of the service to check. Must be non-empty.
-	// On Linux (systemd), valid characters are alphanumeric plus '.', '_', '-', and '@'
-	// (e.g. "nginx.service", "sshd@0.service"). On Windows, valid characters are
-	// alphanumeric plus '.', '_', '-' (e.g. "Spooler").
-	// Since Uptime Kuma 2.5.0 the server trims surrounding whitespace and rejects
-	// names that do not match ^[a-zA-Z0-9._\-@]+$.
+	// Since Uptime Kuma 2.5.0 the server trims surrounding whitespace on write
+	// and rejects names that do not match ^[a-zA-Z0-9._\-@]+$. That regex is
+	// platform independent, so the trimmed name is what gets stored and
+	// returned. The narrower per-platform character sets are only enforced when
+	// the check runs: on Linux (systemd) alphanumeric plus '.', '_', '-', and
+	// '@' (e.g. "nginx.service", "sshd@0.service"), on Windows alphanumeric plus
+	// '.', '_', '-' (e.g. "Spooler").
 	// Note: the upstream API uses snake_case for this field, unlike most other Uptime Kuma fields.
 	SystemServiceName string `json:"system_service_name"`
 }

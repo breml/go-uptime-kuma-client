@@ -106,10 +106,15 @@ type RealBrowserDetails struct {
 	AcceptedStatusCodes []string `json:"accepted_statuscodes"`
 	RemoteBrowser       *int64   `json:"remote_browser,omitempty"`
 	// ScreenshotDelay is the delay in milliseconds the browser waits before
-	// taking the screenshot. Uptime Kuma persists and returns the value since
-	// 2.5.0, before that any value sent by the client was silently dropped.
-	// The server rejects negative values and values greater than or equal to
-	// 50 percent of the interval (in milliseconds).
+	// taking the screenshot. Uptime Kuma only returns the value since 2.5.0;
+	// earlier versions stored it on create and applied it to the check, but
+	// never echoed it back and silently ignored it on update.
+	// As of 2.5.0 the server rejects negative values and values greater than or
+	// equal to Interval * 500, that is half the interval converted to
+	// milliseconds. Values at or above Interval * 800 are reported against the
+	// 80 percent bound instead, because the server checks that one first.
+	// A nil value omits the field from the request, which leaves any previously
+	// stored delay untouched; the delay cannot be cleared through this client.
 	ScreenshotDelay          *int `json:"screenshot_delay,omitempty"`
 	DomainExpiryNotification bool `json:"domainExpiryNotification"`
 }

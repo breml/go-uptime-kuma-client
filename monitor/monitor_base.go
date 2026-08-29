@@ -31,7 +31,7 @@ type Base struct {
 	ProxyID     *int64  `json:"proxyId"`
 	// Interval is the check interval in seconds. The server only enforces a
 	// minimum of 1 second; the 24 day maximum was removed in Uptime Kuma 2.5.0,
-	// so intervals are unbounded from that version onwards.
+	// so no maximum is enforced as of that version.
 	Interval int64 `json:"interval"`
 	// RetryInterval is the interval in seconds between retries after a failed
 	// check. Like Interval, it is only bounded by a minimum of 1 second.
