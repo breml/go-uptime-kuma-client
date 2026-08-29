@@ -1315,6 +1315,7 @@ func TestMonitorCRUD(t *testing.T) {
 					SSL:                    false,
 					AllowAutoTopicCreation: false,
 					SASLOptions:            nil,
+					Timeout:                ptr.To(int64(1)),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -1329,6 +1330,7 @@ func TestMonitorCRUD(t *testing.T) {
 				kafka.Message = "updated message"
 				kafka.SSL = true
 				kafka.AllowAutoTopicCreation = true
+				kafka.Timeout = ptr.To(int64(5))
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1356,6 +1358,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "updated message", kafka.Message)
 				require.True(t, kafka.SSL)
 				require.True(t, kafka.AllowAutoTopicCreation)
+				require.Equal(t, int64(5), *kafka.Timeout)
 			},
 			testPauseResume: true,
 		},

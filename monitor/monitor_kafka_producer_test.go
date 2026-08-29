@@ -50,9 +50,10 @@ func TestMonitorKafkaProducer_Unmarshal(t *testing.T) {
 					SSL:                    true,
 					AllowAutoTopicCreation: false,
 					SASLOptions:            &saslOptionsNone,
+					Timeout:                ptr.To(int64(48)),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Kafka monitor","id":1,"interval":60,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerBrokers":["localhost:9092"],"kafkaProducerMessage":"test message","kafkaProducerSaslOptions":{"mechanism":"None"},"kafkaProducerSsl":true,"kafkaProducerTopic":"test-topic","maxretries":2,"name":"kafka-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"type":"kafka-producer","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Kafka monitor","id":1,"interval":60,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerBrokers":["localhost:9092"],"kafkaProducerMessage":"test message","kafkaProducerSaslOptions":{"mechanism":"None"},"kafkaProducerSsl":true,"kafkaProducerTopic":"test-topic","maxretries":2,"name":"kafka-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"timeout":48,"type":"kafka-producer","upsideDown":false}`,
 		},
 		{
 			name: "success with multiple brokers and SASL",
@@ -82,9 +83,10 @@ func TestMonitorKafkaProducer_Unmarshal(t *testing.T) {
 					SSL:                    false,
 					AllowAutoTopicCreation: true,
 					SASLOptions:            &saslOptionsBasic,
+					Timeout:                ptr.To(int64(30)),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Kafka cluster","id":2,"interval":120,"kafkaProducerAllowAutoTopicCreation":true,"kafkaProducerBrokers":["kafka1:9092","kafka2:9092","kafka3:9092"],"kafkaProducerMessage":"health check","kafkaProducerSaslOptions":{"mechanism":"plain","password":"pass","username":"user"},"kafkaProducerSsl":false,"kafkaProducerTopic":"events","maxretries":3,"name":"kafka-cluster","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"type":"kafka-producer","upsideDown":false}`,
+			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Kafka cluster","id":2,"interval":120,"kafkaProducerAllowAutoTopicCreation":true,"kafkaProducerBrokers":["kafka1:9092","kafka2:9092","kafka3:9092"],"kafkaProducerMessage":"health check","kafkaProducerSaslOptions":{"mechanism":"plain","password":"pass","username":"user"},"kafkaProducerSsl":false,"kafkaProducerTopic":"events","maxretries":3,"name":"kafka-cluster","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"timeout":30,"type":"kafka-producer","upsideDown":false}`,
 		},
 	}
 

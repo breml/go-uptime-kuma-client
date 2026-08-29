@@ -76,6 +76,7 @@ func (k KafkaProducer) MarshalJSON() ([]byte, error) {
 	raw["kafkaProducerSsl"] = k.SSL
 	raw["kafkaProducerAllowAutoTopicCreation"] = k.AllowAutoTopicCreation
 	raw["kafkaProducerSaslOptions"] = k.SASLOptions
+	raw["timeout"] = k.Timeout
 
 	// Server expects these fields to be arrays and not null.
 	raw["accepted_statuscodes"] = []string{}
@@ -105,6 +106,9 @@ type KafkaProducerDetails struct {
 	AllowAutoTopicCreation bool `json:"kafkaProducerAllowAutoTopicCreation"`
 	// SASLOptions is an optional map containing string with SASL configuration.
 	SASLOptions *map[string]any `json:"kafkaProducerSaslOptions"`
+	// Timeout is the optional connection timeout in seconds. The server defaults
+	// to 1 second, if it is not set.
+	Timeout *int64 `json:"timeout"`
 }
 
 // Type returns the monitor type.
