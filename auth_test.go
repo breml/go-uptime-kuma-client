@@ -391,3 +391,124 @@ func TestNewTOTPReplayGuardRecovers(t *testing.T) {
 	require.Len(t, codes, 3, "the login without a code, the rejected one and the retry")
 	require.NotEqual(t, codes[1], codes[2], "the retry has to fall into a later time step")
 }
+
+// TestNewWithSessionToken covers the client that holds a token from an earlier
+// login: it authenticates with no password and no one-time code at all.
+func TestNewWithSessionToken(t *testing.T) {
+	fake, url := newAuthFake(t)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"",
+		"",
+		kuma.WithSessionToken(fakeSessionToken),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	require.Equal(t, 0, fake.loginFrameCount(), "a token login sends no password login")
+	require.Equal(t, fakeSessionToken, client.SessionToken())
+}
+
+// TestNewSessionTokenBypassesTwoFactor covers the reason a token is worth
+// keeping for an account with two-factor authentication: the server accepts it
+// without ever asking for a one-time code.
+func TestNewSessionTokenBypassesTwoFactor(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setTwoFactorSecret(false)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"",
+		"",
+		kuma.WithSessionToken(fakeSessionToken),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	require.Empty(t, fake.receivedLoginCodes())
+}
+
+// TestNewRejectedSessionTokenFallsBack covers the token the server no longer
+// accepts, which is what a password change leaves behind. A caller that also
+// gave a username and password recovers with it.
+func TestNewRejectedSessionTokenFallsBack(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setRejectToken(true)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"admin",
+		"admin1",
+		kuma.WithSessionToken("stale-token"),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	require.Equal(t, 1, fake.loginFrameCount(), "the password login is the fallback")
+	require.Equal(t, fakeSessionToken, client.SessionToken(), "the fresh token replaces the stale one")
+}
+
+// TestNewRejectedSessionTokenWithoutPassword covers the same rejection for a
+// caller that has nothing to fall back to.
+func TestNewRejectedSessionTokenWithoutPassword(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setRejectToken(true)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"",
+		"",
+		kuma.WithSessionToken("stale-token"),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+
+	require.ErrorIs(t, err, kuma.ErrInvalidSessionToken)
+	require.Nil(t, client)
+	require.Equal(t, 0, fake.loginFrameCount())
+}
+
+// TestSessionTokenAfterAutoLogin covers the server with authentication
+// disabled, which logs the client in without handing out a token.
+func TestSessionTokenAfterAutoLogin(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setAutoLogin(true)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, url, "", "", kuma.WithConnectTimeout(5*time.Second))
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	require.Empty(t, client.SessionToken())
+}

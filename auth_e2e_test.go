@@ -113,6 +113,8 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, enabled)
 
+	var sessionToken string
+
 	t.Run("a login without a code is told what is missing", func(t *testing.T) {
 		client, newErr := kuma.New(
 			ctx,
@@ -140,6 +142,30 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 		require.NotNil(t, client)
 
 		t.Cleanup(func() { _ = client.Disconnect() })
+
+		sessionToken = client.SessionToken()
+		require.NotEmpty(t, sessionToken, "a login answers with the token it can be repeated with")
+	})
+
+	t.Run("the session token needs neither password nor code", func(t *testing.T) {
+		client, newErr := kuma.New(
+			ctx,
+			baseURL,
+			"",
+			"",
+			kuma.WithSessionToken(sessionToken),
+			kuma.WithConnectTimeout(10*time.Second),
+		)
+
+		require.NoError(t, newErr)
+		require.NotNil(t, client)
+
+		t.Cleanup(func() { _ = client.Disconnect() })
+
+		require.Equal(t, sessionToken, client.SessionToken())
+
+		// The lists come from a login, and the token is what repeats one.
+		require.NoError(t, client.Resync(ctx))
 	})
 
 	t.Run("a code the server has seen is refused", func(t *testing.T) {

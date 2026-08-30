@@ -5,6 +5,7 @@ go 1.25.2
 require (
 	github.com/maldikhan/go.socket.io v0.1.1
 	github.com/ory/dockertest/v3 v3.12.0
+	github.com/pquerna/otp v1.5.0
 )
 
 require (
@@ -262,7 +263,6 @@ require (
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
-	github.com/pquerna/otp v1.5.0 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect

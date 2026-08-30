@@ -43,6 +43,30 @@ var ErrInvalidTOTPCode = errors.New("invalid two-factor authentication code")
 // changed password or a user that was deactivated or deleted.
 var ErrInvalidSessionToken = errors.New("session token rejected")
 
+// WithSessionToken authenticates with a session token from an earlier login
+// instead of a password, see Client.SessionToken.
+//
+// The token is what the server hands out on a successful login and what it
+// accepts in place of one. It bypasses two-factor authentication entirely, so
+// a client holding one needs neither the password nor the one-time code, which
+// also makes it the way to start many clients at once against an account with
+// two-factor authentication enabled, see WithTOTPSecret.
+//
+// If a username and password are given as well, the token is tried first and
+// the password login is the fallback for a token the server rejects. Without
+// them a rejected token fails New with ErrInvalidSessionToken.
+//
+// Security: the token is a bearer credential that does not expire. The server
+// invalidates it only when the password changes or the user is deactivated,
+// and it is a stronger credential than the password for an account with
+// two-factor authentication, because it needs no second factor. Store it the
+// way the password would be stored.
+func WithSessionToken(token string) Option {
+	return func(c *Client) {
+		c.sessionTokenPreset = token
+	}
+}
+
 // WithTOTPSecret configures the shared secret of an account with two-factor
 // authentication enabled, so the client can answer the server's request for a
 // one-time code itself and log in without a human at the keyboard.
@@ -152,6 +176,7 @@ type authBarrier struct {
 type credentials struct {
 	username string
 	password string
+	token    string
 }
 
 // loginError translates a rejected login ack into one of the package's sentinel
@@ -209,6 +234,11 @@ func (c credentials) isSet() bool {
 	return c.username != "" && c.password != ""
 }
 
+// hasAny reports whether there is anything at all to authenticate with.
+func (c credentials) hasAny() bool {
+	return c.isSet() || c.token != ""
+}
+
 // authenticate logs the client in the way the server asked for, and records the
 // session token a successful login answers with.
 //
@@ -227,12 +257,12 @@ func (c *Client) authenticate(ctx context.Context, creds credentials, barrier au
 		return nil
 
 	case authModeLoginRequired:
-		if !creds.isSet() {
+		if !creds.hasAny() {
 			return ErrAuthRequired
 		}
 
 	case authModeUnknown:
-		if !creds.isSet() {
+		if !creds.hasAny() {
 			// A server that never said it wants a login is not asked for one.
 			return nil
 		}
@@ -241,7 +271,41 @@ func (c *Client) authenticate(ctx context.Context, creds credentials, barrier au
 		// authMode has no other values.
 	}
 
+	if creds.token != "" {
+		err := c.loginWithToken(ctx, creds.token)
+		if err == nil {
+			return nil
+		}
+
+		if !errors.Is(err, ErrInvalidSessionToken) || !creds.isSet() {
+			return err
+		}
+
+		// A token the server no longer accepts is what a password change
+		// leaves behind, and the password is what recovers from it.
+		c.socketioLogger.Warnf("session token rejected, falling back to the password login")
+	}
+
 	return c.loginWithPassword(ctx, creds.username, creds.password)
+}
+
+// loginWithToken presents a session token from an earlier login, see
+// WithSessionToken.
+func (c *Client) loginWithToken(ctx context.Context, token string) error {
+	response, err := c.emitAck(ctx, "loginByToken", token)
+	if err != nil {
+		return err
+	}
+
+	if !response.OK {
+		return loginError("loginByToken", response)
+	}
+
+	// The server answers a loginByToken without a token of its own, so the one
+	// that worked is the one to keep, see Client.SessionToken.
+	c.setSessionToken(token)
+
+	return nil
 }
 
 // loginWithPassword logs in with a username and password, and answers the

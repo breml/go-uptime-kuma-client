@@ -219,6 +219,10 @@ type Client struct {
 	// Resync logs in with, see there.
 	sessionToken string
 
+	// sessionTokenPreset is the token WithSessionToken configured, which is
+	// what New authenticates with instead of a password.
+	sessionTokenPreset string
+
 	// autoLoggedIn records that the server has authentication disabled and
 	// logged the client in itself, which leaves it without a session token,
 	// see Resync.
@@ -759,7 +763,7 @@ connectLoop:
 
 	err = c.authenticate(
 		ctxWithConnectTimeout,
-		credentials{username: username, password: password},
+		credentials{username: username, password: password, token: c.sessionTokenPreset},
 		barrier,
 	)
 	if err != nil {
@@ -887,7 +891,9 @@ func (c *Client) Resync(ctx context.Context) error {
 			)
 		}
 
-		return errors.New("resync: no session token, the client was created without credentials")
+		return errors.New(
+			"resync: no session token, the client was created without credentials",
+		)
 	}
 
 	gate := newReadyGate(c.resyncReadyEvents())
@@ -929,6 +935,21 @@ func (c *Client) Resync(ctx context.Context) error {
 	c.awaitOptionalReadyEvents(ctx, "Resync", gate, nil)
 
 	return nil
+}
+
+// SessionToken returns the session token the server handed out at login, or
+// the empty string for a client that never received one: a client that
+// connected to a server with authentication disabled, and one whose login ack
+// carried no token.
+//
+// It is the credential WithSessionToken takes, so a caller can persist it and
+// reconnect later without the password and without a one-time code. It is a
+// bearer credential that does not expire, see WithSessionToken.
+func (c *Client) SessionToken() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.sessionToken
 }
 
 // MissingReadyEvents returns the best-effort ready events the server did not
