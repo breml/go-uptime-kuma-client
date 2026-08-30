@@ -51,6 +51,11 @@ const fakeAckCreatedID = 4242
 // expects to see again in a loginByToken.
 const fakeSessionToken = "fake-session-token"
 
+// fakePresetToken is a token a test hands to WithSessionToken. It is distinct
+// from the one the fake server issues at login, so that a test can tell the
+// token that was presented from the one that was handed out.
+const fakePresetToken = "preset-session-token"
+
 // fakeAckServer is a minimal socket.io server over HTTP long-polling that
 // completes the handshake, CONNECT, login and ready phases, so kuma.New()
 // returns a usable client. Unlike fakeSocketIOServer it then keeps serving:
@@ -79,9 +84,14 @@ type fakeAckServer struct {
 	// rejectCreds answers a login the way a server rejecting the username and
 	// password does.
 	rejectCreds bool
-	// rejectToken answers a loginByToken the way a server rejecting the
-	// session token does.
-	rejectToken bool
+	// rejectTokenMsg answers a loginByToken the way a server rejecting the
+	// session token does, with this as the reason. The empty string accepts.
+	rejectTokenMsg string
+	// tokenFrames are the tokens the loginByToken frames carried, in order,
+	// recorded whether the token is accepted or refused. firstTokenAt is when
+	// the first of them arrived, to assert it came before any password login.
+	tokenFrames  []string
+	firstTokenAt time.Time
 	// autoLogin answers the connect the way a server with authentication
 	// disabled does: it logs the client in itself and never asks for a login.
 	autoLogin bool
@@ -138,6 +148,24 @@ func loginCode(payload string) string {
 	}
 
 	return data.Token
+}
+
+// tokenFromFrame extracts the session token a loginByToken frame carries.
+func tokenFromFrame(payload string) string {
+	var frame []json.RawMessage
+
+	start := strings.Index(payload, "[")
+	if start < 0 || json.Unmarshal([]byte(payload[start:]), &frame) != nil || len(frame) < 2 {
+		return ""
+	}
+
+	var token string
+
+	if json.Unmarshal(frame[1], &token) != nil {
+		return ""
+	}
+
+	return token
 }
 
 func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -221,11 +249,17 @@ func (s *fakeAckServer) setRejectCreds(reject bool) {
 	s.rejectCreds = reject
 }
 
-func (s *fakeAckServer) setRejectToken(reject bool) {
+func (s *fakeAckServer) setRejectToken() {
+	s.setRejectTokenWith("authInvalidToken")
+}
+
+// setRejectTokenWith refuses a loginByToken with a specific reason, such as the
+// authUserInactiveOrDeleted the server answers for a deactivated user.
+func (s *fakeAckServer) setRejectTokenWith(msg string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.rejectToken = reject
+	s.rejectTokenMsg = msg
 }
 
 func (s *fakeAckServer) setAutoLogin(auto bool) {
@@ -353,11 +387,45 @@ func (s *fakeAckServer) setSuppressOptionalLists(suppress bool) {
 	s.suppressOptionalLists = suppress
 }
 
-func (s *fakeAckServer) tokenRejected() bool {
+// tokenRejection returns the reason a loginByToken is to be refused with, or
+// the empty string for a token the server accepts.
+func (s *fakeAckServer) tokenRejection() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.rejectToken
+	return s.rejectTokenMsg
+}
+
+// recordToken records the token a loginByToken frame carried. It runs before
+// the rejection is answered, so a refused frame is seen as well.
+func (s *fakeAckServer) recordToken(token string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.tokenFrames = append(s.tokenFrames, token)
+
+	if s.firstTokenAt.IsZero() {
+		s.firstTokenAt = time.Now()
+	}
+}
+
+// receivedTokens returns the tokens the loginByToken frames carried, in order.
+func (s *fakeAckServer) receivedTokens() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]string(nil), s.tokenFrames...)
+}
+
+// loginAfterToken reports whether the password login the client fell back to
+// came after the token it presented first.
+func (s *fakeAckServer) loginAfterToken() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return !s.firstLoginAt.IsZero() &&
+		!s.firstTokenAt.IsZero() &&
+		s.firstLoginAt.After(s.firstTokenAt)
 }
 
 func (s *fakeAckServer) recordResync(payload string) bool {
@@ -508,11 +576,14 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 		// A resync logs in again, which is what makes the server resend the
 		// lists. Checked before "login", which is a prefix of it.
 		if strings.Contains(payload, `"loginByToken"`) {
-			if s.tokenRejected() {
+			s.recordToken(tokenFromFrame(payload))
+
+			if msg := s.tokenRejection(); msg != "" {
 				s.messages <- fmt.Appendf(
 					nil,
-					`43%s[{"ok":false,"msg":"authInvalidToken","msgi18n":true}]`,
+					`43%s[{"ok":false,"msg":%q,"msgi18n":true}]`,
 					ackID,
+					msg,
 				)
 
 				return

@@ -219,6 +219,14 @@ type Client struct {
 	// Resync logs in with, see there.
 	sessionToken string
 
+	// sessionTokenPreset is the token WithSessionToken configured, which New
+	// tries before the password login.
+	sessionTokenPreset string
+
+	// sessionTokenRejected records that the server refused sessionTokenPreset
+	// and the password login took over, see Client.SessionTokenRejected.
+	sessionTokenRejected bool
+
 	// autoLoggedIn records that the server has authentication disabled and
 	// logged the client in itself, which leaves it without a session token,
 	// see Resync.
@@ -761,7 +769,7 @@ connectLoop:
 
 	err = c.authenticate(
 		ctxWithConnectTimeout,
-		credentials{username: username, password: password},
+		credentials{username: username, password: password, token: c.sessionTokenPreset},
 		barrier,
 	)
 	if err != nil {
@@ -889,7 +897,9 @@ func (c *Client) Resync(ctx context.Context) error {
 			)
 		}
 
-		return errors.New("resync: no session token, the client was created without credentials")
+		return errors.New(
+			"resync: no session token, the client was created without credentials",
+		)
 	}
 
 	gate := newReadyGate(c.resyncReadyEvents())
@@ -931,6 +941,39 @@ func (c *Client) Resync(ctx context.Context) error {
 	c.awaitOptionalReadyEvents(ctx, "Resync", gate, nil)
 
 	return nil
+}
+
+// SessionToken returns the session token the client is authenticated with: the
+// one the server handed out for the login New performed, or the one
+// WithSessionToken supplied and the server accepted. It is the empty string for
+// a client that was never logged in with credentials - one that connected to a
+// server with authentication disabled or to one that wants to be set up first -
+// and for one whose login ack carried no token.
+//
+// It is the credential WithSessionToken takes, so a caller can persist it and
+// reconnect later without the password and without a one-time code. It is a
+// bearer credential that does not expire, see WithSessionToken.
+func (c *Client) SessionToken() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.sessionToken
+}
+
+// SessionTokenRejected reports whether the server refused the token
+// WithSessionToken configured and New logged in with the username and password
+// instead.
+//
+// It is what tells a caller that its stored token is dead, because nothing else
+// does: the login succeeds either way, and SessionToken then returns the fresh
+// token of the password login, which the caller cannot tell from the one it
+// presented. A caller that persists tokens checks this and writes the new one
+// back, see WithSessionToken.
+func (c *Client) SessionTokenRejected() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.sessionTokenRejected
 }
 
 // MissingReadyEvents returns the best-effort ready events the server did not
@@ -1032,6 +1075,16 @@ func (c *Client) setSessionToken(token string) {
 	defer c.mu.Unlock()
 
 	c.sessionToken = token
+}
+
+// setSessionTokenRejected records that the token WithSessionToken configured
+// was refused and the password login recovered, see
+// Client.SessionTokenRejected.
+func (c *Client) setSessionTokenRejected() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.sessionTokenRejected = true
 }
 
 // splitReadyEvents returns the update events that carry the lists the local
