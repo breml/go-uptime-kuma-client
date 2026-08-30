@@ -102,8 +102,9 @@ func WithSessionToken(token string) Option {
 // The server records the last code it accepted and refuses to see it again,
 // see ErrInvalidTOTPCode, so two clients logging in with the same account
 // inside one 30 second step cannot both succeed. The client retries once in
-// the next step when the caller's deadline allows it, which is why starting
-// many clients for one account at once wants a deadline that can cover a step.
+// the next step when the caller's deadline allows it, so starting many clients
+// for one account at once wants a deadline that can cover a step, or
+// WithSessionToken, which needs no code and so meets no such guard.
 //
 // The server answers a wrong secret and a clock too far off with the same
 // rejection, so those cost the same retry: a login that can never succeed
