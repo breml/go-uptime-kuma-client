@@ -60,7 +60,7 @@ real-time communication.
 - **IMPORTANT**: Assume Uptime Kuma is running when executing integration tests
 - Uses dockertest library with automatic container cleanup
 - Global `client` variable shared across test suite
-- Container expires after 60 seconds
+- Container expires after 300 seconds
 - Test credentials: username="admin", password="admin1"
 
 ### Directory Structure

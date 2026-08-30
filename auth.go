@@ -165,7 +165,9 @@ func WithTOTPCode(code func(ctx context.Context) (string, error)) Option {
 // The server emits loginRequired or autoLogin as the last thing it does for a
 // new connection, so on a healthy server the wait is over in milliseconds. It
 // only elapses in full for a server too old to send either event, or behind a
-// proxy that drops it, and it must not be a hard failure for those.
+// proxy that drops it, and it must not be a hard failure for those - which is
+// also why it never takes more than half of what is left of the caller's
+// deadline, see barrierWaitWithin.
 const authBarrierWait = 500 * time.Millisecond
 
 // authMode is how the server wants the connection to be authenticated, as the
@@ -246,18 +248,20 @@ func loginError(command string, response ackResponse) error {
 // await reports how the server wants the connection to be authenticated, or
 // authModeUnknown once it is clear that it will not say.
 func (b authBarrier) await(ctx context.Context) authMode {
-	timer := time.NewTimer(authBarrierWait)
+	timer := time.NewTimer(barrierWaitWithin(ctx))
 	defer timer.Stop()
 
+	var mode authMode
+
 	select {
-	case <-b.autoLogin:
-		return authModeAutoLogin
-
-	case <-b.loginRequired:
-		return authModeLoginRequired
-
 	case <-b.setupRequired:
 		return authModeSetup
+
+	case <-b.autoLogin:
+		mode = authModeAutoLogin
+
+	case <-b.loginRequired:
+		mode = authModeLoginRequired
 
 	case <-timer.C:
 		return authModeUnknown
@@ -265,6 +269,42 @@ func (b authBarrier) await(ctx context.Context) authMode {
 	case <-ctx.Done():
 		return authModeUnknown
 	}
+
+	// A server that wants to be set up emits setup before it states how it
+	// wants to be authenticated, so by the time either of those events is in,
+	// a setup that is coming has been delivered too. Answering it here rather
+	// than from the select above is what keeps a server that sent both from
+	// being read one way or the other at random.
+	if isRequested(b.setupRequired) {
+		return authModeSetup
+	}
+
+	return mode
+}
+
+// isRequested reports whether an event of the barrier has been delivered,
+// without waiting for one that has not.
+func isRequested(event <-chan struct{}) bool {
+	select {
+	case <-event:
+		return true
+
+	default:
+		return false
+	}
+}
+
+// barrierWaitWithin is how long the barrier may wait for a server that states
+// nothing: authBarrierWait, but never more than half of what is left of the
+// caller's deadline, so that such a server cannot spend the whole budget
+// before the login it does answer is even sent.
+func barrierWaitWithin(ctx context.Context) time.Duration {
+	deadline, hasDeadline := ctx.Deadline()
+	if !hasDeadline {
+		return authBarrierWait
+	}
+
+	return min(authBarrierWait, max(time.Until(deadline)/2, 0))
 }
 
 // isSet reports whether a username and password were given.
@@ -409,12 +449,13 @@ func (c *Client) loginWithPassword(ctx context.Context, username string, passwor
 
 // loginWithTOTP answers the server's request for a one-time code.
 //
-// A code the server rejects is retried once in the next time step, because the
-// server refuses a code it has accepted before and the next step is what
-// produces a different one. Every other reason for the rejection - a wrong
-// secret, a clock too far off - produces the same answer again, so a single
-// retry is enough, and it is skipped altogether when the caller's deadline
-// cannot cover the wait.
+// A code the server rejects is retried once in the step after the one it was
+// generated in, because the server refuses a code it has accepted before and a
+// later step is what produces a different one. Every other reason for the
+// rejection - a wrong secret, a clock too far off - produces the same answer
+// again, so a single retry is enough. The wait is skipped when the round trip
+// already crossed into the next step, and the retry is given up on when the
+// caller's deadline cannot cover the wait.
 //
 // The ways this fails are kept apart in the error, because they call for
 // different fixes: no code source, a source that produced nothing usable, a
@@ -425,18 +466,22 @@ func (c *Client) loginWithTOTP(ctx context.Context, username string, password st
 		return ErrTwoFactorRequired
 	}
 
+	var rejectedStep time.Time
+
 	for retry := range 2 {
 		if retry > 0 {
-			waitErr := awaitTOTPRetry(ctx)
+			waitErr := awaitTOTPRetry(ctx, rejectedStep)
 			if waitErr != nil {
 				return waitErr
 			}
 		}
 
-		err := c.loginOnceWithTOTP(ctx, username, password)
+		step, err := c.loginOnceWithTOTP(ctx, username, password)
 		if !errors.Is(err, ErrInvalidTOTPCode) {
 			return err
 		}
+
+		rejectedStep = step
 	}
 
 	return fmt.Errorf(
@@ -449,43 +494,65 @@ func (c *Client) loginWithTOTP(ctx context.Context, username string, password st
 // loginOnceWithTOTP makes one attempt at a login with a one-time code. A code
 // the server rejects comes back wrapping ErrInvalidTOTPCode, which is the only
 // outcome another attempt could change.
-func (c *Client) loginOnceWithTOTP(ctx context.Context, username string, password string) error {
+//
+// It also reports the time step the code it sent belongs to, which is what
+// tells a retry whether there is still a step to wait out. The step is read
+// after the code was produced, so a code generated just before a step boundary
+// counts as belonging to the later one - the reading that at worst waits when
+// it did not have to, rather than sending the same code twice.
+func (c *Client) loginOnceWithTOTP(
+	ctx context.Context,
+	username string,
+	password string,
+) (time.Time, error) {
 	code, err := c.totpCode(ctx)
+
+	codeStep := totpStepStart(time.Now())
+
 	if err != nil {
-		return fmt.Errorf("login: %w", err)
+		return codeStep, fmt.Errorf("login: %w", err)
 	}
 
 	// The server reads an empty code as no code at all and asks again instead
 	// of rejecting it, in an ack carrying neither an ok nor a message, so
 	// sending one buys an error with nothing in it.
 	if code == "" {
-		return fmt.Errorf("%w: the configured code source produced an empty code", ErrTwoFactorRequired)
+		return codeStep, fmt.Errorf(
+			"%w: the configured code source produced an empty code",
+			ErrTwoFactorRequired,
+		)
 	}
 
 	response, err := c.login(ctx, username, password, code)
 	if err != nil {
-		return err
+		return codeStep, err
 	}
 
 	if response.OK {
 		c.setSessionToken(response.Token)
 
-		return nil
+		return codeStep, nil
 	}
 
 	if response.TokenRequired {
-		return fmt.Errorf(
+		return codeStep, fmt.Errorf(
 			"%w: the server asked for a code again instead of answering the one it was given",
 			ErrTwoFactorRequired,
 		)
 	}
 
-	return loginError("login", response)
+	return codeStep, loginError("login", response)
 }
 
-// awaitTOTPRetry waits out the current time step, so the attempt after it has
-// a code the server has not seen before, and says why it could not.
-func awaitTOTPRetry(ctx context.Context) error {
+// awaitTOTPRetry waits out the time step the rejected code belongs to, so the
+// attempt after it has a code the server has not seen before, and says why it
+// could not. A login whose round trip already crossed into a later step has
+// nothing left to wait for.
+func awaitTOTPRetry(ctx context.Context, rejectedStep time.Time) error {
+	if totpStepStart(time.Now()).After(rejectedStep) {
+		return nil
+	}
+
 	waited, err := waitForNextTOTPStep(ctx)
 	if err != nil {
 		return fmt.Errorf("login: %w", err)

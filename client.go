@@ -271,6 +271,10 @@ func WithLogLevel(level int) Option {
 // the connection to Uptime Kuma.
 // In the case of autosetup with an uninitialized Uptime Kuma this timeout
 // also includes the time required for the initial setup.
+// It covers the login as well, including the short wait for the server to
+// state how it wants to be authenticated. A server that states nothing is
+// waited for with no more than half of the remaining budget, so the login
+// still has time to run.
 func WithConnectTimeout(timeout time.Duration) Option {
 	return func(c *Client) {
 		c.socketioClientConnectTimeout = timeout

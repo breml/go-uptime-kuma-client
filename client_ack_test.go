@@ -529,6 +529,16 @@ func (s *fakeAckServer) sendAuthMode() {
 	s.mu.Unlock()
 
 	if needsSetup {
+		// Both events go out in one engine.io payload, the way a real server
+		// delivers them to a client that polls: it emits setup at the top of
+		// its connection handler and the event below at the bottom, so a
+		// single long poll picks up both.
+		if !auto && !omit {
+			s.messages <- []byte("42[\"setup\"]\x1e42[\"loginRequired\"]")
+
+			return
+		}
+
 		s.messages <- []byte(`42["setup"]`)
 	}
 

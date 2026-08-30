@@ -179,6 +179,12 @@ func TestNewSetupFallbackAfterRejectedCredentials(t *testing.T) {
 	require.NotNil(t, client)
 
 	t.Cleanup(func() { _ = client.Disconnect() })
+
+	// The server sends the setup event and loginRequired in one payload, and
+	// answering the setup is what makes the credentials work, so the only
+	// login is the one the setup ends with. A client that answers the
+	// loginRequired instead sends a doomed one before it.
+	require.Equal(t, 1, fake.loginFrameCount())
 }
 
 // untranslatedCredsRejection is what a server from before the login messages
@@ -254,6 +260,58 @@ func TestNewAutoLoginWithCredentials(t *testing.T) {
 	defer resyncCancel()
 
 	require.NoError(t, client.Resync(resyncCtx))
+}
+
+// TestNewSetupWithoutCredentials covers the server that is not set up yet and
+// is given nothing to set it up with: the setup it asks for is what the client
+// has to report as unanswerable, not the login the same payload also asks for.
+// Which of the two events wins when both are in is settled in
+// TestAuthBarrierSetupWins.
+func TestNewSetupWithoutCredentials(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setSetupRequired(true)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"",
+		"",
+		kuma.WithAutosetup(),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "needs a username and password")
+	require.Nil(t, client)
+	require.Equal(t, 0, fake.loginFrameCount())
+}
+
+// TestNewShortConnectTimeoutWithoutLoginRequired covers the short connect
+// timeout against a server that never states how it wants to be authenticated.
+// The wait for that statement is bounded by what is left of the caller's
+// budget, so the login that follows still has time to run.
+func TestNewShortConnectTimeoutWithoutLoginRequired(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setOmitLoginRequired(true)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"admin",
+		"admin1",
+		kuma.WithConnectTimeout(400*time.Millisecond),
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
 }
 
 // TestNewRejectsHalfCredentials covers the caller that sets only one of the two
