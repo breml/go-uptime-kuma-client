@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -19,7 +18,6 @@ import (
 	"github.com/maldikhan/go.socket.io/socket.io/v5/client/emit"
 	"github.com/maldikhan/go.socket.io/utils"
 	"github.com/maniartech/signals"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/breml/go-uptime-kuma-client/dockerhost"
 	"github.com/breml/go-uptime-kuma-client/maintenance"
@@ -145,6 +143,40 @@ func LogLevel(level string) int {
 //nolint:gochecknoglobals // empty is used as a placeholder value in maps to represent set membership.
 var empty = struct{}{}
 
+// knownReadyEvents lists all initial list events an Uptime Kuma server may emit
+// after login. The subset a given server actually emits depends on its version
+// and on any reverse proxy in front of it (older versions and some proxies never
+// emit certain events, e.g. apiKeyList).
+//
+//nolint:gochecknoglobals // package-level constant list of the known ready events.
+var knownReadyEvents = []string{
+	"monitorList",
+	"notificationList",
+	"statusPageList",
+	"maintenanceList",
+	"proxyList",
+	"dockerHostList",
+	"apiKeyList",
+}
+
+// defaultReadyEvents is the set of events New waits for before returning. These
+// are the primary entities this library manages and are emitted by all
+// supported Uptime Kuma versions. The remaining knownReadyEvents are treated as
+// best-effort: they are cached when they arrive, but never block New.
+//
+//nolint:gochecknoglobals // package-level default for the required ready events.
+var defaultReadyEvents = []string{
+	"monitorList",
+	"notificationList",
+	"statusPageList",
+}
+
+// defaultReadyGracePeriod bounds how long New waits for the best-effort
+// (optional) ready events once all required events have been received. On a
+// healthy server all events arrive within milliseconds, so this only elapses
+// when an optional event is genuinely never sent.
+const defaultReadyGracePeriod = 500 * time.Millisecond
+
 type entryPageResponse struct {
 	Type string `json:"type"`
 }
@@ -170,28 +202,14 @@ type state struct {
 	dockerHosts   []dockerhost.DockerHost
 }
 
-// pendingListEvents returns the update events that carry the lists the local
-// state cache is built from, as a set to strike them off as they arrive. The
-// server sends all of them after a login, which is what New waits for and what
-// Resync repeats.
-func pendingListEvents() map[string]struct{} {
-	return map[string]struct{}{
-		"monitorList":      empty,
-		"maintenanceList":  empty,
-		"notificationList": empty,
-		"statusPageList":   empty,
-		"proxyList":        empty,
-		"dockerHostList":   empty,
-		"apiKeyList":       empty,
-	}
-}
-
 // Client represents a connection to an Uptime Kuma server.
 type Client struct {
 	socketioClient               *socketio.Client
 	socketioClientConnectTimeout time.Duration
 	socketioLogger               socketio.Logger
 	autosetup                    bool
+	readyEvents                  []string
+	readyGracePeriod             time.Duration
 
 	mu      *sync.Mutex
 	updates signals.Signal[string]
@@ -200,6 +218,10 @@ type Client struct {
 	// sessionToken is the JWT the server handed out at login. It is what
 	// Resync logs in with, see there.
 	sessionToken string
+
+	// readyEventsMissing are the best-effort ready events the server did not
+	// emit while New was connecting, see MissingReadyEvents.
+	readyEventsMissing []string
 }
 
 // Option is a functional option for configuring a Client.
@@ -229,6 +251,38 @@ func WithLogLevel(level int) Option {
 func WithConnectTimeout(timeout time.Duration) Option {
 	return func(c *Client) {
 		c.socketioClientConnectTimeout = timeout
+	}
+}
+
+// WithReadyEvents overrides the set of initial list events New waits for before
+// returning. By default New waits for monitorList, notificationList and
+// statusPageList; the remaining known events (e.g. maintenanceList, apiKeyList)
+// are best-effort. Use this to widen or narrow the required set for servers or
+// reverse proxies that emit a different subset of events.
+//
+// An optional event that never arrives (server never sends it, or a proxy
+// drops it) leaves the corresponding client state (e.g. GetMaintenances,
+// GetProxyList, GetDockerHostList) populated as empty, indistinguishable from
+// a genuinely empty list on the server. MissingReadyEvents names those events,
+// and a warning goes to the logger WithLogLevel configures, which is silent by
+// default. Widen readyEvents to require an event if its state must be
+// trustworthy.
+//
+// New rejects an event that is not one of the known ready events, rather than
+// waiting out the connect timeout for something the server never emits.
+func WithReadyEvents(events ...string) Option {
+	return func(c *Client) {
+		c.readyEvents = slices.Clone(events)
+	}
+}
+
+// WithReadyGracePeriod sets how long New waits for the best-effort (optional)
+// ready events after all required events have been received. A value of zero
+// makes New return as soon as the required events arrive, without waiting for
+// the optional ones.
+func WithReadyGracePeriod(d time.Duration) Option {
+	return func(c *Client) {
+		c.readyGracePeriod = d
 	}
 }
 
@@ -395,7 +449,9 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 //nolint:revive // Complexity is necessary for complete client initialization and event setup
 func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
 	c := &Client{
-		socketioLogger: &utils.DefaultLogger{Level: utils.NONE},
+		socketioLogger:   &utils.DefaultLogger{Level: utils.NONE},
+		readyEvents:      defaultReadyEvents,
+		readyGracePeriod: defaultReadyGracePeriod,
 
 		mu:      &sync.Mutex{},
 		updates: signals.New[string](),
@@ -403,6 +459,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	for _, opt := range opts {
 		opt(c)
+	}
+
+	unknown := unknownReadyEvents(c.readyEvents)
+	if len(unknown) > 0 {
+		return nil, fmt.Errorf("ready events: unknown: %s", strings.Join(unknown, ", "))
 	}
 
 	ctxWithConnectTimeout := ctx
@@ -438,26 +499,10 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	c.socketioClient = client
 
-	updateSeenMu := sync.Mutex{}
-	updateSeenMu.Lock()
-	updateSeen := pendingListEvents()
-	updateSeenMu.Unlock()
+	gate := newReadyGate(c.splitReadyEvents())
 
-	ready := make(chan struct{})
-	closeReady := sync.OnceFunc(func() {
-		close(ready)
-	})
-	defer closeReady()
-
-	c.updates.AddListener(func(_ context.Context, s string) {
-		updateSeenMu.Lock()
-		defer updateSeenMu.Unlock()
-
-		delete(updateSeen, s)
-
-		if len(updateSeen) == 0 {
-			closeReady()
-		}
+	c.updates.AddListener(func(_ context.Context, event string) {
+		gate.observe(event)
 	}, "connect-ready")
 	defer c.updates.RemoveListener("connect-ready")
 
@@ -595,23 +640,48 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		}
 	})
 
-	errgrp := errgroup.Group{}
-	errgrp.Go(func() error {
-		return client.Connect(ctx)
-	})
+	// client.Connect returns as soon as the transport is running and the
+	// handshake has been requested; a non-nil error is the real transport
+	// failure, which is surfaced instead of waiting out the timeout. It gets
+	// ctx and not ctxWithConnectTimeout, because the socket.io client keeps
+	// reading from the connection until that context is done and
+	// ctxWithConnectTimeout is canceled as soon as New returns.
+	connectErr := make(chan error, 1)
+	go func() {
+		connectErr <- client.Connect(ctx)
+	}()
 
-	select {
-	case <-connect:
-	case <-ctx.Done():
-		return nil, fmt.Errorf("connect to server: %w", ctx.Err())
+connectLoop:
+	for {
+		select {
+		case <-connect:
+			break connectLoop
 
-	case <-ctxWithConnectTimeout.Done():
-		return nil, fmt.Errorf("connect to server: %w", ctxWithConnectTimeout.Err())
-	}
+		case err := <-connectErr:
+			if err != nil {
+				return nil, fmt.Errorf("connect to server: %w", err)
+			}
 
-	err = errgrp.Wait()
-	if err != nil {
-		return nil, fmt.Errorf("connect to server: %w", err)
+			// The dial returned; keep waiting for the connect event. Setting
+			// connectErr to nil makes this case block forever, and marks the
+			// channel as spent by a transport that is up.
+			connectErr = nil
+
+		case <-ctx.Done():
+			return nil, fmt.Errorf("connect to server: %w", ctx.Err())
+
+		case <-ctxWithConnectTimeout.Done():
+			if connectErr == nil {
+				c.disconnectOrphan()
+			} else {
+				dialErr := c.abandonDial(connectErr)
+				if dialErr != nil {
+					return nil, fmt.Errorf("connect to server: %w", dialErr)
+				}
+			}
+
+			return nil, fmt.Errorf("connect to server: %w", ctxWithConnectTimeout.Err())
+		}
 	}
 
 	// The socket.io client is now connected. On any subsequent error path
@@ -662,71 +732,73 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		}
 	}
 
+	// Both success paths hand the client over through returnReady, so neither
+	// can skip the grace window the best-effort events get. connectTimeoutDone
+	// keeps that wait inside the caller's WithConnectTimeout budget.
+	returnReady := func() *Client {
+		c.awaitOptionalReadyEvents(ctx, "New", gate, connectTimeoutDone)
+		c.setMissingReadyEvents(gate.missingOptional())
+
+		closeOnErr = false
+
+		return c
+	}
+
 	for {
+		// A server that needs setup says so right after the connect, while a
+		// required set that is empty (see WithReadyEvents) opens the ready gate
+		// before that. Checking setup first keeps it from losing that race and
+		// handing back a client for a server that is not set up.
 		select {
-		case <-ready:
-			closeOnErr = false
-			return c, nil
-
 		case <-setupRequired:
-			setupRequired = nil
+			// Handled below the select.
 
-			if !c.autosetup {
-				return nil, errors.New("server does require setup, but autosetup is disabled")
-			}
-
-			_, err := c.syncEmit(ctxWithConnectTimeout, "setup", username, password)
-			if err != nil {
-				return nil, fmt.Errorf("setup: %w", err)
-			}
-
-			loginResponse, err := c.syncEmit(
-				ctxWithConnectTimeout,
-				"login",
-				map[string]any{"username": username, "password": password, "token": ""},
-			)
-			if err != nil {
-				return nil, fmt.Errorf("login: %w", err)
-			}
-
-			c.setSessionToken(loginResponse.Token)
-
-		case <-ctx.Done():
-			return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
-
-		case <-connectTimeoutDone:
-			// ctxWithConnectTimeout is derived from ctx, so its Done channel
-			// closes whenever the parent ctx is cancelled too. Prefer the
-			// parent's error in that case to avoid a misleading
-			// "missing events" message on an ordinary cancellation.
-			if ctx.Err() != nil {
-				return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
-			}
-
-			// If all ready events arrived at the exact same instant as the
-			// timeout, prefer the success path over the error path.
+		default:
 			select {
-			case <-ready:
-				closeOnErr = false
-				return c, nil
+			case <-gate.requiredDone:
+				return returnReady(), nil
 
-			default:
+			case <-setupRequired:
+				// Handled below the select.
+
+			case <-ctx.Done():
+				return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
+
+			case <-connectTimeoutDone:
+				// ctxWithConnectTimeout is derived from ctx, so its Done
+				// channel closes whenever the parent ctx is cancelled too.
+				// Prefer the parent's error in that case to avoid a misleading
+				// "missing events" message on an ordinary cancellation.
+				if ctx.Err() != nil {
+					return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
+				}
+
+				// If all ready events arrived at the exact same instant as the
+				// timeout, prefer the success path over the error path.
+				select {
+				case <-gate.requiredDone:
+					return returnReady(), nil
+
+				default:
+				}
+
+				return nil, fmt.Errorf(
+					"wait for ready: %w (missing events: %s)",
+					ctxWithConnectTimeout.Err(),
+					strings.Join(gate.missingRequired(), ", "),
+				)
 			}
+		}
 
-			updateSeenMu.Lock()
-			missing := make([]string, 0, len(updateSeen))
-			for event := range updateSeen {
-				missing = append(missing, event)
-			}
-			updateSeenMu.Unlock()
+		setupRequired = nil
 
-			sort.Strings(missing)
+		if !c.autosetup {
+			return nil, errors.New("server does require setup, but autosetup is disabled")
+		}
 
-			return nil, fmt.Errorf(
-				"wait for ready: %w (missing events: %s)",
-				ctxWithConnectTimeout.Err(),
-				strings.Join(missing, ", "),
-			)
+		err = c.runSetup(ctxWithConnectTimeout, username, password)
+		if err != nil {
+			return nil, err
 		}
 	}
 }
@@ -742,7 +814,7 @@ func (c *Client) Disconnect() error {
 }
 
 // Resync rebuilds the local state cache from the server and returns once the
-// server has resent every list the cache is built from.
+// server has resent the lists the cache is built from.
 //
 // It is the way out of the stale cache an operation that failed with
 // ErrUpdateEventTimeout leaves behind: the getters that serve from the cache do
@@ -753,6 +825,12 @@ func (c *Client) Disconnect() error {
 // a single list. What it does have is a login, which answers with all of them,
 // so Resync logs in again with the token from the login New performed. A client
 // created without credentials therefore cannot resync.
+//
+// Which lists Resync waits for follows New: the events configured with
+// WithReadyEvents are required and the remaining known events are best-effort,
+// awaited for the ready grace period. The best-effort events New never saw are
+// skipped altogether, because a server (or a proxy in front of it) that does
+// not emit one while connecting does not emit it here either.
 func (c *Client) Resync(ctx context.Context) error {
 	c.mu.Lock()
 	token := c.sessionToken
@@ -762,27 +840,13 @@ func (c *Client) Resync(ctx context.Context) error {
 		return errors.New("resync: no session token, the client was created without credentials")
 	}
 
-	pendingMu := sync.Mutex{}
-	pending := pendingListEvents()
-
-	done := make(chan struct{})
-	closeDone := sync.OnceFunc(func() {
-		close(done)
-	})
-	defer closeDone()
+	gate := newReadyGate(c.resyncReadyEvents())
 
 	// Registered before the command is emitted, so that no list can arrive
 	// unnoticed between the two.
 	listenerID := uuid.New()
 	c.updates.AddListener(func(_ context.Context, update string) {
-		pendingMu.Lock()
-		defer pendingMu.Unlock()
-
-		delete(pending, update)
-
-		if len(pending) == 0 {
-			closeDone()
-		}
+		gate.observe(update)
 	}, listenerID.String())
 
 	defer c.updates.RemoveListener(listenerID.String())
@@ -793,22 +857,114 @@ func (c *Client) Resync(ctx context.Context) error {
 	}
 
 	select {
-	case <-done:
-		return nil
+	case <-gate.requiredDone:
 
 	case <-ctx.Done():
-		pendingMu.Lock()
-		missing := make([]string, 0, len(pending))
-
-		for event := range pending {
-			missing = append(missing, event)
-		}
-		pendingMu.Unlock()
-
-		slices.Sort(missing)
-
-		return fmt.Errorf("resync: %w (missing events: %s)", ctx.Err(), strings.Join(missing, ", "))
+		return fmt.Errorf(
+			"resync: %w (missing events: %s)",
+			ctx.Err(),
+			strings.Join(gate.missingRequired(), ", "),
+		)
 	}
+
+	// The required lists are in. Give the best-effort ones the same grace
+	// window New grants them, so the cache they feed is refreshed too.
+	c.awaitOptionalReadyEvents(ctx, "Resync", gate, nil)
+
+	return nil
+}
+
+// MissingReadyEvents returns the best-effort ready events the server did not
+// emit while New was connecting, sorted.
+//
+// The state such an event carries (maintenances, proxies, Docker hosts, API
+// keys) is empty in the local cache for a reason the getters cannot tell apart
+// from a genuinely empty server, so a caller that depends on one of them can
+// check here — or require the event with WithReadyEvents and have New fail
+// instead.
+func (c *Client) MissingReadyEvents() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return slices.Clone(c.readyEventsMissing)
+}
+
+// abandonDial cleans up the dial New walks away from when the connect timeout
+// fires, and returns the transport error if the dial already failed with one.
+// New returns no *Client on this path, so a connection that was, or still gets,
+// established has no owner: it is disconnected instead of left running until
+// ctx is done.
+func (c *Client) abandonDial(connectErr <-chan error) error {
+	select {
+	case err := <-connectErr:
+		if err != nil {
+			return err
+		}
+
+		c.disconnectOrphan()
+
+	default:
+		// The dial is still in flight (it uses ctx, so this timeout does not
+		// abort it). Drain connectErr in the background so a late failure is
+		// not silently discarded and a late success is not leaked.
+		go func() {
+			err := <-connectErr
+			if err != nil {
+				c.socketioLogger.Warnf("New: dial failed after connect timeout: %s", err)
+
+				return
+			}
+
+			c.disconnectOrphan()
+		}()
+	}
+
+	return nil
+}
+
+// disconnectOrphan closes a connection no caller holds a handle to. The close
+// is best-effort and asynchronous, because Disconnect waits for the transport
+// and the message loop to wind down, which a server that leaves a long poll
+// hanging can stall for as long as it likes — and the caller it would block is
+// on its way out.
+func (c *Client) disconnectOrphan() {
+	go func() {
+		err := c.Disconnect()
+		if err != nil {
+			c.socketioLogger.Warnf("disconnect orphaned connection: %s", err)
+		}
+	}()
+}
+
+// runSetup sets the server up and logs in again afterwards, which is what a
+// server that answers the connect with a setup event asks for.
+func (c *Client) runSetup(ctx context.Context, username string, password string) error {
+	_, err := c.syncEmit(ctx, "setup", username, password)
+	if err != nil {
+		return fmt.Errorf("setup: %w", err)
+	}
+
+	loginResponse, err := c.syncEmit(
+		ctx,
+		"login",
+		map[string]any{"username": username, "password": password, "token": ""},
+	)
+	if err != nil {
+		return fmt.Errorf("login: %w", err)
+	}
+
+	c.setSessionToken(loginResponse.Token)
+
+	return nil
+}
+
+// setMissingReadyEvents records what New waited for in vain, see
+// MissingReadyEvents and resyncReadyEvents.
+func (c *Client) setMissingReadyEvents(missing []string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.readyEventsMissing = missing
 }
 
 // setSessionToken records the JWT a login answered with, see Resync.
@@ -817,6 +973,185 @@ func (c *Client) setSessionToken(token string) {
 	defer c.mu.Unlock()
 
 	c.sessionToken = token
+}
+
+// splitReadyEvents returns the update events that carry the lists the local
+// state cache is built from, as two sets to strike them off as they arrive:
+// the events the client waits for (its configured readyEvents) and the
+// best-effort rest, which are cached when they arrive but never block. The
+// server sends them after a login, which is what New waits for and what Resync
+// repeats.
+func (c *Client) splitReadyEvents() (required map[string]struct{}, optional map[string]struct{}) {
+	required = make(map[string]struct{}, len(c.readyEvents))
+	for _, event := range c.readyEvents {
+		required[event] = empty
+	}
+
+	optional = make(map[string]struct{}, len(knownReadyEvents))
+
+	for _, event := range knownReadyEvents {
+		if _, isRequired := required[event]; !isRequired {
+			optional[event] = empty
+		}
+	}
+
+	return required, optional
+}
+
+// resyncReadyEvents is splitReadyEvents for a resync: the best-effort events
+// the server did not emit while New was connecting are dropped, because it does
+// not emit them here either and waiting them out would cost every resync the
+// full ready grace period for nothing.
+func (c *Client) resyncReadyEvents() (required map[string]struct{}, optional map[string]struct{}) {
+	required, optional = c.splitReadyEvents()
+
+	for _, event := range c.MissingReadyEvents() {
+		delete(optional, event)
+	}
+
+	return required, optional
+}
+
+// unknownReadyEvents returns the events that are not among knownReadyEvents,
+// sorted.
+func unknownReadyEvents(events []string) []string {
+	unknown := make([]string, 0, len(events))
+
+	for _, event := range events {
+		if !slices.Contains(knownReadyEvents, event) {
+			unknown = append(unknown, event)
+		}
+	}
+
+	slices.Sort(unknown)
+
+	return unknown
+}
+
+// awaitOptionalReadyEvents gives the best-effort ready events the ready grace
+// period to arrive, so the state they populate is current when the caller named
+// by caller returns, and warns about the ones that never came. A grace period
+// of zero skips the wait, and with it the warning: the caller asked to return
+// as soon as the required events are in, which is too early to tell an event
+// that is missing from one that is merely late.
+//
+// The wait cannot fail the caller: the required events are already in, so every
+// way out of it is a success. Besides the optional events arriving and the
+// grace period elapsing, those are a done context and abort, which is how New
+// keeps the wait within the caller's WithConnectTimeout budget; a nil abort
+// never fires.
+func (c *Client) awaitOptionalReadyEvents(
+	ctx context.Context,
+	caller string,
+	gate *readyGate,
+	abort <-chan struct{},
+) {
+	if c.readyGracePeriod <= 0 {
+		return
+	}
+
+	graceTimer := time.NewTimer(c.readyGracePeriod)
+	defer graceTimer.Stop()
+
+	select {
+	case <-gate.optionalDone:
+	case <-graceTimer.C:
+	case <-abort:
+	case <-ctx.Done():
+	}
+
+	missing := gate.missingOptional()
+	if len(missing) > 0 {
+		c.socketioLogger.Warnf(
+			"%s: optional ready events did not arrive within the grace period: %s",
+			caller,
+			strings.Join(missing, ", "),
+		)
+	}
+}
+
+// readyGate tracks the initial list events a login answers with, so New and
+// Resync can wait for the required ones and give the best-effort rest a grace
+// period. Events are struck off both sets as they arrive, and a set that runs
+// empty opens its gate.
+type readyGate struct {
+	mu       sync.Mutex
+	required map[string]struct{}
+	optional map[string]struct{}
+
+	requiredDone  chan struct{}
+	optionalDone  chan struct{}
+	closeRequired func()
+	closeOptional func()
+}
+
+func newReadyGate(required map[string]struct{}, optional map[string]struct{}) *readyGate {
+	gate := &readyGate{
+		required:     required,
+		optional:     optional,
+		requiredDone: make(chan struct{}),
+		optionalDone: make(chan struct{}),
+	}
+
+	gate.closeRequired = sync.OnceFunc(func() { close(gate.requiredDone) })
+	gate.closeOptional = sync.OnceFunc(func() { close(gate.optionalDone) })
+
+	// A set that starts out empty has nothing to wait for, e.g. the required
+	// set of a WithReadyEvents() with no events at all. No listener exists yet,
+	// so this needs no lock.
+	gate.openEmptyGates()
+
+	return gate
+}
+
+// observe strikes event off both sets and opens the gates that ran empty.
+func (g *readyGate) observe(event string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	delete(g.required, event)
+	delete(g.optional, event)
+
+	g.openEmptyGates()
+}
+
+// openEmptyGates opens the gate of every set that has nothing left to wait for.
+// Every caller but newReadyGate holds g.mu.
+func (g *readyGate) openEmptyGates() {
+	if len(g.required) == 0 {
+		g.closeRequired()
+	}
+
+	if len(g.optional) == 0 {
+		g.closeOptional()
+	}
+}
+
+// missingRequired returns the required events that have not arrived, sorted.
+func (g *readyGate) missingRequired() []string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	return sortedEvents(g.required)
+}
+
+// missingOptional returns the best-effort events that have not arrived, sorted.
+func (g *readyGate) missingOptional() []string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	return sortedEvents(g.optional)
+}
+
+func sortedEvents(events map[string]struct{}) []string {
+	sorted := make([]string, 0, len(events))
+	for event := range events {
+		sorted = append(sorted, event)
+	}
+
+	slices.Sort(sorted)
+
+	return sorted
 }
 
 type ackResponse struct {

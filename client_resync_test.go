@@ -14,7 +14,7 @@ import (
 
 // newFakeAckClient connects a client to fake and returns it, with the server and
 // the connection torn down when the test ends.
-func newFakeAckClient(t *testing.T, fake *fakeAckServer) *kuma.Client {
+func newFakeAckClient(t *testing.T, fake *fakeAckServer, opts ...kuma.Option) *kuma.Client {
 	t.Helper()
 
 	server := httptest.NewServer(fake)
@@ -30,7 +30,7 @@ func newFakeAckClient(t *testing.T, fake *fakeAckServer) *kuma.Client {
 		ctx,
 		server.URL,
 		"admin", "admin1",
-		kuma.WithConnectTimeout(10*time.Second),
+		append([]kuma.Option{kuma.WithConnectTimeout(10 * time.Second)}, opts...)...,
 	)
 	require.NoError(t, err)
 
@@ -68,8 +68,51 @@ func TestResync(t *testing.T) {
 		err := kumaClient.Resync(ctx)
 
 		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.ErrorContains(t, err, "monitorList")
 		require.ErrorContains(t, err, "notificationList")
-		require.ErrorContains(t, err, "proxyList")
+		require.ErrorContains(t, err, "statusPageList")
+		require.NotContains(t, err.Error(), "proxyList",
+			"a best-effort list is not what a resync waits for")
+	})
+
+	t.Run("the_best_effort_lists_do_not_hold_it_up", func(t *testing.T) {
+		// Long enough that a resync waiting it out is unmistakable in the
+		// elapsed time below.
+		const grace = time.Second
+
+		fake := &fakeAckServer{messages: make(chan []byte, 32)}
+
+		// A server that only ever emits the required lists, as older versions
+		// and some reverse proxies do, has to resync just the same — and once
+		// New has learned that it never sends them, without spending the grace
+		// period on them again.
+		fake.setSuppressOptionalLists(true)
+
+		kumaClient := newFakeAckClient(t, fake, kuma.WithReadyGracePeriod(grace))
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		start := time.Now()
+
+		require.NoError(t, kumaClient.Resync(ctx))
+		require.Less(t, time.Since(start), grace/4,
+			"the resync waited out the grace period for lists this server never sends")
+	})
+
+	t.Run("a_deadline_in_the_grace_window_does_not_fail_a_finished_resync", func(t *testing.T) {
+		fake := &fakeAckServer{messages: make(chan []byte, 32)}
+		kumaClient := newFakeAckClient(t, fake)
+
+		fake.setSuppressOptionalLists(true)
+
+		// Shorter than the default ready grace period, so the deadline is what
+		// ends the wait for the best-effort lists. By then the required ones
+		// have rebuilt the cache, which is all the caller asked for.
+		ctx, cancel := context.WithTimeout(t.Context(), 300*time.Millisecond)
+		defer cancel()
+
+		require.NoError(t, kumaClient.Resync(ctx))
 	})
 
 	t.Run("without_a_session_token_it_reports_that_instead_of_hanging", func(t *testing.T) {
