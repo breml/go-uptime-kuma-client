@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -31,6 +32,11 @@ type fakeSocketIOServer struct {
 	// login ACK, e.g. `42["monitorList",{}]`. This lets a test emit only a
 	// subset of the initial list events to exercise the tolerant ready gate.
 	eventsAfterLogin []string
+	// noConnectACK leaves the socket.io CONNECT unanswered, the way a reverse
+	// proxy that forwards the engine.io handshake but nothing beyond it does.
+	// The transport comes up, so the dial succeeds, but the connect event
+	// never arrives.
+	noConnectACK bool
 }
 
 func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -73,9 +79,24 @@ func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodGet && sid != "":
 		// Long-poll: deliver the next queued message or block until the
 		// client disconnects (simulating a server that never emits ready events).
+		var idle <-chan time.Time
+
+		if s.noConnectACK {
+			// End an idle poll with an engine.io NOOP instead of holding it
+			// open forever. Nothing else would ever end this poll, and a
+			// client shutting down waits for the one in flight.
+			timer := time.NewTimer(50 * time.Millisecond)
+			defer timer.Stop()
+
+			idle = timer.C
+		}
+
 		select {
 		case msg := <-s.messages:
 			_, _ = w.Write(msg)
+
+		case <-idle:
+			_, _ = w.Write([]byte("6"))
 
 		case <-r.Context().Done():
 		}
@@ -95,6 +116,10 @@ func (s *fakeSocketIOServer) handleClientMessage(body []byte) {
 
 	switch socketIOData[0] {
 	case '0': // socket.io CONNECT
+		if s.noConnectACK {
+			return
+		}
+
 		// Enqueue CONNECT ACK: engine.io "4" (Message) + socket.io "0" (Connect).
 		s.messages <- []byte("40")
 
@@ -460,7 +485,34 @@ func TestNewReadyGateTolerant(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	t.Cleanup(func() { _ = client.Disconnect() })
-	require.Less(t, elapsed, timeout, "New() should return after the grace period, not the connect timeout")
+	require.Less(t, elapsed, 5*grace, "New() should return after the grace period, not the connect timeout")
+	require.Equal(t,
+		[]string{"apiKeyList", "dockerHostList", "maintenanceList", "proxyList"},
+		client.MissingReadyEvents(),
+		"the caller has to be able to tell a cache left empty from an empty server")
+}
+
+// TestNewRejectsUnknownReadyEvent covers a typo in WithReadyEvents. Waiting for
+// an event no server ever emits can only end in the connect timeout, so New
+// says so up front, before it even dials.
+func TestNewRejectsUnknownReadyEvent(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	t.Cleanup(cancel)
+
+	start := time.Now()
+
+	_, err := kuma.New(
+		ctx,
+		// Unreachable on purpose: the check has to come before the dial.
+		"http://127.0.0.1:1",
+		"admin", "admin1",
+		kuma.WithReadyEvents("monitorlist"),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+
+	require.ErrorContains(t, err, "unknown")
+	require.ErrorContains(t, err, "monitorlist")
+	require.Less(t, time.Since(start), time.Second, "New() should not have dialed at all")
 }
 
 // TestNewReadyEventsOption verifies that WithReadyEvents narrows the required
@@ -493,6 +545,126 @@ func TestNewReadyEventsOption(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, client)
+	t.Cleanup(func() { _ = client.Disconnect() })
+}
+
+// TestNewConnectTimeoutDoesNotLeakTheDial covers the connect timeout firing
+// after client.Connect has already returned successfully — it only brings the
+// transport up, so it returns long before the socket.io CONNECT this server
+// never answers. New hands back the timeout error without a *Client, so nobody
+// can disconnect the transport afterwards and New has to do it itself.
+func TestNewConnectTimeoutDoesNotLeakTheDial(t *testing.T) {
+	const timeout = 500 * time.Millisecond
+
+	server := httptest.NewServer(&fakeSocketIOServer{
+		messages:     make(chan []byte, 10),
+		noConnectACK: true,
+	})
+
+	// Deliberately without a deadline: the context governs the lifetime of the
+	// connection, so an abandoned one lives on until the caller happens to
+	// cancel it.
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(func() {
+		cancel()
+		server.CloseClientConnections()
+		server.Close()
+	})
+
+	// The rest of the suite keeps clients of its own connected, so only the
+	// growth over this baseline is this test's.
+	before, _ := goroutinesIn(socketIOPackage)
+
+	_, err := kuma.New(
+		ctx,
+		server.URL,
+		"admin", "admin1",
+		kuma.WithConnectTimeout(timeout),
+	)
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	// The connection has to wind down on its own: the context that governs it
+	// is still alive and the caller was handed no *Client to disconnect.
+	running, stack := before+1, ""
+
+	for range 100 {
+		running, stack = goroutinesIn(socketIOPackage)
+		if running <= before {
+			break
+		}
+
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	require.NotContains(t, stack, "chan receive (nil chan)",
+		"draining the spent connectErr channel blocks forever")
+	require.LessOrEqual(t, running, before,
+		"the abandoned connection kept its goroutines running:\n%s", stack)
+}
+
+// socketIOPackage appears in the stack of every goroutine the socket.io client
+// runs, which is what goroutinesIn counts to tell a wound-down connection from
+// a leaked one.
+const socketIOPackage = "go.socket.io"
+
+// goroutinesIn counts the running goroutines whose stack mentions pkg and
+// returns the dump they were counted in.
+func goroutinesIn(pkg string) (count int, dump string) {
+	buf := make([]byte, 1<<16)
+	for {
+		n := runtime.Stack(buf, true)
+		if n < len(buf) {
+			buf = buf[:n]
+
+			break
+		}
+
+		buf = make([]byte, 2*len(buf))
+	}
+
+	dump = string(buf)
+
+	for goroutine := range strings.SplitSeq(dump, "\n\n") {
+		if strings.Contains(goroutine, pkg) {
+			count++
+		}
+	}
+
+	return count, dump
+}
+
+// TestNewReadyGraceWithinCallerDeadline covers the caller that bounds New with
+// a context deadline instead of WithConnectTimeout, against a server that never
+// emits the optional lists. The required events arrive well within the
+// deadline, so the deadline running out during the best-effort grace window has
+// to hand the client over, not throw it away.
+func TestNewReadyGraceWithinCallerDeadline(t *testing.T) {
+	server := httptest.NewServer(&fakeSocketIOServer{
+		messages: make(chan []byte, 10),
+		eventsAfterLogin: []string{
+			`42["monitorList",{}]`,
+			`42["notificationList",[]]`,
+			`42["statusPageList",{}]`,
+		},
+	})
+
+	t.Cleanup(func() {
+		server.CloseClientConnections()
+		server.Close()
+	})
+
+	// Shorter than the default ready grace period, and no WithConnectTimeout,
+	// so nothing but this deadline ends the grace window.
+	ctx, cancel := context.WithTimeout(t.Context(), 300*time.Millisecond)
+	defer cancel()
+
+	client, err := kuma.New(ctx, server.URL, "admin", "admin1")
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
 	t.Cleanup(func() { _ = client.Disconnect() })
 }
 
