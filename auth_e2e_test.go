@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -82,6 +83,14 @@ func newKumaContainer(t *testing.T) string {
 func TestAuthenticationAgainstServer(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
+	}
+
+	// This one brings up a second Uptime Kuma of its own and waits out real
+	// time steps, so it is gated the way the other end-to-end tests are rather
+	// than run on every task test.
+	e2eTest, _ := strconv.ParseBool(os.Getenv("E2E_TEST"))
+	if !e2eTest {
+		t.Skip(`skipping end to end test, "E2E_TEST" env var not set`)
 	}
 
 	baseURL := newKumaContainer(t)

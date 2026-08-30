@@ -52,7 +52,7 @@ func TestNewTwoFactorRequired(t *testing.T) {
 // password, without ever asking to be set up.
 func TestNewInvalidCredentials(t *testing.T) {
 	fake, url := newAuthFake(t)
-	fake.setRejectCreds(true)
+	fake.setRejectCreds()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -113,7 +113,7 @@ func TestNewAutoLogin(t *testing.T) {
 // dropping it does. The client falls back to logging in anyway.
 func TestNewWithoutLoginRequiredEvent(t *testing.T) {
 	fake, url := newAuthFake(t)
-	fake.setOmitLoginRequired(true)
+	fake.setOmitLoginRequired()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -157,8 +157,10 @@ func TestNewLoginWaitsForLoginRequired(t *testing.T) {
 // them and asks to be set up instead. Running the setup is what makes the same
 // credentials work, so the rejection must not end the connect.
 //
-// This is the regression guard for classifying that rejection by the message
-// the server sent rather than by matching on a formatted error string.
+// This is the case where the setup event is already in when the barrier reads
+// it, so the client never sends the doomed login at all. The other ordering,
+// where it arrives only after the rejection, is
+// TestNewSetupFallbackAfterLateSetupEvent.
 func TestNewSetupFallbackAfterRejectedCredentials(t *testing.T) {
 	fake, url := newAuthFake(t)
 	fake.setSetupRequired(true)
@@ -187,6 +189,65 @@ func TestNewSetupFallbackAfterRejectedCredentials(t *testing.T) {
 	require.Equal(t, 1, fake.loginFrameCount())
 }
 
+// TestNewSetupFallbackAfterLateSetupEvent covers the ordering the fallback
+// exists for: the server states that it wants a login, rejects the credentials
+// it has no user for, and only then does the setup event arrive.
+//
+// Nothing guarantees the barrier sees the setup event first - a real client
+// dispatches every handler on its own goroutine, so two events of one payload
+// have no delivery order - which is why the rejection is re-examined instead of
+// being handed to the caller. This is the regression guard for classifying that
+// rejection by the message the server sent rather than by matching on a
+// formatted error string.
+func TestNewSetupFallbackAfterLateSetupEvent(t *testing.T) {
+	t.Cleanup(kuma.SetSetupEventGrace(2 * time.Second))
+
+	fake, url := newAuthFake(t)
+	fake.setLateSetup(50 * time.Millisecond)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"admin",
+		"admin1",
+		kuma.WithAutosetup(),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	// The doomed login the client answered loginRequired with, and the one the
+	// setup ends with. A client that gave up on the rejection sends only the
+	// first and never reaches this.
+	require.Equal(t, 2, fake.loginFrameCount())
+}
+
+// TestNewSetupRequiredWithoutAutosetup covers the same server for a caller that
+// did not ask for the setup to be run: the rejection it gets has to say that
+// the server wants to be set up, not that the password is wrong.
+func TestNewSetupRequiredWithoutAutosetup(t *testing.T) {
+	t.Cleanup(kuma.SetSetupEventGrace(2 * time.Second))
+
+	fake, url := newAuthFake(t)
+	fake.setLateSetup(50 * time.Millisecond)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+
+	require.Error(t, err)
+	require.Nil(t, client)
+	require.NotErrorIs(t, err, kuma.ErrInvalidCredentials)
+	require.Contains(t, err.Error(), "autosetup is disabled")
+}
+
 // untranslatedCredsRejection is what a server from before the login messages
 // were translated answers a rejected login with, trailing period included.
 const untranslatedCredsRejection = "Incorrect username or password."
@@ -196,8 +257,10 @@ const untranslatedCredsRejection = "Incorrect username or password."
 // credentials with the message itself, which the client has to recognize just
 // as well or the autosetup never runs.
 func TestNewSetupFallbackUntranslatedRejection(t *testing.T) {
+	t.Cleanup(kuma.SetSetupEventGrace(2 * time.Second))
+
 	fake, url := newAuthFake(t)
-	fake.setSetupRequired(true)
+	fake.setLateSetup(50 * time.Millisecond)
 	fake.setCredsRejectionMsg(untranslatedCredsRejection)
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
@@ -216,6 +279,10 @@ func TestNewSetupFallbackUntranslatedRejection(t *testing.T) {
 	require.NotNil(t, client)
 
 	t.Cleanup(func() { _ = client.Disconnect() })
+
+	// The untranslated rejection had to be recognized for the setup to run at
+	// all, which the second login is the evidence of.
+	require.Equal(t, 2, fake.loginFrameCount())
 }
 
 // TestNewInvalidCredentialsUntranslated covers the wrong password against that
@@ -223,7 +290,7 @@ func TestNewSetupFallbackUntranslatedRejection(t *testing.T) {
 // rather than as the server's message.
 func TestNewInvalidCredentialsUntranslated(t *testing.T) {
 	fake, url := newAuthFake(t)
-	fake.setRejectCreds(true)
+	fake.setRejectCreds()
 	fake.setCredsRejectionMsg(untranslatedCredsRejection)
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
@@ -295,7 +362,7 @@ func TestNewSetupWithoutCredentials(t *testing.T) {
 // budget, so the login that follows still has time to run.
 func TestNewShortConnectTimeoutWithoutLoginRequired(t *testing.T) {
 	fake, url := newAuthFake(t)
-	fake.setOmitLoginRequired(true)
+	fake.setOmitLoginRequired()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -828,7 +895,7 @@ func TestNewRejectedSessionTokenWithoutPassword(t *testing.T) {
 func TestNewRejectedSessionTokenAndPassword(t *testing.T) {
 	fake, url := newAuthFake(t)
 	fake.setRejectToken()
-	fake.setRejectCreds(true)
+	fake.setRejectCreds()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -912,4 +979,197 @@ func TestSessionTokenAfterAutoLogin(t *testing.T) {
 	t.Cleanup(func() { _ = client.Disconnect() })
 
 	require.Empty(t, client.SessionToken())
+}
+
+// TestNewCancelledDuringAuthBarrier covers the caller that gives up while the
+// client is still waiting for the server to state how it wants to be
+// authenticated.
+//
+// The barrier answers that wait and a server that stated nothing with the same
+// value, so without reading the context back a cancellation would be reported
+// as a server that wants no login: a successful New for a client with no
+// credentials, and for one with them a login emitted into a connection that is
+// already being torn down.
+func TestNewCancelledDuringAuthBarrier(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		username string
+		password string
+	}{
+		{name: "without_credentials"},
+		{name: "with_credentials", username: "admin", password: "admin1"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fake, url := newAuthFake(t)
+
+			// A server that states nothing is what makes the barrier wait at
+			// all, so the cancellation below lands inside that wait rather
+			// than in the connect before it.
+			fake.setOmitLoginRequired()
+
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+
+			go func() {
+				time.Sleep(250 * time.Millisecond)
+				cancel()
+			}()
+
+			client, err := kuma.New(
+				ctx, url, tc.username, tc.password,
+				// Long enough that only the cancellation can end the wait.
+				kuma.WithConnectTimeout(30*time.Second),
+			)
+
+			require.Nil(t, client)
+			require.ErrorIs(t, err, context.Canceled)
+
+			// Naming the barrier is what distinguishes the fix from a
+			// cancellation merely caught later, by the ready wait or by a
+			// login sent into a connection already being torn down.
+			require.ErrorContains(t, err, "auth mode")
+		})
+	}
+}
+
+// TestNewLoginWithoutSessionToken covers the server that accepts a login and
+// hands out no token with it. The client is authenticated but cannot resync,
+// which is reported where it happens rather than surfacing much later as a
+// Resync claiming the client was created without credentials.
+func TestNewLoginWithoutSessionToken(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setOmitLoginToken(true)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+
+	require.Nil(t, client)
+	require.ErrorContains(t, err, "handed out no session token")
+}
+
+// TestNewRateLimited covers the server refusing a login because too many were
+// attempted in a short time. It says so in a sentence rather than a translation
+// key, and a caller has to be able to tell it from a wrong password: one is
+// worth retrying later, the other never is.
+func TestNewRateLimited(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setRejectCreds()
+	fake.setCredsRejectionMsg("Too frequently, try again later.")
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+
+	require.Nil(t, client)
+	require.ErrorIs(t, err, kuma.ErrRateLimited)
+	require.NotErrorIs(t, err, kuma.ErrInvalidCredentials)
+}
+
+// TestNewUnclassifiedRejection covers the two rejections this client version
+// has no sentinel for: a translation key it does not know, which must not be
+// passed off as a sentence, and a rejection naming no reason at all, which
+// without this reaches the caller as an error with nothing in it.
+func TestNewUnclassifiedRejection(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		ack  string
+		want string
+	}{
+		{
+			name: "unknown_translation_key",
+			ack:  `{"ok":false,"msg":"authSomethingNew","msgi18n":true}`,
+			want: `untranslated reason "authSomethingNew"`,
+		},
+		{
+			name: "no_reason_at_all",
+			ack:  `{"ok":false,"msg":""}`,
+			want: "rejected it without saying why",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fake, url := newAuthFake(t)
+			fake.setCredsRejectionAck(tc.ack)
+
+			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+			defer cancel()
+
+			client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+
+			require.Nil(t, client)
+			require.ErrorContains(t, err, tc.want)
+			require.NotErrorIs(t, err, kuma.ErrInvalidCredentials)
+		})
+	}
+}
+
+// TestErrUserInactiveWrapsInvalidSessionToken covers the relationship the
+// sentinel documents. It is what recoverableWithPassword reads to skip the
+// password fallback, so it has to hold for the sentinel itself and not only for
+// the error one particular call site builds.
+func TestErrUserInactiveWrapsInvalidSessionToken(t *testing.T) {
+	require.ErrorIs(t, kuma.ErrUserInactive, kuma.ErrInvalidSessionToken)
+}
+
+// TestNewSessionTokenRejectedCallback covers the pushed form of
+// SessionTokenRejected: the fallback leaves New succeeding, so a caller that
+// persists tokens is told as it happens instead of having to remember to ask.
+func TestNewSessionTokenRejectedCallback(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setRejectToken()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	var rejected []error
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"admin",
+		"admin1",
+		kuma.WithSessionToken("stale-token"),
+		kuma.WithSessionTokenRejectedCallback(func(err error) { rejected = append(rejected, err) }),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	require.Len(t, rejected, 1, "the callback reports the one token that was refused")
+	require.ErrorIs(t, rejected[0], kuma.ErrInvalidSessionToken)
+	require.True(t, client.SessionTokenRejected())
+}
+
+// TestNewSessionTokenAcceptedSkipsCallback covers the other half: a client
+// whose token the server took never calls the callback, so a caller can treat
+// it as the signal to rewrite what it stored.
+func TestNewSessionTokenAcceptedSkipsCallback(t *testing.T) {
+	_, url := newAuthFake(t)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	called := false
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"admin",
+		"admin1",
+		kuma.WithSessionToken(fakePresetToken),
+		kuma.WithSessionTokenRejectedCallback(func(error) { called = true }),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	require.False(t, called)
+	require.False(t, client.SessionTokenRejected())
 }

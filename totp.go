@@ -16,13 +16,14 @@ import (
 const totpStep = 30 * time.Second
 
 // normalizeTOTPSecret returns the secret in the padded upper-case base32 form
-// the code generation expects, and reports a secret it cannot decode.
+// base32.StdEncoding decodes, and reports a secret it cannot decode.
 //
-// The server hands the secret out in the otpauth:// URI it shows when
-// two-factor authentication is set up, with the base32 padding stripped, so
-// restoring the padding is what makes such a secret usable at all. A secret
-// copied out of a user interface may also carry spaces, hyphens and lower
-// case, all of which are accepted.
+// The code generation tolerates a secret that is unpadded or lower case on its
+// own, so neither of those is why this exists. What it is for is the separators
+// a secret carries when it is copied out of a user interface - the server shows
+// it in groups - which are stripped from the middle rather than only from the
+// ends, and the decode below, which turns a mistyped secret into an error from
+// New instead of a login the server rejects for reasons the caller cannot see.
 func normalizeTOTPSecret(secret string) (string, error) {
 	normalized := strings.ToUpper(strings.NewReplacer(" ", "", "-", "", "=", "").Replace(secret))
 	if normalized == "" {

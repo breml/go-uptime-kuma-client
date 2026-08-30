@@ -88,6 +88,10 @@ type fakeAckServer struct {
 	// itself.
 	rejectCreds       bool
 	credsRejectionMsg string
+	// credsRejectionAck replaces the whole rejection ack, for the answers that
+	// are neither of the two shapes above: a translation key this client
+	// version has no sentinel for, and a rejection naming no reason at all.
+	credsRejectionAck string
 	// rejectTokenMsg answers a loginByToken the way a server rejecting the
 	// session token does, with this as the reason. The empty string accepts.
 	rejectTokenMsg string
@@ -126,6 +130,10 @@ type fakeAckServer struct {
 	// setupDone records that the setup command ran, which is what makes the
 	// credentials work.
 	setupDone bool
+	// setupDelay holds the setup event back so it lands after the client has
+	// already been told a login is wanted, which is the ordering the barrier
+	// cannot see and the setup fallback exists for.
+	setupDelay time.Duration
 	// loginRequiredAt and firstLoginAt are when the server said it wants a
 	// login and when the first login arrived, to assert their order.
 	loginRequiredAt time.Time
@@ -246,11 +254,11 @@ func (s *fakeAckServer) setOmitLoginToken(omit bool) {
 	s.omitLoginToken = omit
 }
 
-func (s *fakeAckServer) setRejectCreds(reject bool) {
+func (s *fakeAckServer) setRejectCreds() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.rejectCreds = reject
+	s.rejectCreds = true
 }
 
 // setCredsRejectionMsg rejects the credentials with a specific message, such
@@ -260,6 +268,15 @@ func (s *fakeAckServer) setCredsRejectionMsg(msg string) {
 	defer s.mu.Unlock()
 
 	s.credsRejectionMsg = msg
+}
+
+// setCredsRejectionAck rejects a login with this exact ack payload.
+func (s *fakeAckServer) setCredsRejectionAck(ack string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.rejectCreds = true
+	s.credsRejectionAck = ack
 }
 
 func (s *fakeAckServer) setRejectToken() {
@@ -335,6 +352,17 @@ func (s *fakeAckServer) setSetupRequired(required bool) {
 	s.setupRequired = required
 }
 
+// setLateSetup makes the server state that it wants a login first and send the
+// setup event only after d, the way the per-handler goroutines of a real client
+// can deliver two events of one payload in that order.
+func (s *fakeAckServer) setLateSetup(d time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.setupRequired = true
+	s.setupDelay = d
+}
+
 func (s *fakeAckServer) runSetup() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -360,11 +388,11 @@ func (s *fakeAckServer) firstLoginAfterLoginRequired() bool {
 		s.firstLoginAt.After(s.loginRequiredAt)
 }
 
-func (s *fakeAckServer) setOmitLoginRequired(omit bool) {
+func (s *fakeAckServer) setOmitLoginRequired() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.omitLoginRequired = omit
+	s.omitLoginRequired = true
 }
 
 func (s *fakeAckServer) recordLogin(code string) {
@@ -491,6 +519,10 @@ func (s *fakeAckServer) loginAck(code string) string {
 	defer s.mu.Unlock()
 
 	if s.rejectCreds || (s.setupRequired && !s.setupDone) {
+		if s.credsRejectionAck != "" {
+			return s.credsRejectionAck
+		}
+
 		if s.credsRejectionMsg != "" {
 			return fmt.Sprintf(`{"ok":false,"msg":%q}`, s.credsRejectionMsg)
 		}
@@ -526,7 +558,21 @@ func (s *fakeAckServer) sendAuthMode() {
 	omit := s.omitLoginRequired
 	delay := s.loginRequiredDelay
 	needsSetup := s.setupRequired
+	setupDelay := s.setupDelay
 	s.mu.Unlock()
+
+	if needsSetup && setupDelay > 0 {
+		// Sent out of band and after the event below, so the client sees a
+		// server that wants a login, has its credentials rejected, and only
+		// then learns that a setup is what it was rejected for.
+		go func() {
+			time.Sleep(setupDelay)
+
+			s.messages <- []byte(`42["setup"]`)
+		}()
+
+		needsSetup = false
+	}
 
 	if needsSetup {
 		// Both events go out in one engine.io payload, the way a real server

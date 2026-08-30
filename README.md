@@ -124,10 +124,10 @@ This is also how several clients start at once against an account with
 two-factor authentication: the server refuses a one-time code it has already
 accepted, but takes the same token any number of times.
 
-The token does not expire. The server invalidates it only when the password
-changes or the user is deactivated, and for an account with two-factor
-authentication it is a stronger credential than the password, because it needs
-no second factor. Store it the way the password would be stored.
+The token is a bearer credential that does not expire, and for an account with
+two-factor authentication it is a stronger one than the password. Store it the
+way the password would be stored; `WithSessionToken` documents what invalidates
+it.
 
 A server with authentication disabled logs the client in by itself, so it takes
 no credentials at all:
@@ -136,10 +136,10 @@ no credentials at all:
 client, err := kuma.New(ctx, url, "", "")
 ```
 
-Uptime Kuma API keys are not an option here: the server accepts them for HTTP
-basic auth on `/metrics` only, never for the Socket.IO API this client speaks.
-There is likewise no OIDC, SSO, LDAP or client-certificate login in any
-released Uptime Kuma version.
+As of Uptime Kuma 2.5.0, these are the only ways in. API keys are not among
+them: the server accepts those for HTTP basic auth on `/metrics` only, never for
+the Socket.IO API this client speaks. There is likewise no OIDC, SSO, LDAP or
+client-certificate login.
 
 ## Documentation
 

@@ -203,6 +203,9 @@ type state struct {
 }
 
 // Client represents a connection to an Uptime Kuma server.
+//
+// A Client must be created by New. The zero value is not usable and its methods
+// panic.
 type Client struct {
 	socketioClient               *socketio.Client
 	socketioClientConnectTimeout time.Duration
@@ -227,18 +230,24 @@ type Client struct {
 	// and the password login took over, see Client.SessionTokenRejected.
 	sessionTokenRejected bool
 
+	// sessionTokenRejectedCallback is told about that fallback as it happens,
+	// see WithSessionTokenRejectedCallback.
+	sessionTokenRejectedCallback func(err error)
+
 	// autoLoggedIn records that the server has authentication disabled and
-	// logged the client in itself, which leaves it without a session token,
-	// see Resync.
+	// logged the client in itself. Credentials given anyway are still used, so
+	// this says nothing about whether there is a session token; what it is for
+	// is telling a client that has none why, see Resync.
 	autoLoggedIn bool
 
 	// totpCode produces the one-time code for an account with two-factor
-	// authentication enabled, see WithTOTPSecret and WithTOTPCode.
-	// totpCodeSet tells a configured callback from none, totpSources counts
-	// how many of the two options set one, and totpErr carries a secret New
-	// has to reject.
+	// authentication enabled, and is nil for a client configured with neither
+	// WithTOTPSecret nor WithTOTPCode. totpSources counts how many of the two
+	// options set one, so New can reject a caller that used both, and totpErr
+	// carries an option failure for New to report. Two failing options would
+	// leave only the later error, but New rejects the two-source case before it
+	// looks at totpErr, so at most one option's failure is ever reported.
 	totpCode    func(ctx context.Context) (string, error)
-	totpCodeSet bool
 	totpSources int
 	totpErr     error
 
@@ -473,6 +482,17 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 
 // New creates a new Client connected to an Uptime Kuma server.
 //
+// username and password have to be set together or both be empty. Passing
+// neither is the way to connect to a server with authentication disabled, and
+// to one that WithSessionToken authenticates instead; a server that does want a
+// login answers a client with nothing to offer with ErrAuthRequired.
+//
+// The login it performs reports what the server refused through the package's
+// sentinel errors, so a caller can tell the cases apart with errors.Is:
+// ErrAuthRequired, ErrInvalidCredentials, ErrTwoFactorRequired,
+// ErrInvalidTOTPCode, ErrInvalidSessionToken, ErrUserInactive and
+// ErrRateLimited.
+//
 //nolint:revive // Complexity is necessary for complete client initialization and event setup
 func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
 	c := &Client{
@@ -493,8 +513,9 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		return nil, fmt.Errorf("ready events: unknown: %s", strings.Join(unknown, ", "))
 	}
 
-	if (username == "") != (password == "") {
-		return nil, errors.New("credentials: username and password have to be set together")
+	creds, err := newCredentials(username, password, c.sessionTokenPreset)
+	if err != nil {
+		return nil, err
 	}
 
 	// The count comes first: a caller who configured two sources is told that
@@ -667,11 +688,9 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	})
 	defer closeSetupRequired()
 
-	if c.autosetup {
-		client.On("setup", func() {
-			closeSetupRequired()
-		})
-	}
+	client.On("setup", func() {
+		closeSetupRequired()
+	})
 
 	// The server states how it wants the connection to be authenticated as the
 	// last thing it does for it, so these are registered before the connect and
@@ -771,16 +790,13 @@ connectLoop:
 		}
 	}()
 
-	err = c.authenticate(
-		ctxWithConnectTimeout,
-		credentials{username: username, password: password, token: c.sessionTokenPreset},
-		barrier,
-	)
+	err = c.authenticate(ctxWithConnectTimeout, creds, barrier)
 	if err != nil {
 		// A server that is not set up yet rejects the credentials it does not
 		// have a user for; running the setup is what makes them work, so that
 		// is not a failure when the server asked for one.
-		if !errors.Is(err, ErrInvalidCredentials) || !setupPending(setupRequired) {
+		if !errors.Is(err, ErrInvalidCredentials) ||
+			!setupPending(ctxWithConnectTimeout, setupRequired) {
 			return nil, err
 		}
 	}
@@ -876,8 +892,15 @@ func (c *Client) Disconnect() error {
 //
 // The resync is all or nothing, because the server has no command to re-request
 // a single list. What it does have is a login, which answers with all of them,
-// so Resync logs in again with the token from the login New performed. A client
-// created without credentials therefore cannot resync.
+// so Resync logs in again with the session token the client holds - the one the
+// login New performed handed out, or the one WithSessionToken supplied and the
+// server accepted. A client that never obtained one, because it connected
+// without credentials to a server with authentication disabled, cannot resync.
+//
+// A token the server has since stopped accepting is reported as
+// ErrInvalidSessionToken, wrapped by ErrUserInactive when the account it names
+// was deactivated or deleted. Neither is recoverable here: a new New is what
+// obtains a fresh token.
 //
 // Which lists Resync waits for follows New: the events configured with
 // WithReadyEvents are required and the remaining known events are best-effort,
@@ -951,9 +974,8 @@ func (c *Client) Resync(ctx context.Context) error {
 // SessionToken returns the session token the client is authenticated with: the
 // one the server handed out for the login New performed, or the one
 // WithSessionToken supplied and the server accepted. It is the empty string for
-// a client that was never logged in with credentials - one that connected
-// without them to a server with authentication disabled, or to one that wants
-// to be set up first - and for one whose login ack carried no token.
+// a client that connected without credentials to a server with authentication
+// disabled, which is the one case New returns a client that never logged in.
 //
 // It is the credential WithSessionToken takes, so a caller can persist it and
 // reconnect later without the password and without a one-time code. It is a

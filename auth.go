@@ -24,9 +24,13 @@ var ErrAuthRequired = errors.New("server requires authentication")
 var ErrInvalidCredentials = errors.New("incorrect username or password")
 
 // ErrTwoFactorRequired is returned when the account has two-factor
-// authentication enabled and the client has no code to answer with, because
-// neither WithTOTPSecret nor WithTOTPCode was configured or because the
-// configured callback produced nothing usable.
+// authentication enabled and the login could not answer the server's request
+// for a code: neither WithTOTPSecret nor WithTOTPCode was configured, the
+// configured source produced an empty code, or the server asked for a code
+// again instead of answering the one it was given.
+//
+// A code source that fails outright reports its own error instead, because what
+// went wrong there is not that a code was missing.
 //
 // It is the typed form of the server's tokenRequired answer to a login. That
 // answer carries neither an ok nor a message, so without this it surfaces as an
@@ -47,13 +51,22 @@ var ErrInvalidSessionToken = errors.New("session token rejected")
 
 // ErrUserInactive is returned when the server rejects a session token because
 // the account it names is deactivated or deleted. It wraps
-// ErrInvalidSessionToken as well, so a caller that only cares that the token is
-// gone keeps matching on that one.
+// ErrInvalidSessionToken, so a caller that only cares that the token is gone
+// keeps matching on that one.
 //
 // It is the token rejection a password cannot recover from: the server requires
 // an active user for a password login too, so New reports it instead of falling
 // back, see WithSessionToken.
-var ErrUserInactive = errors.New("user inactive or deleted")
+var ErrUserInactive = fmt.Errorf("%w: user inactive or deleted", ErrInvalidSessionToken)
+
+// ErrRateLimited is returned when the server refuses a login because too many
+// were attempted in a short time. The server allows 20 per minute and answers
+// the ones beyond that with an untranslated sentence rather than a key.
+//
+// A login that answers a one-time code costs two of those attempts, because the
+// server asks for the code in the ack of a first login, so an account with
+// two-factor authentication enabled reaches the limit in half as many logins.
+var ErrRateLimited = errors.New("too many login attempts, rate limited by the server")
 
 // WithSessionToken authenticates with a session token from an earlier login
 // instead of a password, see Client.SessionToken.
@@ -84,6 +97,21 @@ func WithSessionToken(token string) Option {
 	}
 }
 
+// WithSessionTokenRejectedCallback registers a function New calls when the
+// server refused the token WithSessionToken configured and the password login
+// took over, with the error the token was refused with.
+//
+// It is the pushed form of Client.SessionTokenRejected, for a caller that
+// persists tokens and would otherwise have to remember to ask: the fallback
+// leaves New succeeding, so nothing about the returned client says that the
+// stored token is dead. The callback runs on the goroutine that called New,
+// before it returns, and a client whose token was accepted never calls it.
+func WithSessionTokenRejectedCallback(callback func(err error)) Option {
+	return func(c *Client) {
+		c.sessionTokenRejectedCallback = callback
+	}
+}
+
 // WithTOTPSecret configures the shared secret of an account with two-factor
 // authentication enabled, so the client can answer the server's request for a
 // one-time code itself and log in without a human at the keyboard.
@@ -103,9 +131,11 @@ func WithSessionToken(token string) Option {
 // The server records the last code it accepted and refuses to see it again,
 // see ErrInvalidTOTPCode, so two clients logging in with the same account
 // inside one 30 second step cannot both succeed. The client retries once in
-// the next step when the caller's deadline allows it, so starting many clients
-// for one account at once wants a deadline that can cover a step, or
-// WithSessionToken, which needs no code and so meets no such guard.
+// the next step when the caller's deadline allows it, which settles a collision
+// between two clients and no more: of three or more meeting in one step, the
+// ones that lose the retry as well have spent both attempts, however generous
+// the deadline. WithSessionToken is the answer that scales, because it needs no
+// code and so meets no such guard.
 //
 // The server answers a wrong secret and a clock too far off with the same
 // rejection, so those cost the same retry: a login that can never succeed
@@ -123,7 +153,6 @@ func WithTOTPSecret(secret string) Option {
 			return
 		}
 
-		c.totpCodeSet = true
 		c.totpCode = func(_ context.Context) (string, error) {
 			return totpCodeAt(normalized, time.Now())
 		}
@@ -154,7 +183,6 @@ func WithTOTPCode(code func(ctx context.Context) (string, error)) Option {
 			return
 		}
 
-		c.totpCodeSet = true
 		c.totpCode = code
 	}
 }
@@ -169,6 +197,15 @@ func WithTOTPCode(code func(ctx context.Context) (string, error)) Option {
 // also why it never takes more than half of what is left of the caller's
 // deadline, see barrierWaitWithin.
 const authBarrierWait = 500 * time.Millisecond
+
+// setupEventGrace is how long setupPending waits for a setup event that has not
+// arrived yet, to settle its race with the ack of the login the server rejects
+// because it has no users to match against.
+//
+// It is a variable so the tests can widen it, see export_test.go.
+//
+//nolint:gochecknoglobals // widened by the tests, constant everywhere else.
+var setupEventGrace = 10 * time.Millisecond
 
 // authMode is how the server wants the connection to be authenticated, as the
 // events it emits right after the connect state it.
@@ -212,6 +249,17 @@ type credentials struct {
 	token    string
 }
 
+// newCredentials gathers what New was given to authenticate with, and rejects a
+// username without a password (or the other way round): the server has no login
+// that takes one without the other, so it can only ever be a caller mistake.
+func newCredentials(username string, password string, token string) (credentials, error) {
+	if (username == "") != (password == "") {
+		return credentials{}, errors.New("credentials: username and password have to be set together")
+	}
+
+	return credentials{username: username, password: password, token: token}, nil
+}
+
 // loginError translates a rejected login ack into one of the package's sentinel
 // errors, so a caller can tell the cases apart with errors.Is instead of
 // matching on the message.
@@ -219,8 +267,16 @@ func loginError(command string, response ackResponse) error {
 	// A server from before the login messages were translated sends the
 	// message itself, and sends it with a trailing period the translation key
 	// that replaced it has no equivalent of, so it is matched by its prefix.
-	if strings.HasPrefix(response.Msg, "Incorrect username or password") {
-		return ErrInvalidCredentials
+	// The rate limiter's answer is a sentence on every version, because it was
+	// never given a key of its own.
+	if !response.MsgI18n {
+		if strings.HasPrefix(response.Msg, "Incorrect username or password") {
+			return ErrInvalidCredentials
+		}
+
+		if strings.HasPrefix(response.Msg, "Too frequently") {
+			return ErrRateLimited
+		}
 	}
 
 	switch response.Msg {
@@ -228,7 +284,7 @@ func loginError(command string, response ackResponse) error {
 		return ErrInvalidCredentials
 
 	case "authUserInactiveOrDeleted":
-		return fmt.Errorf("%w: %w", ErrInvalidSessionToken, ErrUserInactive)
+		return ErrUserInactive
 
 	case "authInvalidToken":
 		// The server answers two different rejections with this one message: a
@@ -239,6 +295,22 @@ func loginError(command string, response ackResponse) error {
 		}
 
 		return ErrInvalidTOTPCode
+
+	default:
+		return unclassifiedLoginError(command, response)
+	}
+}
+
+// unclassifiedLoginError reports a rejection this client version has no
+// sentinel for, without passing a translation key off as a sentence and without
+// producing an error with nothing in it when the server named no reason at all.
+func unclassifiedLoginError(command string, response ackResponse) error {
+	switch {
+	case response.Msg == "":
+		return fmt.Errorf("%s: the server rejected it without saying why", command)
+
+	case response.MsgI18n:
+		return fmt.Errorf("%s: the server reported the untranslated reason %q", command, response.Msg)
 
 	default:
 		return fmt.Errorf("%s: %s", command, response.Msg)
@@ -307,14 +379,14 @@ func barrierWaitWithin(ctx context.Context) time.Duration {
 	return min(authBarrierWait, max(time.Until(deadline)/2, 0))
 }
 
-// isSet reports whether a username and password were given.
-func (c credentials) isSet() bool {
+// hasPassword reports whether a username and password were given.
+func (c credentials) hasPassword() bool {
 	return c.username != "" && c.password != ""
 }
 
 // hasAny reports whether there is anything at all to authenticate with.
 func (c credentials) hasAny() bool {
-	return c.isSet() || c.token != ""
+	return c.hasPassword() || c.token != ""
 }
 
 // authenticate logs the client in the way the server asked for, and records the
@@ -327,7 +399,20 @@ func (c credentials) hasAny() bool {
 // still logged in to when credentials were given, because that is what produces
 // a session token, see Resync.
 func (c *Client) authenticate(ctx context.Context, creds credentials, barrier authBarrier) error {
-	switch barrier.await(ctx) {
+	mode := barrier.await(ctx)
+
+	// await answers authModeUnknown both for a server that stated nothing and
+	// for a wait the caller cut short. Only the context can tell those apart,
+	// and reading it here keeps a cancellation from being reported as a server
+	// that wants no login - which for a client without credentials would be a
+	// successful New, and for one with them a login emitted into a connection
+	// that is already being torn down.
+	err := ctx.Err()
+	if err != nil {
+		return fmt.Errorf("waiting for the server's auth mode: %w", err)
+	}
+
+	switch mode {
 	case authModeAutoLogin:
 		c.setAutoLoggedIn()
 
@@ -387,6 +472,10 @@ func (c *Client) authenticate(ctx context.Context, creds credentials, barrier au
 
 		c.setSessionTokenRejected()
 
+		if c.sessionTokenRejectedCallback != nil {
+			c.sessionTokenRejectedCallback(tokenErr)
+		}
+
 		return nil
 	}
 
@@ -402,7 +491,7 @@ func (c *Client) authenticate(ctx context.Context, creds credentials, barrier au
 func recoverableWithPassword(err error, creds credentials) bool {
 	return errors.Is(err, ErrInvalidSessionToken) &&
 		!errors.Is(err, ErrUserInactive) &&
-		creds.isSet()
+		creds.hasPassword()
 }
 
 // loginWithToken presents a session token from an earlier login, see
@@ -433,9 +522,7 @@ func (c *Client) loginWithPassword(ctx context.Context, username string, passwor
 	}
 
 	if response.OK {
-		c.setSessionToken(response.Token)
-
-		return nil
+		return c.keepSessionToken(response)
 	}
 
 	// An ack asking for a one-time code carries neither an ok nor a message,
@@ -462,7 +549,7 @@ func (c *Client) loginWithPassword(ctx context.Context, username string, passwor
 // deadline too short to outlast the replay guard, and a code rejected in two
 // consecutive steps, which is what rules the replay guard out.
 func (c *Client) loginWithTOTP(ctx context.Context, username string, password string) error {
-	if !c.totpCodeSet {
+	if c.totpCode == nil {
 		return ErrTwoFactorRequired
 	}
 
@@ -529,9 +616,7 @@ func (c *Client) loginOnceWithTOTP(
 	}
 
 	if response.OK {
-		c.setSessionToken(response.Token)
-
-		return codeStep, nil
+		return codeStep, c.keepSessionToken(response)
 	}
 
 	if response.TokenRequired {
@@ -542,6 +627,21 @@ func (c *Client) loginOnceWithTOTP(
 	}
 
 	return codeStep, loginError("login", response)
+}
+
+// keepSessionToken records the token an accepted login handed out.
+//
+// A success without one would leave the client authenticated but unable to
+// resync, and would surface far from here as Resync reporting a client that was
+// created without credentials, so it is reported where it happens instead.
+func (c *Client) keepSessionToken(response ackResponse) error {
+	if response.Token == "" {
+		return errors.New("login: the server accepted the login but handed out no session token")
+	}
+
+	c.setSessionToken(response.Token)
+
+	return nil
 }
 
 // awaitTOTPRetry waits out the time step the rejected code belongs to, so the
@@ -622,16 +722,21 @@ func waitForNextTOTPStep(ctx context.Context) (bool, error) {
 // setupPending reports whether the server asked to be set up.
 //
 // The setup event and the ack of a login the server rejects because it has no
-// users yet race each other, so the check is made after a moment rather than
-// straight away.
-func setupPending(setupRequired <-chan struct{}) bool {
-	time.Sleep(10 * time.Millisecond)
+// users yet race each other, so an event that has not arrived is given a moment
+// rather than being read as absent straight away. One that is already in costs
+// no wait, and a cancelled caller is not made to sit out the grace period.
+func setupPending(ctx context.Context, setupRequired <-chan struct{}) bool {
+	timer := time.NewTimer(setupEventGrace)
+	defer timer.Stop()
 
 	select {
 	case <-setupRequired:
 		return true
 
-	default:
+	case <-timer.C:
+		return false
+
+	case <-ctx.Done():
 		return false
 	}
 }

@@ -136,7 +136,7 @@ func (s *fakeSocketIOServer) handleClientMessage(body []byte) {
 
 		ackID := string(socketIOData[1:i])
 		// Enqueue login ACK: engine.io "4" + socket.io "3" (Ack) + ack ID + JSON payload.
-		ack := fmt.Sprintf(`43%s[{"ok":true,"msg":"Logged in successfully."}]`, ackID)
+		ack := fmt.Sprintf(`43%s[{"ok":true,"msg":"Logged in successfully.","token":"fake-session-token"}]`, ackID)
 		s.messages <- []byte(ack)
 
 		// Enqueue any configured post-login list events.
@@ -262,7 +262,7 @@ func handleWebSocketUpgrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ackID := msg[2:i]
-	ack := fmt.Sprintf(`43%s[{"ok":true,"msg":"Logged in successfully."}]`, ackID)
+	ack := fmt.Sprintf(`43%s[{"ok":true,"msg":"Logged in successfully.","token":"fake-session-token"}]`, ackID)
 	err = wsSendText(conn, ack)
 	if err != nil {
 		return

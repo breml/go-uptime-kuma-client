@@ -54,9 +54,9 @@
 //	// ... later, in another process
 //	client, err := kuma.New(ctx, url, "", "", kuma.WithSessionToken(token))
 //
-// The token does not expire; the server invalidates it only when the password
-// changes or the user is deactivated. Store it the way the password would be
-// stored.
+// The token is a bearer credential that does not expire. Store it the way the
+// password would be stored, see [WithSessionToken] for what invalidates it and
+// for the fallback a client with a password gets when it is refused.
 //
 // A server with authentication disabled logs the client in by itself, so it
 // takes no credentials at all:
