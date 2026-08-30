@@ -60,7 +60,7 @@ real-time communication.
 - **IMPORTANT**: Assume Uptime Kuma is running when executing integration tests
 - Uses dockertest library with automatic container cleanup
 - Global `client` variable shared across test suite
-- Container expires after 60 seconds
+- Container expires after 300 seconds (600 with `E2E_TEST` set)
 - Test credentials: username="admin", password="admin1"
 
 ### Directory Structure
@@ -73,7 +73,7 @@ real-time communication.
 - **Formatting**: Use `gofumpt` (stricter than `gofmt`)
 - **Linting**: `golangci-lint` enforces style
 - **Documentation**: Self-documenting code preferred, minimal inline comments
-- **Go Version**: 1.24
+- **Go Version**: see the `go` directive in `go.mod`
 
 ## Working with Monitors
 

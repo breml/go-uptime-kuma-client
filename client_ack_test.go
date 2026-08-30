@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/require"
 
 	kuma "github.com/breml/go-uptime-kuma-client"
@@ -49,6 +51,11 @@ const fakeAckCreatedID = 4242
 // expects to see again in a loginByToken.
 const fakeSessionToken = "fake-session-token"
 
+// fakePresetToken is a token a test hands to WithSessionToken. It is distinct
+// from the one the fake server issues at login, so that a test can tell the
+// token that was presented from the one that was handed out.
+const fakePresetToken = "preset-session-token"
+
 // fakeAckServer is a minimal socket.io server over HTTP long-polling that
 // completes the handshake, CONNECT, login and ready phases, so kuma.New()
 // returns a usable client. Unlike fakeSocketIOServer it then keeps serving:
@@ -74,12 +81,114 @@ type fakeAckServer struct {
 	suppressOptionalLists bool
 	// resyncPayload is the last loginByToken frame received.
 	resyncPayload string
+	// rejectCreds answers a login the way a server rejecting the username and
+	// password does. credsRejectionMsg is the message that rejection carries;
+	// the empty string sends the translation key a 2.x server sends, while a
+	// server from before the login messages were translated sends the message
+	// itself.
+	rejectCreds       bool
+	credsRejectionMsg string
+	// credsRejectionAck replaces the whole rejection ack, for the answers that
+	// are neither of the two shapes above: a translation key this client
+	// version has no sentinel for, and a rejection naming no reason at all.
+	credsRejectionAck string
+	// rejectTokenMsg answers a loginByToken the way a server rejecting the
+	// session token does, with this as the reason. The empty string accepts.
+	rejectTokenMsg string
+	// tokenFrames are the tokens the loginByToken frames carried, in order,
+	// recorded whether the token is accepted or refused. firstTokenAt is when
+	// the first of them arrived, to assert it came before any password login.
+	tokenFrames  []string
+	firstTokenAt time.Time
+	// autoLogin answers the connect the way a server with authentication
+	// disabled does: it logs the client in itself and never asks for a login.
+	autoLogin bool
+	// omitLoginRequired answers the connect without stating how it wants to be
+	// authenticated, as a server too old to send the event does.
+	omitLoginRequired bool
+	// loginRequiredDelay holds the loginRequired event back, the way a server
+	// that registers its handlers after an await does.
+	loginRequiredDelay time.Duration
+	// twoFactorRequired answers a login without a code the way a server does
+	// for an account with two-factor authentication enabled. twoFactorSecret
+	// is the secret the codes are verified against, replayGuard turns the
+	// server's refusal to see an accepted code twice on, and acceptedCodes is
+	// what that refusal reads.
+	twoFactorRequired bool
+	twoFactorSecret   string
+	replayGuard       bool
+	acceptedCodes     map[string]struct{}
+	// rejectCodedLogin rejects a login carrying a code for a reason that is
+	// not the code, which the client has to hand over as it is instead of
+	// spending its retry on it.
+	rejectCodedLogin bool
+	// loginCodes are the one-time codes the logins carried, in order.
+	loginCodes []string
+	// setupRequired answers the connect with a setup event and rejects the
+	// credentials until the setup ran, as a server without users does.
+	setupRequired bool
+	// setupDone records that the setup command ran, which is what makes the
+	// credentials work.
+	setupDone bool
+	// setupDelay holds the setup event back so it lands after the client has
+	// already been told a login is wanted, which is the ordering the barrier
+	// cannot see and the setup fallback exists for.
+	setupDelay time.Duration
+	// loginRequiredAt and firstLoginAt are when the server said it wants a
+	// login and when the first login arrived, to assert their order.
+	loginRequiredAt time.Time
+	firstLoginAt    time.Time
+	// loginFrames counts the login frames received.
+	loginFrames int
+}
+
+// loginCode extracts the one-time code a login frame carries.
+func loginCode(payload string) string {
+	var frame []json.RawMessage
+
+	start := strings.Index(payload, "[")
+	if start < 0 || json.Unmarshal([]byte(payload[start:]), &frame) != nil || len(frame) < 2 {
+		return ""
+	}
+
+	var data struct {
+		Token string `json:"token"`
+	}
+
+	if json.Unmarshal(frame[1], &data) != nil {
+		return ""
+	}
+
+	return data.Token
+}
+
+// tokenFromFrame extracts the session token a loginByToken frame carries.
+func tokenFromFrame(payload string) string {
+	var frame []json.RawMessage
+
+	start := strings.Index(payload, "[")
+	if start < 0 || json.Unmarshal([]byte(payload[start:]), &frame) != nil || len(frame) < 2 {
+		return ""
+	}
+
+	var token string
+
+	if json.Unmarshal(frame[1], &token) != nil {
+		return ""
+	}
+
+	return token
 }
 
 func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sid := r.URL.Query().Get("sid")
 
 	switch {
+	case r.URL.Path == "/api/entry-page":
+		// The database is set up; what is missing is the first user, which the
+		// setup event asks for.
+		_, _ = w.Write([]byte(`{"type":"entryPage","entryPage":null}`))
+
 	case r.Method == http.MethodGet && sid == "":
 		type engineIOHandshake struct {
 			Sid          string   `json:"sid"`
@@ -145,6 +254,166 @@ func (s *fakeAckServer) setOmitLoginToken(omit bool) {
 	s.omitLoginToken = omit
 }
 
+func (s *fakeAckServer) setRejectCreds() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.rejectCreds = true
+}
+
+// setCredsRejectionMsg rejects the credentials with a specific message, such
+// as the untranslated "Incorrect username or password." a 1.x server sends.
+func (s *fakeAckServer) setCredsRejectionMsg(msg string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.credsRejectionMsg = msg
+}
+
+// setCredsRejectionAck rejects a login with this exact ack payload.
+func (s *fakeAckServer) setCredsRejectionAck(ack string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.rejectCreds = true
+	s.credsRejectionAck = ack
+}
+
+func (s *fakeAckServer) setRejectToken() {
+	s.setRejectTokenWith("authInvalidToken")
+}
+
+// setRejectTokenWith refuses a loginByToken with a specific reason, such as the
+// authUserInactiveOrDeleted the server answers for a deactivated user.
+func (s *fakeAckServer) setRejectTokenWith(msg string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.rejectTokenMsg = msg
+}
+
+func (s *fakeAckServer) setAutoLogin(auto bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.autoLogin = auto
+}
+
+func (s *fakeAckServer) setLoginRequiredDelay(d time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.loginRequiredDelay = d
+}
+
+// setTwoFactorSecret turns two-factor authentication on and verifies the codes
+// against the shared test secret. With replayGuard set it also refuses every
+// code it has already accepted; the real server only remembers the last one it
+// let through, in twofa_last_token, which is stricter than these tests need to
+// tell apart.
+func (s *fakeAckServer) setTwoFactorSecret(replayGuard bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.twoFactorRequired = true
+	s.twoFactorSecret = rfc6238Secret
+	s.replayGuard = replayGuard
+	s.acceptedCodes = map[string]struct{}{}
+}
+
+// useCode marks a code as already accepted, the way another client logging in
+// with the same account inside the same time step would.
+func (s *fakeAckServer) useCode(code string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.acceptedCodes[code] = struct{}{}
+}
+
+// receivedLoginCodes returns the one-time codes the logins carried, in order.
+func (s *fakeAckServer) receivedLoginCodes() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]string(nil), s.loginCodes...)
+}
+
+func (s *fakeAckServer) setRejectCodedLogin(reject bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.rejectCodedLogin = reject
+}
+
+func (s *fakeAckServer) setSetupRequired(required bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.setupRequired = required
+}
+
+// setLateSetup makes the server state that it wants a login first and send the
+// setup event only after d, the way the per-handler goroutines of a real client
+// can deliver two events of one payload in that order.
+func (s *fakeAckServer) setLateSetup(d time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.setupRequired = true
+	s.setupDelay = d
+}
+
+func (s *fakeAckServer) runSetup() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.setupDone = true
+}
+
+func (s *fakeAckServer) setTwoFactorRequired(required bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.twoFactorRequired = required
+}
+
+// firstLoginAfterLoginRequired reports whether the client held its login back
+// until the server asked for one.
+func (s *fakeAckServer) firstLoginAfterLoginRequired() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return !s.firstLoginAt.IsZero() &&
+		!s.loginRequiredAt.IsZero() &&
+		s.firstLoginAt.After(s.loginRequiredAt)
+}
+
+func (s *fakeAckServer) setOmitLoginRequired() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.omitLoginRequired = true
+}
+
+func (s *fakeAckServer) recordLogin(code string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.loginFrames++
+	s.loginCodes = append(s.loginCodes, code)
+
+	if s.firstLoginAt.IsZero() {
+		s.firstLoginAt = time.Now()
+	}
+}
+
+func (s *fakeAckServer) loginFrameCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.loginFrames
+}
+
 func (s *fakeAckServer) setSuppressLists(suppress bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -157,6 +426,47 @@ func (s *fakeAckServer) setSuppressOptionalLists(suppress bool) {
 	defer s.mu.Unlock()
 
 	s.suppressOptionalLists = suppress
+}
+
+// tokenRejection returns the reason a loginByToken is to be refused with, or
+// the empty string for a token the server accepts.
+func (s *fakeAckServer) tokenRejection() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.rejectTokenMsg
+}
+
+// recordToken records the token a loginByToken frame carried. It runs before
+// the rejection is answered, so a refused frame is seen as well.
+func (s *fakeAckServer) recordToken(token string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.tokenFrames = append(s.tokenFrames, token)
+
+	if s.firstTokenAt.IsZero() {
+		s.firstTokenAt = time.Now()
+	}
+}
+
+// receivedTokens returns the tokens the loginByToken frames carried, in order.
+func (s *fakeAckServer) receivedTokens() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]string(nil), s.tokenFrames...)
+}
+
+// loginAfterToken reports whether the password login the client fell back to
+// came after the token it presented first.
+func (s *fakeAckServer) loginAfterToken() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return !s.firstLoginAt.IsZero() &&
+		!s.firstTokenAt.IsZero() &&
+		s.firstLoginAt.After(s.firstTokenAt)
 }
 
 func (s *fakeAckServer) recordResync(payload string) bool {
@@ -175,15 +485,129 @@ func (s *fakeAckServer) lastResyncPayload() string {
 	return s.resyncPayload
 }
 
-func (s *fakeAckServer) loginAck() string {
+// acceptsCodeLocked verifies a one-time code the way the server does, with the
+// replay guard that refuses a code it has already let through. The caller holds
+// the lock.
+func (s *fakeAckServer) acceptsCodeLocked(code string) bool {
+	if s.twoFactorSecret == "" {
+		return false
+	}
+
+	if s.replayGuard {
+		if _, used := s.acceptedCodes[code]; used {
+			return false
+		}
+	}
+
+	valid, err := totp.ValidateCustom(code, s.twoFactorSecret, time.Now(), totp.ValidateOpts{
+		Period:    30,
+		Skew:      1,
+		Digits:    otp.DigitsSix,
+		Algorithm: otp.AlgorithmSHA1,
+	})
+	if err != nil || !valid {
+		return false
+	}
+
+	s.acceptedCodes[code] = struct{}{}
+
+	return true
+}
+
+func (s *fakeAckServer) loginAck(code string) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.rejectCreds || (s.setupRequired && !s.setupDone) {
+		if s.credsRejectionAck != "" {
+			return s.credsRejectionAck
+		}
+
+		if s.credsRejectionMsg != "" {
+			return fmt.Sprintf(`{"ok":false,"msg":%q}`, s.credsRejectionMsg)
+		}
+
+		return `{"ok":false,"msg":"authIncorrectCreds","msgi18n":true}`
+	}
+
+	// An ack asking for a one-time code carries neither an ok nor a message.
+	if s.twoFactorRequired && code == "" {
+		return `{"tokenRequired":true}`
+	}
+
+	if s.rejectCodedLogin && code != "" {
+		return `{"ok":false,"msg":"authIncorrectCreds","msgi18n":true}`
+	}
+
+	if s.twoFactorRequired && !s.acceptsCodeLocked(code) {
+		return `{"ok":false,"msg":"authInvalidToken","msgi18n":true}`
+	}
 
 	if s.omitLoginToken {
 		return `{"ok":true,"msg":"Logged in successfully."}`
 	}
 
 	return fmt.Sprintf(`{"ok":true,"msg":"Logged in successfully.","token":%q}`, fakeSessionToken)
+}
+
+// sendAuthMode states how the connection is to be authenticated, which a real
+// server does as the last thing it does for a new connection.
+func (s *fakeAckServer) sendAuthMode() {
+	s.mu.Lock()
+	auto := s.autoLogin
+	omit := s.omitLoginRequired
+	delay := s.loginRequiredDelay
+	needsSetup := s.setupRequired
+	setupDelay := s.setupDelay
+	s.mu.Unlock()
+
+	if needsSetup && setupDelay > 0 {
+		// Sent out of band and after the event below, so the client sees a
+		// server that wants a login, has its credentials rejected, and only
+		// then learns that a setup is what it was rejected for.
+		go func() {
+			time.Sleep(setupDelay)
+
+			s.messages <- []byte(`42["setup"]`)
+		}()
+
+		needsSetup = false
+	}
+
+	if needsSetup {
+		// Both events go out in one engine.io payload, the way a real server
+		// delivers them to a client that polls: it emits setup at the top of
+		// its connection handler and the event below at the bottom, so a
+		// single long poll picks up both.
+		if !auto && !omit {
+			s.messages <- []byte("42[\"setup\"]\x1e42[\"loginRequired\"]")
+
+			return
+		}
+
+		s.messages <- []byte(`42["setup"]`)
+	}
+
+	switch {
+	case auto:
+		s.messages <- []byte(`42["autoLogin"]`)
+		s.sendReadyEvents()
+
+	case omit:
+
+	default:
+		// Held back out of band so the delay does not stall the request that
+		// carried the connect.
+		go func() {
+			time.Sleep(delay)
+
+			s.mu.Lock()
+			s.loginRequiredAt = time.Now()
+			s.mu.Unlock()
+
+			s.messages <- []byte(`42["loginRequired"]`)
+		}()
+	}
 }
 
 func (s *fakeAckServer) sendReadyEvents() {
@@ -211,6 +635,7 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 	switch socketIOData[0] {
 	case '0': // socket.io CONNECT
 		s.messages <- []byte("40")
+		s.sendAuthMode()
 
 	case '2': // socket.io EVENT
 		i := 1
@@ -224,6 +649,19 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 		// A resync logs in again, which is what makes the server resend the
 		// lists. Checked before "login", which is a prefix of it.
 		if strings.Contains(payload, `"loginByToken"`) {
+			s.recordToken(tokenFromFrame(payload))
+
+			if msg := s.tokenRejection(); msg != "" {
+				s.messages <- fmt.Appendf(
+					nil,
+					`43%s[{"ok":false,"msg":%q,"msgi18n":true}]`,
+					ackID,
+					msg,
+				)
+
+				return
+			}
+
 			s.messages <- fmt.Appendf(nil, `43%s[{"ok":true}]`, ackID)
 
 			if s.recordResync(payload) {
@@ -233,9 +671,23 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 			return
 		}
 
+		if strings.Contains(payload, `"setup"`) {
+			s.runSetup()
+			s.messages <- fmt.Appendf(nil, `43%s[{"ok":true,"msg":"ok"}]`, ackID)
+
+			return
+		}
+
 		if strings.Contains(payload, `"login"`) {
-			s.messages <- fmt.Appendf(nil, `43%s[%s]`, ackID, s.loginAck())
-			s.sendReadyEvents()
+			code := loginCode(payload)
+			s.recordLogin(code)
+
+			ack := s.loginAck(code)
+			s.messages <- fmt.Appendf(nil, `43%s[%s]`, ackID, ack)
+
+			if strings.Contains(ack, `"ok":true`) {
+				s.sendReadyEvents()
+			}
 
 			return
 		}

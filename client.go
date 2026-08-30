@@ -203,6 +203,9 @@ type state struct {
 }
 
 // Client represents a connection to an Uptime Kuma server.
+//
+// A Client must be created by New. The zero value is not usable and its methods
+// panic.
 type Client struct {
 	socketioClient               *socketio.Client
 	socketioClientConnectTimeout time.Duration
@@ -218,6 +221,35 @@ type Client struct {
 	// sessionToken is the JWT the server handed out at login. It is what
 	// Resync logs in with, see there.
 	sessionToken string
+
+	// sessionTokenPreset is the token WithSessionToken configured, which New
+	// tries before the password login.
+	sessionTokenPreset string
+
+	// sessionTokenRejected records that the server refused sessionTokenPreset
+	// and the password login took over, see Client.SessionTokenRejected.
+	sessionTokenRejected bool
+
+	// sessionTokenRejectedCallback is told about that fallback as it happens,
+	// see WithSessionTokenRejectedCallback.
+	sessionTokenRejectedCallback func(err error)
+
+	// autoLoggedIn records that the server has authentication disabled and
+	// logged the client in itself. Credentials given anyway are still used, so
+	// this says nothing about whether there is a session token; what it is for
+	// is telling a client that has none why, see Resync.
+	autoLoggedIn bool
+
+	// totpCode produces the one-time code for an account with two-factor
+	// authentication enabled, and is nil for a client configured with neither
+	// WithTOTPSecret nor WithTOTPCode. totpSources counts how many of the two
+	// options set one, so New can reject a caller that used both, and totpErr
+	// carries an option failure for New to report. Two failing options would
+	// leave only the later error, but New rejects the two-source case before it
+	// looks at totpErr, so at most one option's failure is ever reported.
+	totpCode    func(ctx context.Context) (string, error)
+	totpSources int
+	totpErr     error
 
 	// readyEventsMissing are the best-effort ready events the server did not
 	// emit while New was connecting, see MissingReadyEvents.
@@ -248,6 +280,10 @@ func WithLogLevel(level int) Option {
 // the connection to Uptime Kuma.
 // In the case of autosetup with an uninitialized Uptime Kuma this timeout
 // also includes the time required for the initial setup.
+// It covers the login as well, including the short wait for the server to
+// state how it wants to be authenticated. A server that states nothing is
+// waited for with no more than half of the remaining budget, so the login
+// still has time to run.
 func WithConnectTimeout(timeout time.Duration) Option {
 	return func(c *Client) {
 		c.socketioClientConnectTimeout = timeout
@@ -446,6 +482,17 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 
 // New creates a new Client connected to an Uptime Kuma server.
 //
+// username and password have to be set together or both be empty. Passing
+// neither is the way to connect to a server with authentication disabled, and
+// to one that WithSessionToken authenticates instead; a server that does want a
+// login answers a client with nothing to offer with ErrAuthRequired.
+//
+// The login it performs reports what the server refused through the package's
+// sentinel errors, so a caller can tell the cases apart with errors.Is:
+// ErrAuthRequired, ErrInvalidCredentials, ErrTwoFactorRequired,
+// ErrInvalidTOTPCode, ErrInvalidSessionToken, ErrUserInactive and
+// ErrRateLimited.
+//
 //nolint:revive // Complexity is necessary for complete client initialization and event setup
 func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
 	c := &Client{
@@ -464,6 +511,21 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	unknown := unknownReadyEvents(c.readyEvents)
 	if len(unknown) > 0 {
 		return nil, fmt.Errorf("ready events: unknown: %s", strings.Join(unknown, ", "))
+	}
+
+	creds, err := newCredentials(username, password, c.sessionTokenPreset)
+	if err != nil {
+		return nil, err
+	}
+
+	// The count comes first: a caller who configured two sources is told that
+	// before being sent to fix whichever of them also failed to decode.
+	if c.totpSources > 1 {
+		return nil, errors.New("totp: at most one of WithTOTPSecret and WithTOTPCode may be used")
+	}
+
+	if c.totpErr != nil {
+		return nil, c.totpErr
 	}
 
 	ctxWithConnectTimeout := ctx
@@ -626,10 +688,37 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	})
 	defer closeSetupRequired()
 
-	if c.autosetup {
-		client.On("setup", func() {
-			closeSetupRequired()
-		})
+	client.On("setup", func() {
+		closeSetupRequired()
+	})
+
+	// The server states how it wants the connection to be authenticated as the
+	// last thing it does for it, so these are registered before the connect and
+	// unconditionally, see authBarrier.
+	loginRequired := make(chan struct{})
+	closeLoginRequired := sync.OnceFunc(func() {
+		close(loginRequired)
+	})
+	defer closeLoginRequired()
+
+	client.On("loginRequired", func() {
+		closeLoginRequired()
+	})
+
+	autoLogin := make(chan struct{})
+	closeAutoLogin := sync.OnceFunc(func() {
+		close(autoLogin)
+	})
+	defer closeAutoLogin()
+
+	client.On("autoLogin", func() {
+		closeAutoLogin()
+	})
+
+	barrier := authBarrier{
+		loginRequired: loginRequired,
+		autoLogin:     autoLogin,
+		setupRequired: setupRequired,
 	}
 
 	client.OnAny(func(s string, _ []any) {
@@ -701,34 +790,14 @@ connectLoop:
 		}
 	}()
 
-	if username != "" && password != "" {
-		var loginResponse ackResponse
-
-		loginResponse, err = c.syncEmit(
-			ctxWithConnectTimeout,
-			"login",
-			map[string]any{"username": username, "password": password, "token": ""},
-		)
-		if err == nil {
-			c.setSessionToken(loginResponse.Token)
-		}
-
-		if err != nil {
-			// Ensure we had the time to receive a potential setup event.
-			time.Sleep(10 * time.Millisecond)
-
-			wantSetup := false
-			select {
-			case <-setupRequired:
-				wantSetup = true
-
-			default:
-			}
-
-			if (!strings.Contains(err.Error(), "Incorrect username or password") && !strings.Contains(err.Error(), "authIncorrectCreds")) ||
-				!wantSetup {
-				return nil, fmt.Errorf("login: %w", err)
-			}
+	err = c.authenticate(ctxWithConnectTimeout, creds, barrier)
+	if err != nil {
+		// A server that is not set up yet rejects the credentials it does not
+		// have a user for; running the setup is what makes them work, so that
+		// is not a failure when the server asked for one.
+		if !errors.Is(err, ErrInvalidCredentials) ||
+			!setupPending(ctxWithConnectTimeout, setupRequired) {
+			return nil, err
 		}
 	}
 
@@ -823,8 +892,15 @@ func (c *Client) Disconnect() error {
 //
 // The resync is all or nothing, because the server has no command to re-request
 // a single list. What it does have is a login, which answers with all of them,
-// so Resync logs in again with the token from the login New performed. A client
-// created without credentials therefore cannot resync.
+// so Resync logs in again with the session token the client holds - the one the
+// login New performed handed out, or the one WithSessionToken supplied and the
+// server accepted. A client that never obtained one, because it connected
+// without credentials to a server with authentication disabled, cannot resync.
+//
+// A token the server has since stopped accepting is reported as
+// ErrInvalidSessionToken, wrapped by ErrUserInactive when the account it names
+// was deactivated or deleted. Neither is recoverable here: a new New is what
+// obtains a fresh token.
 //
 // Which lists Resync waits for follows New: the events configured with
 // WithReadyEvents are required and the remaining known events are best-effort,
@@ -834,10 +910,24 @@ func (c *Client) Disconnect() error {
 func (c *Client) Resync(ctx context.Context) error {
 	c.mu.Lock()
 	token := c.sessionToken
+	autoLoggedIn := c.autoLoggedIn
 	c.mu.Unlock()
 
 	if token == "" {
-		return errors.New("resync: no session token, the client was created without credentials")
+		if autoLoggedIn {
+			// The server hands a session token only to a login it performed
+			// for a client that asked for one, and the commands it does have
+			// resend some of the lists but not all of them.
+			return errors.New(
+				"resync: the server logged the client in itself (authentication disabled) " +
+					"and offers no command to resend the lists, pass credentials to New " +
+					"for a session token",
+			)
+		}
+
+		return errors.New(
+			"resync: no session token, the client was created without credentials",
+		)
 	}
 
 	gate := newReadyGate(c.resyncReadyEvents())
@@ -851,9 +941,16 @@ func (c *Client) Resync(ctx context.Context) error {
 
 	defer c.updates.RemoveListener(listenerID.String())
 
-	_, err := c.syncEmit(ctx, "loginByToken", token)
+	response, err := c.emitAck(ctx, "loginByToken", token)
 	if err != nil {
 		return fmt.Errorf("resync: %w", err)
+	}
+
+	if !response.OK {
+		// A token the server no longer accepts is the one failure a caller can
+		// act on: it means the password was changed or the user was removed,
+		// and a new login is the only way back.
+		return fmt.Errorf("resync: %w", loginError("loginByToken", response))
 	}
 
 	select {
@@ -872,6 +969,38 @@ func (c *Client) Resync(ctx context.Context) error {
 	c.awaitOptionalReadyEvents(ctx, "Resync", gate, nil)
 
 	return nil
+}
+
+// SessionToken returns the session token the client is authenticated with: the
+// one the server handed out for the login New performed, or the one
+// WithSessionToken supplied and the server accepted. It is the empty string for
+// a client that connected without credentials to a server with authentication
+// disabled, which is the one case New returns a client that never logged in.
+//
+// It is the credential WithSessionToken takes, so a caller can persist it and
+// reconnect later without the password and without a one-time code. It is a
+// bearer credential that does not expire, see WithSessionToken.
+func (c *Client) SessionToken() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.sessionToken
+}
+
+// SessionTokenRejected reports whether the server refused the token
+// WithSessionToken configured and New logged in with the username and password
+// instead.
+//
+// It is what tells a caller that its stored token is dead, because nothing else
+// does: the login succeeds either way, and SessionToken then returns the fresh
+// token of the password login, which the caller cannot tell from the one it
+// presented. A caller that persists tokens checks this and writes the new one
+// back, see WithSessionToken.
+func (c *Client) SessionTokenRejected() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.sessionTokenRejected
 }
 
 // MissingReadyEvents returns the best-effort ready events the server did not
@@ -939,21 +1068,21 @@ func (c *Client) disconnectOrphan() {
 // runSetup sets the server up and logs in again afterwards, which is what a
 // server that answers the connect with a setup event asks for.
 func (c *Client) runSetup(ctx context.Context, username string, password string) error {
+	if username == "" || password == "" {
+		return errors.New("setup: the server requires setup, which needs a username and password")
+	}
+
 	_, err := c.syncEmit(ctx, "setup", username, password)
 	if err != nil {
 		return fmt.Errorf("setup: %w", err)
 	}
 
-	loginResponse, err := c.syncEmit(
-		ctx,
-		"login",
-		map[string]any{"username": username, "password": password, "token": ""},
-	)
+	// The user the setup just created has no two-factor authentication, so
+	// this login is answered without the server ever asking for a code.
+	err = c.loginWithPassword(ctx, username, password)
 	if err != nil {
 		return fmt.Errorf("login: %w", err)
 	}
-
-	c.setSessionToken(loginResponse.Token)
 
 	return nil
 }
@@ -973,6 +1102,16 @@ func (c *Client) setSessionToken(token string) {
 	defer c.mu.Unlock()
 
 	c.sessionToken = token
+}
+
+// setSessionTokenRejected records that the token WithSessionToken configured
+// was refused and the password login recovered, see
+// Client.SessionTokenRejected.
+func (c *Client) setSessionTokenRejected() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.sessionTokenRejected = true
 }
 
 // splitReadyEvents returns the update events that carry the lists the local
@@ -1155,8 +1294,23 @@ func sortedEvents(events map[string]struct{}) []string {
 }
 
 type ackResponse struct {
-	Msg             string         `json:"msg"`
-	OK              bool           `json:"ok"`
+	Msg string `json:"msg"`
+	OK  bool   `json:"ok"`
+
+	// TokenRequired is how a login for an account with two-factor
+	// authentication enabled is answered. Such an ack carries neither an ok
+	// nor a message, so it has to be recognized by this field alone.
+	TokenRequired bool `json:"tokenRequired"`
+
+	// MsgI18n reports that Msg is a translation key rather than a sentence.
+	MsgI18n bool `json:"msgi18n"`
+
+	// URI is the otpauth:// URI a prepare2FA answers with.
+	URI string `json:"uri"`
+
+	// Status is whether two-factor authentication is on, from a twoFAStatus.
+	Status bool `json:"status"`
+
 	Token           string         `json:"token"`
 	ID              int64          `json:"id"`
 	MonitorID       int64          `json:"monitorID"`
@@ -1173,7 +1327,14 @@ type ackResponse struct {
 	Incident        map[string]any `json:"incident"`
 }
 
-func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
+// emitAck emits command and returns the ack the server answered with, whether
+// it reports success or not.
+//
+// Unlike syncEmit it leaves the interpretation of the ack to the caller, which
+// is what the login path needs: a login that wants a one-time code is answered
+// with neither an ok nor a message, so there is nothing for syncEmit to report.
+// The returned error is reserved for an ack that never arrived.
+func (c *Client) emitAck(ctx context.Context, command string, args ...any) (ackResponse, error) {
 	// Buffered and never closed, so a late ack (e.g. after the context
 	// expired) neither leaks the ack goroutine forever nor panics sending on
 	// a closed channel.
@@ -1190,15 +1351,24 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 
 	select {
 	case response := <-res:
-		if !response.OK {
-			return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
-		}
-
 		return response, nil
 
 	case <-ctx.Done():
 		return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
 	}
+}
+
+func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
+	response, err := c.emitAck(ctx, command, args...)
+	if err != nil {
+		return ackResponse{}, err
+	}
+
+	if !response.OK {
+		return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
+	}
+
+	return response, nil
 }
 
 // syncEmitWithUpdateEvent emits command and returns once the server has

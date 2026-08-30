@@ -754,6 +754,12 @@ linters:
         linters:
           - testpackage
 
+      # Tests the unexported authBarrier and the totp retry wait, both of which
+      # have to be driven through states the socket cannot reach reliably.
+      - path: 'auth_barrier_test\.go'
+        linters:
+          - testpackage
+
       # These linters do not make sense for monitor and notification files.
       - path: (monitor|notification|proxy)/.*\.go
         linters:
