@@ -181,6 +181,81 @@ func TestNewSetupFallbackAfterRejectedCredentials(t *testing.T) {
 	t.Cleanup(func() { _ = client.Disconnect() })
 }
 
+// untranslatedCredsRejection is what a server from before the login messages
+// were translated answers a rejected login with, trailing period included.
+const untranslatedCredsRejection = "Incorrect username or password."
+
+// TestNewSetupFallbackUntranslatedRejection covers the same setup fallback
+// against a server too old to send the translation key: it rejects the
+// credentials with the message itself, which the client has to recognize just
+// as well or the autosetup never runs.
+func TestNewSetupFallbackUntranslatedRejection(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setSetupRequired(true)
+	fake.setCredsRejectionMsg(untranslatedCredsRejection)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"admin",
+		"admin1",
+		kuma.WithAutosetup(),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+}
+
+// TestNewInvalidCredentialsUntranslated covers the wrong password against that
+// same older server, which has to reach the caller as ErrInvalidCredentials
+// rather than as the server's message.
+func TestNewInvalidCredentialsUntranslated(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setRejectCreds(true)
+	fake.setCredsRejectionMsg(untranslatedCredsRejection)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, url, "admin", "wrong", kuma.WithConnectTimeout(5*time.Second))
+
+	require.ErrorIs(t, err, kuma.ErrInvalidCredentials)
+	require.Nil(t, client)
+}
+
+// TestNewAutoLoginWithCredentials covers the server with authentication
+// disabled that is given credentials anyway: its login handler still works and
+// the login is the only thing that hands out a session token, so the client
+// has to send one to keep Resync working.
+func TestNewAutoLoginWithCredentials(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setAutoLogin(true)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	require.Equal(t, 1, fake.loginFrameCount())
+	require.NotEmpty(t, client.SessionToken())
+
+	resyncCtx, resyncCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer resyncCancel()
+
+	require.NoError(t, client.Resync(resyncCtx))
+}
+
 // TestNewRejectsHalfCredentials covers the caller that sets only one of the two
 // credentials, which used to reach the server as a login that could not
 // succeed.

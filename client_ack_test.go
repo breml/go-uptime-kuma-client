@@ -82,8 +82,12 @@ type fakeAckServer struct {
 	// resyncPayload is the last loginByToken frame received.
 	resyncPayload string
 	// rejectCreds answers a login the way a server rejecting the username and
-	// password does.
-	rejectCreds bool
+	// password does. credsRejectionMsg is the message that rejection carries;
+	// the empty string sends the translation key a 2.x server sends, while a
+	// server from before the login messages were translated sends the message
+	// itself.
+	rejectCreds       bool
+	credsRejectionMsg string
 	// rejectTokenMsg answers a loginByToken the way a server rejecting the
 	// session token does, with this as the reason. The empty string accepts.
 	rejectTokenMsg string
@@ -247,6 +251,15 @@ func (s *fakeAckServer) setRejectCreds(reject bool) {
 	defer s.mu.Unlock()
 
 	s.rejectCreds = reject
+}
+
+// setCredsRejectionMsg rejects the credentials with a specific message, such
+// as the untranslated "Incorrect username or password." a 1.x server sends.
+func (s *fakeAckServer) setCredsRejectionMsg(msg string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.credsRejectionMsg = msg
 }
 
 func (s *fakeAckServer) setRejectToken() {
@@ -478,6 +491,10 @@ func (s *fakeAckServer) loginAck(code string) string {
 	defer s.mu.Unlock()
 
 	if s.rejectCreds || (s.setupRequired && !s.setupDone) {
+		if s.credsRejectionMsg != "" {
+			return fmt.Sprintf(`{"ok":false,"msg":%q}`, s.credsRejectionMsg)
+		}
+
 		return `{"ok":false,"msg":"authIncorrectCreds","msgi18n":true}`
 	}
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -213,8 +214,15 @@ type credentials struct {
 // errors, so a caller can tell the cases apart with errors.Is instead of
 // matching on the message.
 func loginError(command string, response ackResponse) error {
+	// A server from before the login messages were translated sends the
+	// message itself, and sends it with a trailing period the translation key
+	// that replaced it has no equivalent of, so it is matched by its prefix.
+	if strings.HasPrefix(response.Msg, "Incorrect username or password") {
+		return ErrInvalidCredentials
+	}
+
 	switch response.Msg {
-	case "authIncorrectCreds", "Incorrect username or password":
+	case "authIncorrectCreds":
 		return ErrInvalidCredentials
 
 	case "authUserInactiveOrDeleted":
@@ -273,15 +281,25 @@ func (c credentials) hasAny() bool {
 // session token the connection ends up authenticated with, whether the server
 // handed it out or accepted the one the client presented.
 //
-// It returns nil without logging in for a server that authenticated the client
-// itself, for one that wants to be set up first, and for one that never stated
-// what it wants while the client has no credentials to offer anyway.
+// It returns nil without logging in for a server that wants to be set up first,
+// and for one that never stated what it wants while the client has no
+// credentials to offer anyway. A server that authenticated the client itself is
+// still logged in to when credentials were given, because that is what produces
+// a session token, see Resync.
 func (c *Client) authenticate(ctx context.Context, creds credentials, barrier authBarrier) error {
 	switch barrier.await(ctx) {
 	case authModeAutoLogin:
 		c.setAutoLoggedIn()
 
-		return nil
+		if !creds.hasAny() {
+			return nil
+		}
+
+		// The connection is authenticated already, but a server with
+		// authentication disabled keeps its login handler in place and a login
+		// is the only thing that hands out a session token, which Resync and
+		// Client.SessionToken need. Credentials given explicitly are therefore
+		// still used.
 
 	case authModeSetup:
 		// The caller runs the setup and logs in afterwards.

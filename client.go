@@ -893,7 +893,8 @@ func (c *Client) Resync(ctx context.Context) error {
 			// resend some of the lists but not all of them.
 			return errors.New(
 				"resync: the server logged the client in itself (authentication disabled) " +
-					"and offers no command to resend the lists",
+					"and offers no command to resend the lists, pass credentials to New " +
+					"for a session token",
 			)
 		}
 
@@ -946,9 +947,9 @@ func (c *Client) Resync(ctx context.Context) error {
 // SessionToken returns the session token the client is authenticated with: the
 // one the server handed out for the login New performed, or the one
 // WithSessionToken supplied and the server accepted. It is the empty string for
-// a client that was never logged in with credentials - one that connected to a
-// server with authentication disabled or to one that wants to be set up first -
-// and for one whose login ack carried no token.
+// a client that was never logged in with credentials - one that connected
+// without them to a server with authentication disabled, or to one that wants
+// to be set up first - and for one whose login ack carried no token.
 //
 // It is the credential WithSessionToken takes, so a caller can persist it and
 // reconnect later without the password and without a one-time code. It is a
