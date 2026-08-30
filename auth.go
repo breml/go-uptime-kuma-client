@@ -43,6 +43,16 @@ var ErrInvalidTOTPCode = errors.New("invalid two-factor authentication code")
 // changed password or a user that was deactivated or deleted.
 var ErrInvalidSessionToken = errors.New("session token rejected")
 
+// ErrUserInactive is returned when the server rejects a session token because
+// the account it names is deactivated or deleted. It wraps
+// ErrInvalidSessionToken as well, so a caller that only cares that the token is
+// gone keeps matching on that one.
+//
+// It is the token rejection a password cannot recover from: the server requires
+// an active user for a password login too, so New reports it instead of falling
+// back, see WithSessionToken.
+var ErrUserInactive = errors.New("user inactive or deleted")
+
 // WithSessionToken authenticates with a session token from an earlier login
 // instead of a password, see Client.SessionToken.
 //
@@ -53,8 +63,13 @@ var ErrInvalidSessionToken = errors.New("session token rejected")
 // two-factor authentication enabled, see WithTOTPSecret.
 //
 // If a username and password are given as well, the token is tried first and
-// the password login is the fallback for a token the server rejects. Without
-// them a rejected token fails New with ErrInvalidSessionToken.
+// the password login is the fallback for a token the server refuses.
+// Client.SessionTokenRejected reports that this happened, because the login
+// succeeds either way and the stored token is dead. The fallback is skipped
+// where the password cannot help: for a deactivated or deleted user, see
+// ErrUserInactive, and for a failure that is not a rejection at all, such as a
+// transport error. Without a username and password a rejected token fails New
+// with ErrInvalidSessionToken.
 //
 // Security: the token is a bearer credential that does not expire. The server
 // invalidates it only when the password changes or the user is deactivated,
@@ -188,7 +203,7 @@ func loginError(command string, response ackResponse) error {
 		return ErrInvalidCredentials
 
 	case "authUserInactiveOrDeleted":
-		return fmt.Errorf("%w: user inactive or deleted", ErrInvalidSessionToken)
+		return fmt.Errorf("%w: %w", ErrInvalidSessionToken, ErrUserInactive)
 
 	case "authInvalidToken":
 		// The server answers two different rejections with this one message: a
@@ -240,7 +255,8 @@ func (c credentials) hasAny() bool {
 }
 
 // authenticate logs the client in the way the server asked for, and records the
-// session token a successful login answers with.
+// session token the connection ends up authenticated with, whether the server
+// handed it out or accepted the one the client presented.
 //
 // It returns nil without logging in for a server that authenticated the client
 // itself, for one that wants to be set up first, and for one that never stated
@@ -272,21 +288,48 @@ func (c *Client) authenticate(ctx context.Context, creds credentials, barrier au
 	}
 
 	if creds.token != "" {
-		err := c.loginWithToken(ctx, creds.token)
-		if err == nil {
+		tokenErr := c.loginWithToken(ctx, creds.token)
+		if tokenErr == nil {
 			return nil
 		}
 
-		if !errors.Is(err, ErrInvalidSessionToken) || !creds.isSet() {
-			return err
+		if !recoverableWithPassword(tokenErr, creds) {
+			return tokenErr
 		}
 
 		// A token the server no longer accepts is what a password change
 		// leaves behind, and the password is what recovers from it.
-		c.socketioLogger.Warnf("session token rejected, falling back to the password login")
+		c.socketioLogger.Warnf(
+			"session token rejected (%v), falling back to the password login for %q",
+			tokenErr,
+			creds.username,
+		)
+
+		err := c.loginWithPassword(ctx, creds.username, creds.password)
+		if err != nil {
+			// The rejected token is what sent the login down this path, which
+			// the password failure on its own does not say.
+			return fmt.Errorf("%w, and the password login that followed: %w", tokenErr, err)
+		}
+
+		c.setSessionTokenRejected()
+
+		return nil
 	}
 
 	return c.loginWithPassword(ctx, creds.username, creds.password)
+}
+
+// recoverableWithPassword reports whether a rejected session token is worth
+// following with a password login: only a token the server refuses, and only
+// when there is a password to offer. A deactivated or deleted user is the
+// rejection the server answers the same way for both credentials, and anything
+// that is not a rejection - a transport failure, a message the client does not
+// know - says nothing about the password either way.
+func recoverableWithPassword(err error, creds credentials) bool {
+	return errors.Is(err, ErrInvalidSessionToken) &&
+		!errors.Is(err, ErrUserInactive) &&
+		creds.isSet()
 }
 
 // loginWithToken presents a session token from an earlier login, see
