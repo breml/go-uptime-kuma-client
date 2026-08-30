@@ -74,12 +74,47 @@ type fakeAckServer struct {
 	suppressOptionalLists bool
 	// resyncPayload is the last loginByToken frame received.
 	resyncPayload string
+	// rejectCreds answers a login the way a server rejecting the username and
+	// password does.
+	rejectCreds bool
+	// rejectToken answers a loginByToken the way a server rejecting the
+	// session token does.
+	rejectToken bool
+	// autoLogin answers the connect the way a server with authentication
+	// disabled does: it logs the client in itself and never asks for a login.
+	autoLogin bool
+	// omitLoginRequired answers the connect without stating how it wants to be
+	// authenticated, as a server too old to send the event does.
+	omitLoginRequired bool
+	// loginRequiredDelay holds the loginRequired event back, the way a server
+	// that registers its handlers after an await does.
+	loginRequiredDelay time.Duration
+	// twoFactorRequired answers a login without a code the way a server does
+	// for an account with two-factor authentication enabled.
+	twoFactorRequired bool
+	// setupRequired answers the connect with a setup event and rejects the
+	// credentials until the setup ran, as a server without users does.
+	setupRequired bool
+	// setupDone records that the setup command ran, which is what makes the
+	// credentials work.
+	setupDone bool
+	// loginRequiredAt and firstLoginAt are when the server said it wants a
+	// login and when the first login arrived, to assert their order.
+	loginRequiredAt time.Time
+	firstLoginAt    time.Time
+	// loginFrames counts the login frames received.
+	loginFrames int
 }
 
 func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sid := r.URL.Query().Get("sid")
 
 	switch {
+	case r.URL.Path == "/api/entry-page":
+		// The database is set up; what is missing is the first user, which the
+		// setup event asks for.
+		_, _ = w.Write([]byte(`{"type":"entryPage","entryPage":null}`))
+
 	case r.Method == http.MethodGet && sid == "":
 		type engineIOHandshake struct {
 			Sid          string   `json:"sid"`
@@ -145,6 +180,91 @@ func (s *fakeAckServer) setOmitLoginToken(omit bool) {
 	s.omitLoginToken = omit
 }
 
+func (s *fakeAckServer) setRejectCreds(reject bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.rejectCreds = reject
+}
+
+func (s *fakeAckServer) setRejectToken(reject bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.rejectToken = reject
+}
+
+func (s *fakeAckServer) setAutoLogin(auto bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.autoLogin = auto
+}
+
+func (s *fakeAckServer) setLoginRequiredDelay(d time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.loginRequiredDelay = d
+}
+
+func (s *fakeAckServer) setSetupRequired(required bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.setupRequired = required
+}
+
+func (s *fakeAckServer) runSetup() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.setupDone = true
+}
+
+func (s *fakeAckServer) setTwoFactorRequired(required bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.twoFactorRequired = required
+}
+
+// firstLoginAfterLoginRequired reports whether the client held its login back
+// until the server asked for one.
+func (s *fakeAckServer) firstLoginAfterLoginRequired() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return !s.firstLoginAt.IsZero() &&
+		!s.loginRequiredAt.IsZero() &&
+		s.firstLoginAt.After(s.loginRequiredAt)
+}
+
+func (s *fakeAckServer) setOmitLoginRequired(omit bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.omitLoginRequired = omit
+}
+
+func (s *fakeAckServer) recordLogin() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.loginFrames++
+
+	if s.firstLoginAt.IsZero() {
+		s.firstLoginAt = time.Now()
+	}
+}
+
+func (s *fakeAckServer) loginFrameCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.loginFrames
+}
+
 func (s *fakeAckServer) setSuppressLists(suppress bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -157,6 +277,13 @@ func (s *fakeAckServer) setSuppressOptionalLists(suppress bool) {
 	defer s.mu.Unlock()
 
 	s.suppressOptionalLists = suppress
+}
+
+func (s *fakeAckServer) tokenRejected() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.rejectToken
 }
 
 func (s *fakeAckServer) recordResync(payload string) bool {
@@ -179,11 +306,56 @@ func (s *fakeAckServer) loginAck() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.rejectCreds || (s.setupRequired && !s.setupDone) {
+		return `{"ok":false,"msg":"authIncorrectCreds","msgi18n":true}`
+	}
+
+	// An ack asking for a one-time code carries neither an ok nor a message.
+	if s.twoFactorRequired {
+		return `{"tokenRequired":true}`
+	}
+
 	if s.omitLoginToken {
 		return `{"ok":true,"msg":"Logged in successfully."}`
 	}
 
 	return fmt.Sprintf(`{"ok":true,"msg":"Logged in successfully.","token":%q}`, fakeSessionToken)
+}
+
+// sendAuthMode states how the connection is to be authenticated, which a real
+// server does as the last thing it does for a new connection.
+func (s *fakeAckServer) sendAuthMode() {
+	s.mu.Lock()
+	auto := s.autoLogin
+	omit := s.omitLoginRequired
+	delay := s.loginRequiredDelay
+	needsSetup := s.setupRequired
+	s.mu.Unlock()
+
+	if needsSetup {
+		s.messages <- []byte(`42["setup"]`)
+	}
+
+	switch {
+	case auto:
+		s.messages <- []byte(`42["autoLogin"]`)
+		s.sendReadyEvents()
+
+	case omit:
+
+	default:
+		// Held back out of band so the delay does not stall the request that
+		// carried the connect.
+		go func() {
+			time.Sleep(delay)
+
+			s.mu.Lock()
+			s.loginRequiredAt = time.Now()
+			s.mu.Unlock()
+
+			s.messages <- []byte(`42["loginRequired"]`)
+		}()
+	}
 }
 
 func (s *fakeAckServer) sendReadyEvents() {
@@ -211,6 +383,7 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 	switch socketIOData[0] {
 	case '0': // socket.io CONNECT
 		s.messages <- []byte("40")
+		s.sendAuthMode()
 
 	case '2': // socket.io EVENT
 		i := 1
@@ -224,6 +397,16 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 		// A resync logs in again, which is what makes the server resend the
 		// lists. Checked before "login", which is a prefix of it.
 		if strings.Contains(payload, `"loginByToken"`) {
+			if s.tokenRejected() {
+				s.messages <- fmt.Appendf(
+					nil,
+					`43%s[{"ok":false,"msg":"authInvalidToken","msgi18n":true}]`,
+					ackID,
+				)
+
+				return
+			}
+
 			s.messages <- fmt.Appendf(nil, `43%s[{"ok":true}]`, ackID)
 
 			if s.recordResync(payload) {
@@ -233,9 +416,22 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 			return
 		}
 
+		if strings.Contains(payload, `"setup"`) {
+			s.runSetup()
+			s.messages <- fmt.Appendf(nil, `43%s[{"ok":true,"msg":"ok"}]`, ackID)
+
+			return
+		}
+
 		if strings.Contains(payload, `"login"`) {
-			s.messages <- fmt.Appendf(nil, `43%s[%s]`, ackID, s.loginAck())
-			s.sendReadyEvents()
+			s.recordLogin()
+
+			ack := s.loginAck()
+			s.messages <- fmt.Appendf(nil, `43%s[%s]`, ackID, ack)
+
+			if strings.Contains(ack, `"ok":true`) {
+				s.sendReadyEvents()
+			}
 
 			return
 		}

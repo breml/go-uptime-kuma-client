@@ -219,6 +219,11 @@ type Client struct {
 	// Resync logs in with, see there.
 	sessionToken string
 
+	// autoLoggedIn records that the server has authentication disabled and
+	// logged the client in itself, which leaves it without a session token,
+	// see Resync.
+	autoLoggedIn bool
+
 	// readyEventsMissing are the best-effort ready events the server did not
 	// emit while New was connecting, see MissingReadyEvents.
 	readyEventsMissing []string
@@ -466,6 +471,10 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		return nil, fmt.Errorf("ready events: unknown: %s", strings.Join(unknown, ", "))
 	}
 
+	if (username == "") != (password == "") {
+		return nil, errors.New("credentials: username and password have to be set together")
+	}
+
 	ctxWithConnectTimeout := ctx
 
 	// connectTimeoutDone is non-nil only when WithConnectTimeout is
@@ -632,6 +641,35 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		})
 	}
 
+	// The server states how it wants the connection to be authenticated as the
+	// last thing it does for it, so these are registered before the connect and
+	// unconditionally, see authBarrier.
+	loginRequired := make(chan struct{})
+	closeLoginRequired := sync.OnceFunc(func() {
+		close(loginRequired)
+	})
+	defer closeLoginRequired()
+
+	client.On("loginRequired", func() {
+		closeLoginRequired()
+	})
+
+	autoLogin := make(chan struct{})
+	closeAutoLogin := sync.OnceFunc(func() {
+		close(autoLogin)
+	})
+	defer closeAutoLogin()
+
+	client.On("autoLogin", func() {
+		closeAutoLogin()
+	})
+
+	barrier := authBarrier{
+		loginRequired: loginRequired,
+		autoLogin:     autoLogin,
+		setupRequired: setupRequired,
+	}
+
 	client.OnAny(func(s string, _ []any) {
 		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" &&
 			s != "proxyList" &&
@@ -701,34 +739,17 @@ connectLoop:
 		}
 	}()
 
-	if username != "" && password != "" {
-		var loginResponse ackResponse
-
-		loginResponse, err = c.syncEmit(
-			ctxWithConnectTimeout,
-			"login",
-			map[string]any{"username": username, "password": password, "token": ""},
-		)
-		if err == nil {
-			c.setSessionToken(loginResponse.Token)
-		}
-
-		if err != nil {
-			// Ensure we had the time to receive a potential setup event.
-			time.Sleep(10 * time.Millisecond)
-
-			wantSetup := false
-			select {
-			case <-setupRequired:
-				wantSetup = true
-
-			default:
-			}
-
-			if (!strings.Contains(err.Error(), "Incorrect username or password") && !strings.Contains(err.Error(), "authIncorrectCreds")) ||
-				!wantSetup {
-				return nil, fmt.Errorf("login: %w", err)
-			}
+	err = c.authenticate(
+		ctxWithConnectTimeout,
+		credentials{username: username, password: password},
+		barrier,
+	)
+	if err != nil {
+		// A server that is not set up yet rejects the credentials it does not
+		// have a user for; running the setup is what makes them work, so that
+		// is not a failure when the server asked for one.
+		if !errors.Is(err, ErrInvalidCredentials) || !setupPending(setupRequired) {
+			return nil, err
 		}
 	}
 
@@ -834,9 +855,20 @@ func (c *Client) Disconnect() error {
 func (c *Client) Resync(ctx context.Context) error {
 	c.mu.Lock()
 	token := c.sessionToken
+	autoLoggedIn := c.autoLoggedIn
 	c.mu.Unlock()
 
 	if token == "" {
+		if autoLoggedIn {
+			// The server hands a session token only to a login it performed
+			// for a client that asked for one, and the commands it does have
+			// resend some of the lists but not all of them.
+			return errors.New(
+				"resync: the server logged the client in itself (authentication disabled) " +
+					"and offers no command to resend the lists",
+			)
+		}
+
 		return errors.New("resync: no session token, the client was created without credentials")
 	}
 
@@ -851,9 +883,16 @@ func (c *Client) Resync(ctx context.Context) error {
 
 	defer c.updates.RemoveListener(listenerID.String())
 
-	_, err := c.syncEmit(ctx, "loginByToken", token)
+	response, err := c.emitAck(ctx, "loginByToken", token)
 	if err != nil {
 		return fmt.Errorf("resync: %w", err)
+	}
+
+	if !response.OK {
+		// A token the server no longer accepts is the one failure a caller can
+		// act on: it means the password was changed or the user was removed,
+		// and a new login is the only way back.
+		return fmt.Errorf("resync: %w", loginError("loginByToken", response))
 	}
 
 	select {
@@ -939,21 +978,21 @@ func (c *Client) disconnectOrphan() {
 // runSetup sets the server up and logs in again afterwards, which is what a
 // server that answers the connect with a setup event asks for.
 func (c *Client) runSetup(ctx context.Context, username string, password string) error {
+	if username == "" || password == "" {
+		return errors.New("setup: the server requires setup, which needs a username and password")
+	}
+
 	_, err := c.syncEmit(ctx, "setup", username, password)
 	if err != nil {
 		return fmt.Errorf("setup: %w", err)
 	}
 
-	loginResponse, err := c.syncEmit(
-		ctx,
-		"login",
-		map[string]any{"username": username, "password": password, "token": ""},
-	)
+	// The user the setup just created has no two-factor authentication, so
+	// this login is answered without the server ever asking for a code.
+	err = c.loginWithPassword(ctx, username, password)
 	if err != nil {
 		return fmt.Errorf("login: %w", err)
 	}
-
-	c.setSessionToken(loginResponse.Token)
 
 	return nil
 }
@@ -1155,8 +1194,17 @@ func sortedEvents(events map[string]struct{}) []string {
 }
 
 type ackResponse struct {
-	Msg             string         `json:"msg"`
-	OK              bool           `json:"ok"`
+	Msg string `json:"msg"`
+	OK  bool   `json:"ok"`
+
+	// TokenRequired is how a login for an account with two-factor
+	// authentication enabled is answered. Such an ack carries neither an ok
+	// nor a message, so it has to be recognized by this field alone.
+	TokenRequired bool `json:"tokenRequired"`
+
+	// MsgI18n reports that Msg is a translation key rather than a sentence.
+	MsgI18n bool `json:"msgi18n"`
+
 	Token           string         `json:"token"`
 	ID              int64          `json:"id"`
 	MonitorID       int64          `json:"monitorID"`
@@ -1173,7 +1221,14 @@ type ackResponse struct {
 	Incident        map[string]any `json:"incident"`
 }
 
-func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
+// emitAck emits command and returns the ack the server answered with, whether
+// it reports success or not.
+//
+// Unlike syncEmit it leaves the interpretation of the ack to the caller, which
+// is what the login path needs: a login that wants a one-time code is answered
+// with neither an ok nor a message, so there is nothing for syncEmit to report.
+// The returned error is reserved for an ack that never arrived.
+func (c *Client) emitAck(ctx context.Context, command string, args ...any) (ackResponse, error) {
 	// Buffered and never closed, so a late ack (e.g. after the context
 	// expired) neither leaks the ack goroutine forever nor panics sending on
 	// a closed channel.
@@ -1190,15 +1245,24 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 
 	select {
 	case response := <-res:
-		if !response.OK {
-			return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
-		}
-
 		return response, nil
 
 	case <-ctx.Done():
 		return ackResponse{}, fmt.Errorf("%s: %w", command, ctx.Err())
 	}
+}
+
+func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
+	response, err := c.emitAck(ctx, command, args...)
+	if err != nil {
+		return ackResponse{}, err
+	}
+
+	if !response.OK {
+		return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
+	}
+
+	return response, nil
 }
 
 // syncEmitWithUpdateEvent emits command and returns once the server has
