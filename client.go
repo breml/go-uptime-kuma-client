@@ -224,6 +224,16 @@ type Client struct {
 	// see Resync.
 	autoLoggedIn bool
 
+	// totpCode produces the one-time code for an account with two-factor
+	// authentication enabled, see WithTOTPSecret and WithTOTPCode.
+	// totpCodeSet tells a configured callback from none, totpSources counts
+	// how many of the two options set one, and totpErr carries a secret New
+	// has to reject.
+	totpCode    func(ctx context.Context) (string, error)
+	totpCodeSet bool
+	totpSources int
+	totpErr     error
+
 	// readyEventsMissing are the best-effort ready events the server did not
 	// emit while New was connecting, see MissingReadyEvents.
 	readyEventsMissing []string
@@ -473,6 +483,14 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	if (username == "") != (password == "") {
 		return nil, errors.New("credentials: username and password have to be set together")
+	}
+
+	if c.totpErr != nil {
+		return nil, c.totpErr
+	}
+
+	if c.totpSources > 1 {
+		return nil, errors.New("totp: WithTOTPSecret and WithTOTPCode are mutually exclusive")
 	}
 
 	ctxWithConnectTimeout := ctx
@@ -1204,6 +1222,12 @@ type ackResponse struct {
 
 	// MsgI18n reports that Msg is a translation key rather than a sentence.
 	MsgI18n bool `json:"msgi18n"`
+
+	// URI is the otpauth:// URI a prepare2FA answers with.
+	URI string `json:"uri"`
+
+	// Status is whether two-factor authentication is on, from a twoFAStatus.
+	Status bool `json:"status"`
 
 	Token           string         `json:"token"`
 	ID              int64          `json:"id"`

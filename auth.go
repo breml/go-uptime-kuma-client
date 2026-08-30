@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 )
 
@@ -41,6 +42,67 @@ var ErrInvalidTOTPCode = errors.New("invalid two-factor authentication code")
 // see Client.Resync. The token carries no expiry, so what invalidates it is a
 // changed password or a user that was deactivated or deleted.
 var ErrInvalidSessionToken = errors.New("session token rejected")
+
+// WithTOTPSecret configures the shared secret of an account with two-factor
+// authentication enabled, so the client can answer the server's request for a
+// one-time code itself and log in without a human at the keyboard.
+//
+// The secret is the base32 string from the otpauth:// URI Uptime Kuma shows
+// when two-factor authentication is set up. Spaces, hyphens, lower case and
+// the missing base32 padding the server strips are all accepted; a secret that
+// cannot be decoded fails New rather than the login it would be needed for.
+//
+// The code is generated only once the server asks for one, so configuring a
+// secret for an account without two-factor authentication changes nothing. It
+// is generated then and not before because the server evaluates the fields of
+// a login independently: a code sent to an account that has two-factor
+// authentication disabled is verified against a secret that does not exist,
+// after the login has already been answered.
+//
+// The server records the last code it accepted and refuses to see it again, so
+// two clients logging in with the same account inside one 30 second step
+// cannot both succeed. The client retries once in the next step when the
+// caller's deadline allows it, but a caller starting many clients at once is
+// better served by WithSessionToken.
+//
+// WithTOTPSecret and WithTOTPCode are mutually exclusive.
+func WithTOTPSecret(secret string) Option {
+	return func(c *Client) {
+		c.totpSources++
+
+		normalized, err := normalizeTOTPSecret(secret)
+		if err != nil {
+			c.totpErr = err
+
+			return
+		}
+
+		c.totpCodeSet = true
+		c.totpCode = func(_ context.Context) (string, error) {
+			return totpCodeAt(normalized, time.Now())
+		}
+	}
+}
+
+// WithTOTPCode configures a callback that produces the one-time code, for a
+// caller whose secret lives somewhere the client cannot read it, such as a
+// hardware token or an external authenticator.
+//
+// It is called only when the server asks for a code, and once more for the
+// single retry the client makes in the next time step, see ErrInvalidTOTPCode.
+// WithTOTPSecret is this option with the code computed from a secret, and the
+// two are mutually exclusive.
+func WithTOTPCode(code func(ctx context.Context) (string, error)) Option {
+	return func(c *Client) {
+		if code == nil {
+			return
+		}
+
+		c.totpCodeSet = true
+		c.totpSources++
+		c.totpCode = code
+	}
+}
 
 // authBarrierWait bounds how long the client waits for the server to state how
 // it wants to be authenticated, see authBarrier.
@@ -182,13 +244,10 @@ func (c *Client) authenticate(ctx context.Context, creds credentials, barrier au
 	return c.loginWithPassword(ctx, creds.username, creds.password)
 }
 
-// loginWithPassword logs in with a username and password.
+// loginWithPassword logs in with a username and password, and answers the
+// server's request for a one-time code if it makes one.
 func (c *Client) loginWithPassword(ctx context.Context, username string, password string) error {
-	response, err := c.emitAck(
-		ctx,
-		"login",
-		map[string]any{"username": username, "password": password, "token": ""},
-	)
+	response, err := c.login(ctx, username, password, "")
 	if err != nil {
 		return err
 	}
@@ -202,10 +261,71 @@ func (c *Client) loginWithPassword(ctx context.Context, username string, passwor
 	// An ack asking for a one-time code carries neither an ok nor a message,
 	// so it has to be recognized before the message is looked at.
 	if response.TokenRequired {
-		return ErrTwoFactorRequired
+		return c.loginWithTOTP(ctx, username, password)
 	}
 
 	return loginError("login", response)
+}
+
+// loginWithTOTP answers the server's request for a one-time code.
+//
+// A code the server rejects is retried once in the next time step, because the
+// server refuses a code it has accepted before and the next step is what
+// produces a different one. Every other reason for the rejection - a wrong
+// secret, a clock too far off - produces the same answer again, so a single
+// retry is enough, and it is skipped altogether when the caller's deadline
+// cannot cover the wait.
+func (c *Client) loginWithTOTP(ctx context.Context, username string, password string) error {
+	if !c.totpCodeSet {
+		return ErrTwoFactorRequired
+	}
+
+	for retry := range 2 {
+		if retry > 0 && !waitForNextTOTPStep(ctx) {
+			break
+		}
+
+		code, err := c.totpCode(ctx)
+		if err != nil {
+			return fmt.Errorf("login: totp code: %w", err)
+		}
+
+		response, err := c.login(ctx, username, password, code)
+		if err != nil {
+			return err
+		}
+
+		if response.OK {
+			c.setSessionToken(response.Token)
+
+			return nil
+		}
+
+		if !errors.Is(loginError("login", response), ErrInvalidTOTPCode) {
+			return loginError("login", response)
+		}
+	}
+
+	return fmt.Errorf(
+		"%w: the server also rejects a code it has accepted before, "+
+			"so another login with this account may have just used this one",
+		ErrInvalidTOTPCode,
+	)
+}
+
+// login emits the login command with an optional one-time code and returns the
+// ack, whether it reports success or not.
+func (c *Client) login(
+	ctx context.Context,
+	username string,
+	password string,
+	code string,
+) (ackResponse, error) {
+	return c.emitAck(
+		ctx,
+		"login",
+		map[string]any{"username": username, "password": password, "token": code},
+	)
 }
 
 // setAutoLoggedIn records that the server logged the client in itself, see
@@ -215,6 +335,29 @@ func (c *Client) setAutoLoggedIn() {
 	defer c.mu.Unlock()
 
 	c.autoLoggedIn = true
+}
+
+// waitForNextTOTPStep waits until the current time step is over, and reports
+// whether the wait completed inside the caller's budget. A deadline that
+// cannot cover the wait is left alone rather than run into.
+func waitForNextTOTPStep(ctx context.Context) bool {
+	wait := time.Until(totpStepStart(time.Now()).Add(totpStep))
+
+	deadline, hasDeadline := ctx.Deadline()
+	if hasDeadline && time.Until(deadline) <= wait {
+		return false
+	}
+
+	timer := time.NewTimer(wait)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return true
+
+	case <-ctx.Done():
+		return false
+	}
 }
 
 // setupPending reports whether the server asked to be set up.
@@ -232,4 +375,55 @@ func setupPending(setupRequired <-chan struct{}) bool {
 	default:
 		return false
 	}
+}
+
+// prepare2FA asks the server for a new two-factor secret and returns it.
+//
+// The server stores the secret right away, before it has been confirmed, and
+// only starts requiring a code once save2FA ran. currentPassword is the
+// password of the logged in account, which the server checks again for this
+// command even though the connection is already authenticated.
+func (c *Client) prepare2FA(ctx context.Context, currentPassword string) (string, error) {
+	response, err := c.syncEmit(ctx, "prepare2FA", currentPassword)
+	if err != nil {
+		return "", err
+	}
+
+	uri, err := url.Parse(response.URI)
+	if err != nil {
+		return "", fmt.Errorf("prepare2FA: parse otpauth uri: %w", err)
+	}
+
+	secret := uri.Query().Get("secret")
+	if secret == "" {
+		return "", errors.New("prepare2FA: otpauth uri carries no secret")
+	}
+
+	return secret, nil
+}
+
+// save2FA turns two-factor authentication on for the logged in account, using
+// the secret prepare2FA handed out.
+func (c *Client) save2FA(ctx context.Context, currentPassword string) error {
+	_, err := c.syncEmit(ctx, "save2FA", currentPassword)
+
+	return err
+}
+
+// disable2FA turns two-factor authentication off for the logged in account.
+func (c *Client) disable2FA(ctx context.Context, currentPassword string) error {
+	_, err := c.syncEmit(ctx, "disable2FA", currentPassword)
+
+	return err
+}
+
+// twoFAStatus reports whether two-factor authentication is on for the logged
+// in account.
+func (c *Client) twoFAStatus(ctx context.Context) (bool, error) {
+	response, err := c.syncEmit(ctx, "twoFAStatus")
+	if err != nil {
+		return false, err
+	}
+
+	return response.Status, nil
 }
