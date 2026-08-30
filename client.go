@@ -485,12 +485,14 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		return nil, errors.New("credentials: username and password have to be set together")
 	}
 
-	if c.totpErr != nil {
-		return nil, c.totpErr
+	// The count comes first: a caller who configured two sources is told that
+	// before being sent to fix whichever of them also failed to decode.
+	if c.totpSources > 1 {
+		return nil, errors.New("totp: at most one of WithTOTPSecret and WithTOTPCode may be used")
 	}
 
-	if c.totpSources > 1 {
-		return nil, errors.New("totp: WithTOTPSecret and WithTOTPCode are mutually exclusive")
+	if c.totpErr != nil {
+		return nil, c.totpErr
 	}
 
 	ctxWithConnectTimeout := ctx

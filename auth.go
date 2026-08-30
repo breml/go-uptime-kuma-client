@@ -23,8 +23,9 @@ var ErrAuthRequired = errors.New("server requires authentication")
 var ErrInvalidCredentials = errors.New("incorrect username or password")
 
 // ErrTwoFactorRequired is returned when the account has two-factor
-// authentication enabled, which the client cannot answer yet: the server asks
-// for a one-time code and the client has none to give.
+// authentication enabled and the client has no code to answer with, because
+// neither WithTOTPSecret nor WithTOTPCode was configured or because the
+// configured callback produced nothing usable.
 //
 // It is the typed form of the server's tokenRequired answer to a login. That
 // answer carries neither an ok nor a message, so without this it surfaces as an
@@ -59,11 +60,15 @@ var ErrInvalidSessionToken = errors.New("session token rejected")
 // authentication disabled is verified against a secret that does not exist,
 // after the login has already been answered.
 //
-// The server records the last code it accepted and refuses to see it again, so
-// two clients logging in with the same account inside one 30 second step
-// cannot both succeed. The client retries once in the next step when the
-// caller's deadline allows it, but a caller starting many clients at once is
-// better served by WithSessionToken.
+// The server records the last code it accepted and refuses to see it again,
+// see ErrInvalidTOTPCode, so two clients logging in with the same account
+// inside one 30 second step cannot both succeed. The client retries once in
+// the next step when the caller's deadline allows it, which is why starting
+// many clients for one account at once wants a deadline that can cover a step.
+//
+// The server answers a wrong secret and a clock too far off with the same
+// rejection, so those cost the same retry: a login that can never succeed
+// takes up to one step to fail. WithConnectTimeout bounds it.
 //
 // WithTOTPSecret and WithTOTPCode are mutually exclusive.
 func WithTOTPSecret(secret string) Option {
@@ -88,18 +93,27 @@ func WithTOTPSecret(secret string) Option {
 // caller whose secret lives somewhere the client cannot read it, such as a
 // hardware token or an external authenticator.
 //
-// It is called only when the server asks for a code, and once more for the
-// single retry the client makes in the next time step, see ErrInvalidTOTPCode.
-// WithTOTPSecret is this option with the code computed from a secret, and the
-// two are mutually exclusive.
+// It is called at most twice per login: once when the server asks for a code,
+// and once more for the single retry the client makes in the next time step,
+// which happens only if the server rejected the first code and the caller's
+// deadline can cover the wait, see ErrInvalidTOTPCode. A callback that returns
+// an empty code fails the login with ErrTwoFactorRequired rather than sending
+// it, because the server reads an empty code as no code at all.
+//
+// A nil callback fails New, the way a secret WithTOTPSecret cannot decode
+// does. WithTOTPSecret is this option with the code computed from a secret,
+// and the two are mutually exclusive.
 func WithTOTPCode(code func(ctx context.Context) (string, error)) Option {
 	return func(c *Client) {
+		c.totpSources++
+
 		if code == nil {
+			c.totpErr = errors.New("totp: WithTOTPCode was given a nil callback")
+
 			return
 		}
 
 		c.totpCodeSet = true
-		c.totpSources++
 		c.totpCode = code
 	}
 }
@@ -275,41 +289,91 @@ func (c *Client) loginWithPassword(ctx context.Context, username string, passwor
 // secret, a clock too far off - produces the same answer again, so a single
 // retry is enough, and it is skipped altogether when the caller's deadline
 // cannot cover the wait.
+//
+// The ways this fails are kept apart in the error, because they call for
+// different fixes: no code source, a source that produced nothing usable, a
+// deadline too short to outlast the replay guard, and a code rejected in two
+// consecutive steps, which is what rules the replay guard out.
 func (c *Client) loginWithTOTP(ctx context.Context, username string, password string) error {
 	if !c.totpCodeSet {
 		return ErrTwoFactorRequired
 	}
 
 	for retry := range 2 {
-		if retry > 0 && !waitForNextTOTPStep(ctx) {
-			break
+		if retry > 0 {
+			waitErr := awaitTOTPRetry(ctx)
+			if waitErr != nil {
+				return waitErr
+			}
 		}
 
-		code, err := c.totpCode(ctx)
-		if err != nil {
-			return fmt.Errorf("login: totp code: %w", err)
-		}
-
-		response, err := c.login(ctx, username, password, code)
-		if err != nil {
+		err := c.loginOnceWithTOTP(ctx, username, password)
+		if !errors.Is(err, ErrInvalidTOTPCode) {
 			return err
-		}
-
-		if response.OK {
-			c.setSessionToken(response.Token)
-
-			return nil
-		}
-
-		if !errors.Is(loginError("login", response), ErrInvalidTOTPCode) {
-			return loginError("login", response)
 		}
 	}
 
 	return fmt.Errorf(
-		"%w: the server also rejects a code it has accepted before, "+
-			"so another login with this account may have just used this one",
+		"%w: rejected in two consecutive time steps, which rules out the server's replay "+
+			"guard, so what is left to check is the secret and this host's clock",
 		ErrInvalidTOTPCode,
+	)
+}
+
+// loginOnceWithTOTP makes one attempt at a login with a one-time code. A code
+// the server rejects comes back wrapping ErrInvalidTOTPCode, which is the only
+// outcome another attempt could change.
+func (c *Client) loginOnceWithTOTP(ctx context.Context, username string, password string) error {
+	code, err := c.totpCode(ctx)
+	if err != nil {
+		return fmt.Errorf("login: %w", err)
+	}
+
+	// The server reads an empty code as no code at all and asks again instead
+	// of rejecting it, in an ack carrying neither an ok nor a message, so
+	// sending one buys an error with nothing in it.
+	if code == "" {
+		return fmt.Errorf("%w: the configured code source produced an empty code", ErrTwoFactorRequired)
+	}
+
+	response, err := c.login(ctx, username, password, code)
+	if err != nil {
+		return err
+	}
+
+	if response.OK {
+		c.setSessionToken(response.Token)
+
+		return nil
+	}
+
+	if response.TokenRequired {
+		return fmt.Errorf(
+			"%w: the server asked for a code again instead of answering the one it was given",
+			ErrTwoFactorRequired,
+		)
+	}
+
+	return loginError("login", response)
+}
+
+// awaitTOTPRetry waits out the current time step, so the attempt after it has
+// a code the server has not seen before, and says why it could not.
+func awaitTOTPRetry(ctx context.Context) error {
+	waited, err := waitForNextTOTPStep(ctx)
+	if err != nil {
+		return fmt.Errorf("login: %w", err)
+	}
+
+	if waited {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"%w: recovering from a code the server has seen before needs a wait of up to %s "+
+			"for the next time step, which does not fit in the deadline",
+		ErrInvalidTOTPCode,
+		totpStep,
 	)
 }
 
@@ -337,15 +401,17 @@ func (c *Client) setAutoLoggedIn() {
 	c.autoLoggedIn = true
 }
 
-// waitForNextTOTPStep waits until the current time step is over, and reports
-// whether the wait completed inside the caller's budget. A deadline that
-// cannot cover the wait is left alone rather than run into.
-func waitForNextTOTPStep(ctx context.Context) bool {
+// waitForNextTOTPStep waits until the current time step is over and reports
+// whether it got there. A deadline that cannot cover the wait is left alone
+// rather than run into, which is the (false, nil) answer; a wait the context
+// cuts short returns that context's error, so a cancellation on the way is not
+// reported as a code the server disliked.
+func waitForNextTOTPStep(ctx context.Context) (bool, error) {
 	wait := time.Until(totpStepStart(time.Now()).Add(totpStep))
 
 	deadline, hasDeadline := ctx.Deadline()
 	if hasDeadline && time.Until(deadline) <= wait {
-		return false
+		return false, nil
 	}
 
 	timer := time.NewTimer(wait)
@@ -353,10 +419,10 @@ func waitForNextTOTPStep(ctx context.Context) bool {
 
 	select {
 	case <-timer.C:
-		return true
+		return true, nil
 
 	case <-ctx.Done():
-		return false
+		return false, fmt.Errorf("waiting for the next totp time step: %w", ctx.Err())
 	}
 }
 

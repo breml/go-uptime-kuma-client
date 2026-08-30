@@ -93,12 +93,17 @@ type fakeAckServer struct {
 	loginRequiredDelay time.Duration
 	// twoFactorRequired answers a login without a code the way a server does
 	// for an account with two-factor authentication enabled. twoFactorSecret
-	// is the secret the codes are verified against, and acceptedCodes records
-	// the codes already used, which a real server refuses to see again.
+	// is the secret the codes are verified against, replayGuard turns the
+	// server's refusal to see an accepted code twice on, and acceptedCodes is
+	// what that refusal reads.
 	twoFactorRequired bool
 	twoFactorSecret   string
 	replayGuard       bool
 	acceptedCodes     map[string]struct{}
+	// rejectCodedLogin rejects a login carrying a code for a reason that is
+	// not the code, which the client has to hand over as it is instead of
+	// spending its retry on it.
+	rejectCodedLogin bool
 	// loginCodes are the one-time codes the logins carried, in order.
 	loginCodes []string
 	// setupRequired answers the connect with a setup event and rejects the
@@ -238,8 +243,10 @@ func (s *fakeAckServer) setLoginRequiredDelay(d time.Duration) {
 }
 
 // setTwoFactorSecret turns two-factor authentication on and verifies the codes
-// against the shared test secret. With replayGuard set it also refuses a code
-// it has already accepted, the way a real server does.
+// against the shared test secret. With replayGuard set it also refuses every
+// code it has already accepted; the real server only remembers the last one it
+// let through, in twofa_last_token, which is stricter than these tests need to
+// tell apart.
 func (s *fakeAckServer) setTwoFactorSecret(replayGuard bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -265,6 +272,13 @@ func (s *fakeAckServer) receivedLoginCodes() []string {
 	defer s.mu.Unlock()
 
 	return append([]string(nil), s.loginCodes...)
+}
+
+func (s *fakeAckServer) setRejectCodedLogin(reject bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.rejectCodedLogin = reject
 }
 
 func (s *fakeAckServer) setSetupRequired(required bool) {
@@ -402,6 +416,10 @@ func (s *fakeAckServer) loginAck(code string) string {
 	// An ack asking for a one-time code carries neither an ok nor a message.
 	if s.twoFactorRequired && code == "" {
 		return `{"tokenRequired":true}`
+	}
+
+	if s.rejectCodedLogin && code != "" {
+		return `{"ok":false,"msg":"authIncorrectCreds","msgi18n":true}`
 	}
 
 	if s.twoFactorRequired && !s.acceptsCodeLocked(code) {

@@ -86,10 +86,15 @@ func TestNormalizeTOTPSecret(t *testing.T) {
 }
 
 // TestNormalizeTOTPSecretServerShape covers the secret Uptime Kuma actually
-// hands out: 64 random bytes, base32 encoded with the padding stripped.
+// hands out: the 64 random alphanumeric characters of genSecret, base32
+// encoded and stripped of the one padding character that leaves. 103 is what
+// makes this the interesting case - a length that is not a multiple of 8, so
+// the padding has to be restored before the secret decodes at all.
 func TestNormalizeTOTPSecretServerShape(t *testing.T) {
-	const serverSecret = "KRUGS4ZANFZSAYJANRQXE6JAOZQWY5LFMRPWG33EMVSA" +
-		"KRUGS4ZANFZSAYJANRQXE6JAOZQWY5LFMRPWG33EMVSAKRUGS4ZANFZSAYJA"
+	const serverSecret = "MRXUIZ2RKI4TMY2JGFGDMWJZONETK5KZGE2WE3SGHBHEUUKIOVMU" +
+		"OSCSHEZUY3BSJF2GUUKXNNVFCWRXJ44DKN3TOBIHK2JSN52DG5Y"
+
+	require.NotZero(t, len(serverSecret)%8, "the fixture has to need the padding restored")
 
 	normalized, err := kuma.NormalizeTOTPSecret(serverSecret)
 
