@@ -63,6 +63,15 @@
 //
 //	client, err := kuma.New(ctx, url, "", "")
 //
+// # Server Versions
+//
+// The client targets Uptime Kuma 2.x and is tested against 2.5.0. Uptime Kuma
+// 1.x is not supported and connecting to it is not expected to work: it never
+// announces loginRequired, so New cannot tell a server that wants a login from
+// one that does not and takes the full auth barrier wait on every connect, and
+// it reports rejected logins with untranslated messages that are not mapped to
+// the package's sentinel errors, see [New].
+//
 // # Supported Monitor Types
 //
 // HTTP, TCP, Ping, DNS, gRPC, Redis, PostgreSQL, Real Browser, and more.

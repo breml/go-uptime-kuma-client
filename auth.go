@@ -191,9 +191,10 @@ func WithTOTPCode(code func(ctx context.Context) (string, error)) Option {
 // it wants to be authenticated, see authBarrier.
 //
 // The server emits loginRequired or autoLogin as the last thing it does for a
-// new connection, so on a healthy server the wait is over in milliseconds. It
-// only elapses in full for a server too old to send either event, or behind a
-// proxy that drops it, and it must not be a hard failure for those - which is
+// new connection, so on a supported server the wait is over in milliseconds. It
+// only elapses in full behind a proxy that drops the event, or against an
+// Uptime Kuma 1.x server, which sends neither and is not supported, see the
+// package documentation. It must not be a hard failure for those - which is
 // also why it never takes more than half of what is left of the caller's
 // deadline, see barrierWaitWithin.
 const authBarrierWait = 500 * time.Millisecond
@@ -269,6 +270,11 @@ func loginError(command string, response ackResponse) error {
 	// that replaced it has no equivalent of, so it is matched by its prefix.
 	// The rate limiter's answer is a sentence on every version, because it was
 	// never given a key of its own.
+	//
+	// These two are the only untranslated messages that are classified. Uptime
+	// Kuma 1.x, which answers every rejection this way, is not supported: its
+	// remaining rejections - an invalid session token, a deactivated user, a
+	// wrong one-time code - fall through to unclassifiedLoginError.
 	if !response.MsgI18n {
 		if strings.HasPrefix(response.Msg, "Incorrect username or password") {
 			return ErrInvalidCredentials

@@ -12,6 +12,16 @@ Go client library for the Uptime Kuma API using Socket.IO for real-time communic
 go get github.com/breml/go-uptime-kuma-client
 ```
 
+## Requirements
+
+Uptime Kuma 2.x, tested against 2.5.0.
+
+Uptime Kuma 1.x is not supported and connecting to it is not expected to work.
+It speaks a different login protocol: it never announces `loginRequired`, so the
+client cannot tell a server that wants a login from one that does not, and it
+reports rejected logins with untranslated messages that the client does not map
+to its sentinel errors.
+
 ## Features
 
 - **Monitor Management**: HTTP, TCP, Ping, DNS, Redis, PostgreSQL, gRPC, Real Browser,

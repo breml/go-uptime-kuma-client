@@ -491,7 +491,8 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 // sentinel errors, so a caller can tell the cases apart with errors.Is:
 // ErrAuthRequired, ErrInvalidCredentials, ErrTwoFactorRequired,
 // ErrInvalidTOTPCode, ErrInvalidSessionToken, ErrUserInactive and
-// ErrRateLimited.
+// ErrRateLimited. Those are the rejections an Uptime Kuma 2.x server states;
+// 1.x is not supported, see the package documentation.
 //
 //nolint:revive // Complexity is necessary for complete client initialization and event setup
 func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
@@ -894,8 +895,10 @@ func (c *Client) Disconnect() error {
 // a single list. What it does have is a login, which answers with all of them,
 // so Resync logs in again with the session token the client holds - the one the
 // login New performed handed out, or the one WithSessionToken supplied and the
-// server accepted. A client that never obtained one, because it connected
-// without credentials to a server with authentication disabled, cannot resync.
+// server accepted. A client New returned without logging it in never obtained
+// one and cannot resync: that is a client created without credentials, against
+// a server that either has authentication disabled or never stated that it
+// wants a login.
 //
 // A token the server has since stopped accepting is reported as
 // ErrInvalidSessionToken, wrapped by ErrUserInactive when the account it names
@@ -974,8 +977,9 @@ func (c *Client) Resync(ctx context.Context) error {
 // SessionToken returns the session token the client is authenticated with: the
 // one the server handed out for the login New performed, or the one
 // WithSessionToken supplied and the server accepted. It is the empty string for
-// a client that connected without credentials to a server with authentication
-// disabled, which is the one case New returns a client that never logged in.
+// a client New returned without logging it in, which is a client created
+// without credentials, against a server that either has authentication disabled
+// or never stated that it wants a login.
 //
 // It is the credential WithSessionToken takes, so a caller can persist it and
 // reconnect later without the password and without a one-time code. It is a
