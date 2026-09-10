@@ -123,6 +123,10 @@ func (s *fakeSocketIOServer) handleClientMessage(body []byte) {
 		// Enqueue CONNECT ACK: engine.io "4" (Message) + socket.io "0" (Connect).
 		s.messages <- []byte("40")
 
+		// A real server states how it wants to be authenticated right after
+		// the connect, which is what the client waits for before it logs in.
+		s.messages <- []byte(`42["loginRequired"]`)
+
 	case '2': // socket.io EVENT — the login request
 		// Extract the ack ID: digits immediately after the "2" type byte.
 		i := 1
@@ -132,7 +136,7 @@ func (s *fakeSocketIOServer) handleClientMessage(body []byte) {
 
 		ackID := string(socketIOData[1:i])
 		// Enqueue login ACK: engine.io "4" + socket.io "3" (Ack) + ack ID + JSON payload.
-		ack := fmt.Sprintf(`43%s[{"ok":true,"msg":"Logged in successfully."}]`, ackID)
+		ack := fmt.Sprintf(`43%s[{"ok":true,"msg":"Logged in successfully.","token":"fake-session-token"}]`, ackID)
 		s.messages <- []byte(ack)
 
 		// Enqueue any configured post-login list events.
@@ -241,6 +245,11 @@ func handleWebSocketUpgrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = wsSendText(conn, `42["loginRequired"]`)
+	if err != nil {
+		return
+	}
+
 	// socket.io login event "42N[\"login\",...]" → ACK.
 	msg, err = wsReadText(conn)
 	if err != nil || len(msg) < 3 || !strings.HasPrefix(msg, "42") {
@@ -253,7 +262,7 @@ func handleWebSocketUpgrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ackID := msg[2:i]
-	ack := fmt.Sprintf(`43%s[{"ok":true,"msg":"Logged in successfully."}]`, ackID)
+	ack := fmt.Sprintf(`43%s[{"ok":true,"msg":"Logged in successfully.","token":"fake-session-token"}]`, ackID)
 	err = wsSendText(conn, ack)
 	if err != nil {
 		return
@@ -656,8 +665,10 @@ func TestNewReadyGraceWithinCallerDeadline(t *testing.T) {
 	})
 
 	// Shorter than the default ready grace period, and no WithConnectTimeout,
-	// so nothing but this deadline ends the grace window.
-	ctx, cancel := context.WithTimeout(t.Context(), 300*time.Millisecond)
+	// so nothing but this deadline ends the grace window. The long-polling
+	// transport delivers one frame per poll, so the budget has to cover the
+	// loginRequired frame the client waits for before it logs in as well.
+	ctx, cancel := context.WithTimeout(t.Context(), 400*time.Millisecond)
 	defer cancel()
 
 	client, err := kuma.New(ctx, server.URL, "admin", "admin1")

@@ -31,7 +31,11 @@ func TestMain(m *testing.M) {
 }
 
 func testMainSetup(m *testing.M) (int, error) {
-	dockerTimeout := uint(60)
+	// Long enough for the whole package to run against the container: the
+	// integration tests alone take about a minute, and an expiry that lands in
+	// the middle of them fails the run with a closed connection rather than a
+	// real defect.
+	dockerTimeout := uint(300)
 
 	e2eTest, _ := strconv.ParseBool(os.Getenv("E2E_TEST"))
 	if e2eTest {

@@ -116,15 +116,36 @@ func TestResync(t *testing.T) {
 	})
 
 	t.Run("without_a_session_token_it_reports_that_instead_of_hanging", func(t *testing.T) {
+		// A server too old to state how it wants to be authenticated, given a
+		// client with nothing to offer: New logs in nowhere, so there is no
+		// token to resync with. An accepted login that carried no token cannot
+		// produce this state, see TestNewLoginWithoutSessionToken.
 		fake := &fakeAckServer{messages: make(chan []byte, 32)}
-		fake.setOmitLoginToken(true)
+		fake.setOmitLoginRequired()
 
-		kumaClient := newFakeAckClient(t, fake)
+		server := httptest.NewServer(fake)
+
+		newCtx, newCancel := context.WithTimeout(t.Context(), time.Minute)
+		t.Cleanup(func() {
+			newCancel()
+			server.CloseClientConnections()
+			server.Close()
+		})
+
+		kumaClient, err := kuma.New(
+			newCtx, server.URL, "", "",
+			kuma.WithConnectTimeout(10*time.Second),
+			// Such a server sends no lists to a client it never logged in, so
+			// the ready gate is what would be waited out, not the resync.
+			kuma.WithReadyEvents(),
+			kuma.WithReadyGracePeriod(0),
+		)
+		require.NoError(t, err)
 
 		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 		defer cancel()
 
-		err := kumaClient.Resync(ctx)
+		err = kumaClient.Resync(ctx)
 
 		require.ErrorContains(t, err, "no session token")
 		require.Empty(t, fake.lastResyncPayload(),

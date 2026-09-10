@@ -33,7 +33,7 @@ tasks:
   test:
     desc: Run all tests
     cmds:
-      - go test -v -shuffle on -cover -timeout=120s -parallel=10 ./...
+      - go test -v -race -shuffle on -cover -timeout=180s -parallel=10 ./...
 
   test-debug:
     desc: Run all tests with verbose output
@@ -47,7 +47,7 @@ tasks:
     env:
       E2E_TEST: "true"
     cmds:
-      - go test -v -shuffle on -coverprofile coverage.out -timeout 240s ./...
+      - go test -v -race -shuffle on -coverprofile coverage.out -timeout 480s ./...
 
   test-e2e-cover-report:
     desc: Show coverage report for existing coverage.out or run end-to-end tests and generate coverage report
