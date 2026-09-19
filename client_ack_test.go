@@ -920,3 +920,103 @@ func TestUpdateEventTimeoutKeepsSuccessfulAck(t *testing.T) {
 			"without an ack the client cannot claim the command was applied")
 	})
 }
+
+// TestOperationTimeoutKeepsSuccessfulAck is TestUpdateEventTimeoutKeepsSuccessfulAck
+// for the deadline the client imposes on itself. It is the combination
+// ErrOperationTimeout documents and the one the caller it was written for
+// actually reaches: a Terraform provider sets no deadline, so before
+// WithOperationTimeout this path needed a caller that did, and now it does not.
+//
+// The ack arrives, the update event never does, and the budget expires. The
+// created notification exists, so the ID has to survive - a retry without it
+// creates a second one.
+func TestOperationTimeoutKeepsSuccessfulAck(t *testing.T) {
+	t.Parallel()
+
+	// Long enough that the ack, which the fake sends without delay, reliably
+	// arrives first; the call then spends the rest of the budget waiting for
+	// the update event the fake never emits.
+	const operationTimeout = 500 * time.Millisecond
+
+	fake := &fakeAckServer{messages: make(chan []byte, 32)}
+	server := httptest.NewServer(fake)
+
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
+	t.Cleanup(func() {
+		cancel()
+		server.CloseClientConnections()
+		server.Close()
+	})
+
+	kumaClient, err := kuma.New(
+		ctx,
+		server.URL,
+		"admin", "admin1",
+		kuma.WithConnectTimeout(10*time.Second),
+		kuma.WithOperationTimeout(operationTimeout),
+	)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = kumaClient.Disconnect() })
+
+	// Deliberately without a deadline of its own: the budget is what has to
+	// end this call.
+	id, err := kumaClient.CreateNotification(t.Context(), notification.Generic{
+		Base:           notification.Base{Name: "operation timeout"},
+		GenericDetails: notification.GenericDetails{},
+		TypeName:       "generic",
+	})
+
+	require.ErrorIs(t, err, kuma.ErrUpdateEventTimeout,
+		"the ack arrived, so the write was applied and only the broadcast is missing")
+	require.ErrorIs(t, err, kuma.ErrOperationTimeout,
+		"the wait ended on the client's own budget, not on a deadline the caller set")
+	require.ErrorIs(t, err, context.DeadlineExceeded,
+		"the sentinels must not hide the expiry from callers matching on it")
+	require.Equal(t, int64(fakeAckCreatedID), id,
+		"the notification exists on the server, so its ID must survive the missing update event")
+}
+
+// TestResyncOperationTimeout pins that Resync is bounded as a whole. Its ack is
+// bounded by emitAck, but the wait for the lists the server resends is the one
+// that matters here: Resync is what ErrUpdateEventTimeout points a caller at
+// after a lost broadcast, so a lost broadcast must not be able to hang it.
+func TestResyncOperationTimeout(t *testing.T) {
+	t.Parallel()
+
+	const operationTimeout = 300 * time.Millisecond
+
+	fake := &fakeAckServer{messages: make(chan []byte, 32)}
+	server := httptest.NewServer(fake)
+
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
+	t.Cleanup(func() {
+		cancel()
+		server.CloseClientConnections()
+		server.Close()
+	})
+
+	kumaClient, err := kuma.New(
+		ctx,
+		server.URL,
+		"admin", "admin1",
+		kuma.WithConnectTimeout(10*time.Second),
+		kuma.WithOperationTimeout(operationTimeout),
+	)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = kumaClient.Disconnect() })
+
+	// From here the server answers the loginByToken and resends nothing.
+	fake.setSuppressLists(true)
+
+	start := time.Now()
+	err = kumaClient.Resync(t.Context())
+	elapsed := time.Since(start)
+
+	require.ErrorIs(t, err, kuma.ErrOperationTimeout,
+		"a caller that sets no deadline must still get Resync back, got: %v", err)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.GreaterOrEqual(t, elapsed, operationTimeout,
+		"the budget must not be spent before the lists had a chance to arrive")
+}

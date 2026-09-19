@@ -35,9 +35,10 @@ var ErrNotFound = errors.New("not found")
 // arrive before the context was done. The write landed on the server; what is
 // missing is only the broadcast.
 //
-// An error wrapping ErrUpdateEventTimeout also wraps the context error, so
-// errors.Is(err, context.DeadlineExceeded) still reports an expired deadline
-// and errors.Is(err, context.Canceled) a cancelled context. Use
+// An error wrapping ErrUpdateEventTimeout also wraps the error that ended the
+// wait, so errors.Is(err, context.DeadlineExceeded) still reports an expired
+// deadline - the caller's own or the client's, see ErrOperationTimeout - and
+// errors.Is(err, context.Canceled) a cancelled context. Use
 // errors.Is(err, ErrUpdateEventTimeout) to tell the two cases apart: a plain
 // context error means the server never confirmed the command and it may or may
 // not have been applied, while ErrUpdateEventTimeout means it was applied.
@@ -86,8 +87,10 @@ type UpdateEventTimeoutError struct {
 	// a command that creates nothing, and for an ack that carried no ID.
 	ID int64
 
-	// Err is the error of the context that was done before the update event
-	// arrived.
+	// Err describes the context that was done before the update event
+	// arrived: its cause when the client's own operation timeout expired, see
+	// ErrOperationTimeout, and otherwise its Err(). Compare it with errors.Is
+	// rather than by equality, which only the latter case satisfies.
 	Err error
 }
 
@@ -113,9 +116,15 @@ func withCreatedID(err error, id int64) error {
 
 // ErrOperationTimeout is returned when a command exceeded the client's own
 // per-operation budget, see WithOperationTimeout, rather than a deadline the
-// caller set. It means the server did not answer in time: either the ack never
-// arrived, or, together with ErrUpdateEventTimeout, the ack arrived but the
-// update event confirming it did not.
+// caller set. The server did not answer in time: either the ack never arrived,
+// or, together with ErrUpdateEventTimeout, the ack arrived but the write never
+// became visible in the state cache.
+//
+// A lost ack says nothing about the server: the command was already on the
+// wire when the budget expired, so it may well have been applied. Unlike an
+// error wrapping ErrUpdateEventTimeout, this one carries no ID to adopt a
+// created resource by, so re-read before retrying a create, and see Resync for
+// a state cache that missed a broadcast.
 //
 // An error wrapping it also wraps context.DeadlineExceeded, so the context
 // checks a caller already has keep reporting. Use errors.Is(err,
@@ -123,9 +132,13 @@ func withCreatedID(err error, id int64) error {
 var ErrOperationTimeout = errors.New("operation timeout exceeded")
 
 // operationTimeoutError is the cause recorded on a context derived by
-// operationContext. It names the configured budget, and wraps
-// context.DeadlineExceeded so that replacing the plain context error with it
-// changes what the message says, not what errors.Is reports.
+// operationContext, which is its only construction site and always passes a
+// positive budget. It names that budget, and wraps context.DeadlineExceeded so
+// that replacing the plain context error with it changes what the message
+// says, not what errors.Is reports.
+//
+// It stays unexported because the only thing it carries is the timeout the
+// caller configured: ErrOperationTimeout is the whole public contract.
 type operationTimeoutError struct {
 	timeout time.Duration
 }
@@ -138,28 +151,25 @@ func (*operationTimeoutError) Unwrap() []error {
 	return []error{ErrOperationTimeout, context.DeadlineExceeded}
 }
 
-// contextErr is ctx.Err(), replaced by the cause whenever one was recorded
-// explicitly. Only operationContext records one, so this reports the client's
-// own operation timeout as such while leaving a caller's cancellation or
-// deadline to speak for itself.
+// contextErr describes a done context: the operation timeout recorded by
+// operationContext when that is what expired, and otherwise ctx.Err(). Call it
+// only on a context that is done, as both call sites do; for a live one it
+// returns nil like ctx.Err() does.
 //
-// callers wrap with the command they belong to.
+// It matches the client's own cause rather than any cause, because
+// context.Cause reports the cause of the first cancelled ancestor: a caller
+// that built its context with context.WithCancelCause would otherwise see its
+// own error in place of context.Canceled, and the contract on
+// ErrUpdateEventTimeout promises it stays reportable.
 //
-//nolint:wrapcheck // Both returns are the context's own error, which the
+//nolint:wrapcheck // Both returns are the context's own error, which the callers wrap with the command they belong to.
 func contextErr(ctx context.Context) error {
-	err := ctx.Err()
-
-	cause := context.Cause(ctx)
-
-	// Identity, not errors.Is: a cause equal to the context error is the one
-	// context records by itself, and says nothing the error does not.
-	//
-	//nolint:errorlint // See above.
-	if cause != nil && cause != err {
-		return cause
+	var operationTimeout *operationTimeoutError
+	if errors.As(context.Cause(ctx), &operationTimeout) {
+		return operationTimeout
 	}
 
-	return err
+	return ctx.Err()
 }
 
 // Log level constants for configuring socket.io client logging verbosity.
@@ -228,13 +238,18 @@ var defaultReadyEvents = []string{
 // when an optional event is genuinely never sent.
 const defaultReadyGracePeriod = 500 * time.Millisecond
 
-// defaultOperationTimeout bounds a single command: the wait for its ack, and
-// for the update event that confirms it. Uptime Kuma answers a command in
-// milliseconds, so a minute is far beyond any healthy round trip and only
-// elapses when an ack or a broadcast is genuinely lost. Without it such a loss
-// blocks the caller for as long as its context lives, which for a Terraform
-// provider is forever. See WithOperationTimeout.
-const defaultOperationTimeout = 60 * time.Second
+// defaultOperationTimeout is the budget WithOperationTimeout applies when the
+// caller configures none. Uptime Kuma answers the commands that only touch its
+// own database in milliseconds, so a minute is far beyond any healthy round
+// trip and elapses only when an ack or a broadcast is genuinely lost. The
+// commands that drive an outbound request instead are exempt rather than
+// budgeted, see unboundedCommands. See WithOperationTimeout.
+//
+// It is a variable so the tests can shorten it and exercise the default that
+// New applies, see export_test.go.
+//
+//nolint:gochecknoglobals // shortened by the tests, constant everywhere else.
+var defaultOperationTimeout = 60 * time.Second
 
 type entryPageResponse struct {
 	Type string `json:"type"`
@@ -273,15 +288,15 @@ type Client struct {
 	readyEvents                  []string
 	readyGracePeriod             time.Duration
 
-	// operationTimeout bounds each command once the connection is up, see
-	// WithOperationTimeout. Zero disables it.
+	// operationTimeout is set once in New, before any goroutine exists, and so
+	// is read without the lock. See WithOperationTimeout.
 	operationTimeout time.Duration
 
 	mu *sync.Mutex
 
 	// listWrites serializes the writes to each list-replacing update event,
-	// see wholeListUpdateEvents. One mutex per event name, created in New.
-	listWrites map[string]*sync.Mutex
+	// see wholeListUpdateEvents. One semaphore per event name, created in New.
+	listWrites map[string]chan struct{}
 	updates    signals.Signal[string]
 	state      state
 
@@ -357,20 +372,30 @@ func WithConnectTimeout(timeout time.Duration) Option {
 	}
 }
 
-// WithOperationTimeout bounds each individual command sent over an established
-// connection: the wait for the server's ack, and the wait for the update event
-// that confirms the command reached the local state cache. It defaults to
-// defaultOperationTimeout; a value of zero disables it, leaving every command
-// bounded only by the caller's context.
+// WithOperationTimeout bounds each individual command: the wait for the
+// server's ack, and the wait for the update event that confirms the command
+// reached the local state cache. Resync, which is a command and the lists it
+// resends, is bounded as a whole. It defaults to one minute; a value of zero
+// or less disables it, leaving every command bounded only by the caller's
+// context.
 //
 // It exists because an ack the server never sends, or an update event lost on
 // the way, would otherwise block the caller for as long as its context lives.
 // Callers whose context has no deadline - a Terraform provider is handed one
 // per RPC and Terraform sets none - would block forever.
 //
-// This is unrelated to WithConnectTimeout, which bounds establishing the
-// connection. A caller that passes its own deadline keeps it: the effective
-// bound is whichever of the two expires first.
+// The bound is on the round trip, not on the call: a write that has to queue
+// behind the other writes to the list it broadcasts, see wholeListUpdateEvents,
+// spends no budget while it waits its turn, and is bounded there by the
+// caller's context alone. A caller that wants a bound on the whole call sets
+// its own deadline, which the queue honours.
+//
+// TestNotification and TestDockerHost are exempt, see unboundedCommands.
+//
+// WithConnectTimeout bounds establishing the connection as a whole; the login
+// and setup it covers are commands, so this budget bounds them too. Either way
+// a caller that passes its own deadline keeps it: the effective bound is
+// whichever expires first.
 func WithOperationTimeout(timeout time.Duration) Option {
 	return func(c *Client) {
 		c.operationTimeout = timeout
@@ -1022,6 +1047,14 @@ func (c *Client) Resync(ctx context.Context) error {
 		)
 	}
 
+	// Resync is one command and the lists it resends, so the operation budget
+	// covers both, see WithOperationTimeout. emitAck derives one of its own,
+	// which bounds the ack alone; a server that answers the token and then
+	// never resends a list would otherwise block a caller that set no deadline
+	// forever - in the very call ErrUpdateEventTimeout points it at.
+	ctx, cancel := c.operationContext(ctx, "resync")
+	defer cancel()
+
 	gate := newReadyGate(c.resyncReadyEvents())
 
 	// Registered before the command is emitted, so that no list can arrive
@@ -1051,7 +1084,7 @@ func (c *Client) Resync(ctx context.Context) error {
 	case <-ctx.Done():
 		return fmt.Errorf(
 			"resync: %w (missing events: %s)",
-			ctx.Err(),
+			contextErr(ctx),
 			strings.Join(gate.missingRequired(), ", "),
 		)
 	}
@@ -1420,17 +1453,59 @@ type ackResponse struct {
 	Incident        map[string]any `json:"incident"`
 }
 
-// operationContext derives the context a single command runs under, bounded by
-// the configured operation timeout, see WithOperationTimeout. It returns ctx
-// unchanged when the timeout is disabled, and context.WithTimeout already keeps
+// unboundedCommands names the commands the operation budget does not apply to:
+// testNotification, behind TestNotification, and testDockerHost, behind
+// TestDockerHost.
+//
+// Every other command only touches Uptime Kuma's own database and is answered
+// in milliseconds. These two instead wait on the server while it makes a
+// request of its own - to a notification provider, to a Docker daemon - and an
+// unreachable one takes as long as that provider's own timeouts, which can run
+// well past a minute. The answer is the point of asking, so the client does not
+// cut it short; the caller's context is the bound.
+func unboundedCommands() []string {
+	return []string{
+		"testNotification",
+		"testDockerHost",
+	}
+}
+
+// operationContext derives the context command runs under, see
+// WithOperationTimeout. It returns ctx unchanged when the budget is disabled or
+// command is exempt from it, and context.WithTimeoutCause already keeps
 // whichever of the two deadlines comes first, so a caller's own deadline is
 // never extended.
-func (c *Client) operationContext(ctx context.Context) (context.Context, context.CancelFunc) {
-	if c.operationTimeout <= 0 {
+func (c *Client) operationContext(ctx context.Context, command string) (context.Context, context.CancelFunc) {
+	if c.operationTimeout <= 0 || slices.Contains(unboundedCommands(), command) {
 		return ctx, func() {}
 	}
 
 	return context.WithTimeoutCause(ctx, c.operationTimeout, &operationTimeoutError{timeout: c.operationTimeout})
+}
+
+// ackOptions returns the emit options that deliver the ack on res, together
+// with the expiry that reclaims the registration the socket.io client keeps
+// for it. That registration is otherwise dropped only by the ack itself, so a
+// command abandoned on a done context - the routine outcome now that an
+// operation timeout bounds one, see WithOperationTimeout - would retain it,
+// and the closure it holds, for the life of the socket. The expiry needs no
+// callback of its own: the waiting select reports what happened.
+//
+// A context with no deadline gets no expiry, because there is no duration to
+// give one; that is the WithOperationTimeout(0) opt-out, where a command is
+// abandoned only if the caller abandons it.
+func ackOptions(ctx context.Context, res chan<- ackResponse) []any {
+	options := []any{
+		emit.WithAck(func(response ackResponse) {
+			res <- response
+		}),
+	}
+
+	if deadline, ok := ctx.Deadline(); ok {
+		options = append(options, emit.WithTimeout(time.Until(deadline), nil))
+	}
+
+	return options
 }
 
 // emitAck emits command and returns the ack the server answered with, whether
@@ -1441,7 +1516,7 @@ func (c *Client) operationContext(ctx context.Context) (context.Context, context
 // with neither an ok nor a message, so there is nothing for syncEmit to report.
 // The returned error is reserved for an ack that never arrived.
 func (c *Client) emitAck(ctx context.Context, command string, args ...any) (ackResponse, error) {
-	ctx, cancel := c.operationContext(ctx)
+	ctx, cancel := c.operationContext(ctx, command)
 	defer cancel()
 
 	// Buffered and never closed, so a late ack (e.g. after the context
@@ -1449,9 +1524,7 @@ func (c *Client) emitAck(ctx context.Context, command string, args ...any) (ackR
 	// a closed channel.
 	res := make(chan ackResponse, 1)
 
-	args = append(args, emit.WithAck(func(response ackResponse) {
-		res <- response
-	}))
+	args = append(args, ackOptions(ctx, res)...)
 
 	err := c.socketioClient.Emit(command, args...)
 	if err != nil {
@@ -1504,27 +1577,42 @@ func wholeListUpdateEvents() []string {
 	}
 }
 
-// newListWriteLocks builds the mutex per list-replacing update event.
-func newListWriteLocks() map[string]*sync.Mutex {
-	locks := make(map[string]*sync.Mutex, len(wholeListUpdateEvents()))
+// newListWriteLocks builds the write semaphore per list-replacing update
+// event. A buffered channel with room for one token rather than a mutex,
+// because a caller waiting its turn has to be able to give up, see
+// lockListWrite.
+func newListWriteLocks() map[string]chan struct{} {
+	locks := make(map[string]chan struct{}, len(wholeListUpdateEvents()))
 	for _, event := range wholeListUpdateEvents() {
-		locks[event] = &sync.Mutex{}
+		locks[event] = make(chan struct{}, 1)
 	}
 
 	return locks
 }
 
-// lockListWrite takes the write lock of updateEvent and returns the release, or
-// nil for an event that carries no whole list and needs no serializing.
-func (c *Client) lockListWrite(updateEvent string) func() {
+// lockListWrite takes the write lock of updateEvent and returns the release. It
+// returns a nil release for an event that carries no whole list and needs no
+// serializing, and an error for a caller whose context was done before its turn
+// came.
+//
+// The wait is on ctx and not on the operation budget: the budget bounds a
+// command's own round trip and is taken once the lock is won, see
+// syncEmitWithConfirmedUpdateEvent, so what bounds the queue is whatever bounds
+// the caller. Giving up here is the only way out of a queue behind writes that
+// are each waiting out a server that stopped answering.
+func (c *Client) lockListWrite(ctx context.Context, updateEvent string) (func(), error) {
 	lock, ok := c.listWrites[updateEvent]
 	if !ok {
-		return nil
+		return nil, nil //nolint:nilnil // no lock to take is not a failure.
 	}
 
-	lock.Lock()
+	select {
+	case lock <- struct{}{}:
+		return func() { <-lock }, nil
 
-	return lock.Unlock
+	case <-ctx.Done():
+		return nil, fmt.Errorf("waiting for the other writes to %s: %w", updateEvent, contextErr(ctx))
+	}
 }
 
 // cachedByID reports whether list holds an entry with the given ID. It is what
@@ -1597,7 +1685,12 @@ func (c *Client) syncEmitWithConfirmedUpdateEvent(
 ) (ackResponse, error) {
 	// Held for the whole command, so that the server never has two reads of
 	// this list in flight and cannot emit them out of order.
-	if unlock := c.lockListWrite(updateEvent); unlock != nil {
+	unlock, err := c.lockListWrite(ctx, updateEvent)
+	if err != nil {
+		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
+	}
+
+	if unlock != nil {
 		defer unlock()
 	}
 
@@ -1605,7 +1698,7 @@ func (c *Client) syncEmitWithConfirmedUpdateEvent(
 	// own round trip, and queueing behind the other writes to this list is not
 	// part of it. Taking it earlier would let a busy list spend the budget
 	// before the command is even sent.
-	ctx, cancel := c.operationContext(ctx)
+	ctx, cancel := c.operationContext(ctx, command)
 	defer cancel()
 
 	// Buffered with room for one token and written to without blocking: the
@@ -1635,10 +1728,9 @@ func (c *Client) syncEmitWithConfirmedUpdateEvent(
 	// while the send is already blocked.
 	res := make(chan ackResponse, 1)
 
-	args = append(args, emit.WithAck(func(response ackResponse) {
-		res <- response
-	}))
-	err := c.socketioClient.Emit(command, args...)
+	args = append(args, ackOptions(ctx, res)...)
+
+	err = c.socketioClient.Emit(command, args...)
 	if err != nil {
 		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}

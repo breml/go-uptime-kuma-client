@@ -760,8 +760,9 @@ linters:
         linters:
           - testpackage
 
-      # Tests the unexported operationContext and contextErr, which describe a
-      # done context and so cannot be observed from outside the package.
+      # Tests operationContext, contextErr and operationTimeoutError, which are
+      # unexported and take or return a context the external test package
+      # cannot construct.
       - path: 'client_operation_timeout_test\.go'
         linters:
           - testpackage
