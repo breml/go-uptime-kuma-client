@@ -214,9 +214,13 @@ type Client struct {
 	readyEvents                  []string
 	readyGracePeriod             time.Duration
 
-	mu      *sync.Mutex
-	updates signals.Signal[string]
-	state   state
+	mu *sync.Mutex
+
+	// listWrites serializes the writes to each list-replacing update event,
+	// see wholeListUpdateEvents. One mutex per event name, created in New.
+	listWrites map[string]*sync.Mutex
+	updates    signals.Signal[string]
+	state      state
 
 	// sessionToken is the JWT the server handed out at login. It is what
 	// Resync logs in with, see there.
@@ -501,8 +505,9 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		readyEvents:      defaultReadyEvents,
 		readyGracePeriod: defaultReadyGracePeriod,
 
-		mu:      &sync.Mutex{},
-		updates: signals.New[string](),
+		mu:         &sync.Mutex{},
+		updates:    signals.New[string](),
+		listWrites: newListWriteLocks(),
 	}
 
 	for _, opt := range opts {
@@ -1375,10 +1380,89 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 	return response, nil
 }
 
+// wholeListUpdateEvents names the update events whose payload is a complete
+// list that replaces the cached one.
+//
+// Such a broadcast is only as fresh as the moment the server read the list, and
+// Uptime Kuma reads it after the write it belongs to and emits it afterwards,
+// over a connection that preserves that order. Two writes in flight at once
+// therefore interleave into a read-without, emit-after order, and the older
+// snapshot lands last and drops the newer write from the cache again. Writes to
+// these lists are serialized so that no two of them can interleave that way.
+//
+// updateMonitorIntoList and deleteMonitorFromList are absent on purpose: they
+// carry a single monitor and are merged into the cache rather than replacing
+// it, so they cannot go stale this way and stay concurrent.
+func wholeListUpdateEvents() []string {
+	return []string{
+		"notificationList",
+		"proxyList",
+		"dockerHostList",
+		"maintenanceList",
+		"monitorList",
+		"statusPageList",
+	}
+}
+
+// newListWriteLocks builds the mutex per list-replacing update event.
+func newListWriteLocks() map[string]*sync.Mutex {
+	locks := make(map[string]*sync.Mutex, len(wholeListUpdateEvents()))
+	for _, event := range wholeListUpdateEvents() {
+		locks[event] = &sync.Mutex{}
+	}
+
+	return locks
+}
+
+// lockListWrite takes the write lock of updateEvent and returns the release, or
+// nil for an event that carries no whole list and needs no serializing.
+func (c *Client) lockListWrite(updateEvent string) func() {
+	lock, ok := c.listWrites[updateEvent]
+	if !ok {
+		return nil
+	}
+
+	lock.Lock()
+
+	return lock.Unlock
+}
+
+// cachedByID reports whether list holds an entry with the given ID. It is what
+// the create and delete confirmations are built from: a create is settled once
+// the ID the server assigned is in the cache, a delete once it is gone.
+func cachedByID[T interface{ GetID() int64 }](list []T, id int64) bool {
+	for i := range list {
+		if list[i].GetID() == id {
+			return true
+		}
+	}
+
+	return false
+}
+
+// updateEventConfirm reports whether the local state cache already reflects the
+// write the server acknowledged with response.
+//
+// It exists because the update events are broadcasts with no reference to the
+// write that caused them: they carry a whole list, and the listener sees only
+// its name. With several writes in flight on one connection - a Terraform apply
+// runs its resource operations concurrently over a single client - the first
+// broadcast a waiting write observes may well be the one a neighbouring write
+// triggered, taken from a list that predates its own change. Accepting it
+// leaves the cache one broadcast behind, and the cache-served getters then
+// report a resource the server has as missing.
+//
+// A confirmation closes that gap by looking at what the cache actually holds,
+// so waiting continues until the write is visible there.
+type updateEventConfirm func(response ackResponse) bool
+
 // syncEmitWithUpdateEvent emits command and returns once the server has
-// acknowledged it and has broadcast an updateEvent, which is what refreshes the
-// local state cache. The listener matches the event by name, so the client
-// cannot tell which write caused the broadcast it observes.
+// acknowledged it and has broadcast updateEvent, which is what refreshes the
+// local state cache.
+//
+// The broadcast is matched by name alone, so the caller cannot tell which write
+// caused the one it observes. Callers that can recognize their own write pass a
+// confirmation to syncEmitWithConfirmedUpdateEvent instead.
 //
 // If the ack reports success but no update event arrives before ctx is done,
 // the response is returned together with an error wrapping
@@ -1391,18 +1475,48 @@ func (c *Client) syncEmitWithUpdateEvent(
 	updateEvent string,
 	args ...any,
 ) (ackResponse, error) {
-	done := make(chan struct{})
-	closeDone := sync.OnceFunc(func() {
-		close(done)
-	})
-	defer closeDone()
+	return c.syncEmitWithConfirmedUpdateEvent(ctx, command, updateEvent, nil, args...)
+}
 
-	// Register listener for notifications updates.
-	// Signal done, if update is received and remove listener.
+// syncEmitWithConfirmedUpdateEvent is syncEmitWithUpdateEvent for a caller that
+// can recognize its own write in the state cache.
+//
+// Every broadcast of updateEvent makes it re-evaluate confirm, and it returns
+// once the ack has arrived and confirm reports the write is visible. A confirm
+// that never does is reported like a broadcast that never arrives, as
+// ErrUpdateEventTimeout: the server applied the command either way, and Resync
+// is what rebuilds the cache.
+//
+// A nil confirm keeps the plain behaviour of returning on the first broadcast.
+func (c *Client) syncEmitWithConfirmedUpdateEvent(
+	ctx context.Context,
+	command string,
+	updateEvent string,
+	confirm updateEventConfirm,
+	args ...any,
+) (ackResponse, error) {
+	// Held for the whole command, so that the server never has two reads of
+	// this list in flight and cannot emit them out of order.
+	if unlock := c.lockListWrite(updateEvent); unlock != nil {
+		defer unlock()
+	}
+
+	// Buffered with room for one token and written to without blocking: the
+	// listener runs on the goroutine that applied the state and must never be
+	// held up, and a token that is already pending says everything a second
+	// one would. The waiter re-reads the cache after every token it takes, so
+	// a broadcast that is coalesced away cannot hide a state change.
+	updated := make(chan struct{}, 1)
+
 	listenerID := uuid.New()
 	c.updates.AddListener(func(_ context.Context, update string) {
-		if update == updateEvent {
-			closeDone()
+		if update != updateEvent {
+			return
+		}
+
+		select {
+		case updated <- struct{}{}:
+		default:
 		}
 	}, listenerID.String())
 	defer c.updates.RemoveListener(listenerID.String())
@@ -1422,37 +1536,40 @@ func (c *Client) syncEmitWithUpdateEvent(
 		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
 
-	return awaitAckAndUpdateEvent(ctx, command, done, res)
+	return awaitAckAndUpdateEvent(ctx, command, updated, res, confirm)
 }
 
 // awaitAckAndUpdateEvent waits for the ack delivered on res and for the update
-// event that closes done, and reports which of the two arrived before ctx was
-// done.
+// event that confirm accepts, or, when confirm is nil, for the first update
+// event signalled on updated.
 //
 // An ack that reports a failure is returned as the server's error even when ctx
 // is done as well, because the rejection is the more useful answer and it is
 // what the caller would have received had the ack arrived a moment earlier. An
 // update event without an ack stays a plain context error: without the ack the
 // client knows neither the outcome of the command nor the ID the server
-// assigned.
+// assigned, and a confirmation cannot run without the ID either.
 func awaitAckAndUpdateEvent(
 	ctx context.Context,
 	command string,
-	done <-chan struct{},
+	updated <-chan struct{},
 	res <-chan ackResponse,
+	confirm updateEventConfirm,
 ) (ackResponse, error) {
 	var (
-		response ackResponse
-		acked    bool
+		response  ackResponse
+		acked     bool
+		sawUpdate bool
 	)
 
-	// Ensure, we have received both signals: done and ack
-	// Setting channel to nil blocks forever, thisway we ensure, that
-	// we also receive the second signal.
-	for done != nil || res != nil {
+	for {
+		if acked && confirmUpdate(confirm, response, sawUpdate) {
+			return response, nil
+		}
+
 		select {
-		case <-done:
-			done = nil
+		case <-updated:
+			sawUpdate = true
 
 		case response = <-res:
 			if !response.OK {
@@ -1460,6 +1577,8 @@ func awaitAckAndUpdateEvent(
 			}
 
 			acked = true
+			// Nil blocks forever, so the loop keeps waiting on the remaining
+			// signals instead of spinning on a channel that is done.
 			res = nil
 
 		case <-ctx.Done():
@@ -1479,43 +1598,56 @@ func awaitAckAndUpdateEvent(
 			}
 
 			select {
-			case <-done:
-				done = nil
+			case <-updated:
+				sawUpdate = true
 
 			default:
 			}
 
-			return resultOnContextDone(ctx, command, response, acked, done == nil)
+			return resultOnContextDone(
+				ctx, command, response, acked, acked && confirmUpdate(confirm, response, sawUpdate),
+			)
 		}
 	}
+}
 
-	return response, nil
+// confirmUpdate reports whether the write acknowledged by response is settled:
+// visible in the state cache when the caller supplied a confirmation, and
+// otherwise simply broadcast at least once.
+func confirmUpdate(confirm updateEventConfirm, response ackResponse, sawUpdate bool) bool {
+	if confirm == nil {
+		return sawUpdate
+	}
+
+	return confirm(response)
 }
 
 // resultOnContextDone reports the outcome of a command whose context is done,
 // from the signals that are in hand: acked tells whether the ack in response
-// arrived, updated whether the update event did.
+// arrived, settled whether the write is visible in the state cache - the
+// update event for a command that waits for one by name, the confirmation for
+// a command that recognizes its own write.
 func resultOnContextDone(
 	ctx context.Context,
 	command string,
 	response ackResponse,
 	acked bool,
-	updated bool,
+	settled bool,
 ) (ackResponse, error) {
 	switch {
 	case acked && !response.OK:
 		return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
 
-	case acked && updated:
+	case acked && settled:
 		// Both signals are in hand and the context merely expired while they
 		// were collected. Nothing is missing, so this is the same success the
 		// caller's loop returns.
 		return response, nil
 
 	case acked:
-		// The server applied the command, only its broadcast is missing.
-		// Returning the response lets the caller keep what the ack carried,
-		// e.g. the ID of a created resource.
+		// The server applied the command, only the state cache has not caught
+		// up with it. Returning the response lets the caller keep what the ack
+		// carried, e.g. the ID of a created resource.
 		return response, &UpdateEventTimeoutError{Command: command, Err: ctx.Err()}
 
 	default:

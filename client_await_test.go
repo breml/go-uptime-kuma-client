@@ -19,8 +19,12 @@ const awaitIterations = 100
 type awaitSignals struct {
 	// ack is placed in the buffered ack channel if it is not nil.
 	ack *ackResponse
-	// updateEvent closes the channel the update event handler closes.
+	// updateEvent places a token in the channel the update event handler
+	// writes to.
 	updateEvent bool
+	// confirm is the confirmation the caller supplied, nil for a caller that
+	// returns on the first update event.
+	confirm updateEventConfirm
 }
 
 // awaitWith drives awaitAckAndUpdateEvent with the signals already in the state
@@ -31,12 +35,12 @@ func awaitWith(ctx context.Context, signals awaitSignals) (ackResponse, error) {
 		res <- *signals.ack
 	}
 
-	done := make(chan struct{})
+	updated := make(chan struct{}, 1)
 	if signals.updateEvent {
-		close(done)
+		updated <- struct{}{}
 	}
 
-	return awaitAckAndUpdateEvent(ctx, "addNotification", done, res)
+	return awaitAckAndUpdateEvent(ctx, "addNotification", updated, res, signals.confirm)
 }
 
 func expiredContext(t *testing.T) context.Context {
@@ -187,6 +191,116 @@ func TestAwaitAckAndUpdateEvent(t *testing.T) {
 
 			require.ErrorIs(t, err, context.DeadlineExceeded)
 			require.NotErrorIs(t, err, ErrUpdateEventTimeout)
+		}
+	})
+}
+
+// TestAwaitAckAndUpdateEventConfirmation pins down what a confirmation changes:
+// the wait no longer ends on the first broadcast, it ends when the state cache
+// holds the write. The broadcasts carry a whole list and are matched by name, so
+// with several writes in flight on one connection the first one a waiter sees is
+// routinely a neighbour's, taken from a list that predates its own change.
+func TestAwaitAckAndUpdateEventConfirmation(t *testing.T) {
+	t.Parallel()
+
+	okAck := ackResponse{OK: true, Msg: "ok", ID: 4242}
+
+	t.Run("a_stale_broadcast_does_not_end_the_wait", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := expiredContext(t)
+
+		for range awaitIterations {
+			// The update event is in hand, but the cache does not hold the
+			// write: that is exactly the broadcast a neighbouring write
+			// caused. Without the confirmation this returns success and leaves
+			// the caller with a cache that is one broadcast behind.
+			_, err := awaitWith(ctx, awaitSignals{
+				ack:         &okAck,
+				updateEvent: true,
+				confirm:     func(ackResponse) bool { return false },
+			})
+
+			require.ErrorIs(t, err, ErrUpdateEventTimeout)
+			require.ErrorIs(t, err, context.DeadlineExceeded)
+		}
+	})
+
+	t.Run("the_confirmed_write_succeeds_without_any_broadcast", func(t *testing.T) {
+		t.Parallel()
+
+		// A broadcast that arrived while the command was still in flight has
+		// already refreshed the cache, so there is nothing left to wait for.
+		ctx := expiredContext(t)
+
+		for range awaitIterations {
+			response, err := awaitWith(ctx, awaitSignals{
+				ack:     &okAck,
+				confirm: func(ackResponse) bool { return true },
+			})
+
+			require.NoError(t, err)
+			require.Equal(t, okAck, response)
+		}
+	})
+
+	t.Run("the_confirmation_sees_the_ack", func(t *testing.T) {
+		t.Parallel()
+
+		// The ID a create is confirmed by is the one the ack carries, so the
+		// confirmation has to run after the ack and be handed it.
+		for range awaitIterations {
+			var seen []int64
+
+			response, err := awaitWith(t.Context(), awaitSignals{
+				ack:     &okAck,
+				confirm: func(response ackResponse) bool { seen = append(seen, response.ID); return true },
+			})
+
+			require.NoError(t, err)
+			require.Equal(t, okAck, response)
+			require.Equal(t, []int64{okAck.ID}, seen)
+		}
+	})
+
+	t.Run("a_later_broadcast_re_runs_the_confirmation", func(t *testing.T) {
+		t.Parallel()
+
+		// The first broadcast is the neighbour's and the second is this
+		// write's own. Only re-reading the cache after every one of them gets
+		// the waiter past the first.
+		for range awaitIterations {
+			updated := make(chan struct{}, 1)
+			updated <- struct{}{}
+
+			res := make(chan ackResponse, 1)
+			res <- okAck
+
+			calls := 0
+			confirm := func(ackResponse) bool {
+				calls++
+				if calls == 1 {
+					// Stand in for this write's own broadcast landing while
+					// the neighbour's is still being looked at. Sent the way
+					// the listener sends it, without blocking: the initial
+					// token is still pending whenever the ack was taken
+					// first.
+					select {
+					case updated <- struct{}{}:
+					default:
+					}
+
+					return false
+				}
+
+				return true
+			}
+
+			response, err := awaitAckAndUpdateEvent(t.Context(), "addNotification", updated, res, confirm)
+
+			require.NoError(t, err)
+			require.Equal(t, okAck, response)
+			require.Equal(t, 2, calls)
 		}
 	})
 }

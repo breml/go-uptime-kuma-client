@@ -62,7 +62,11 @@ func (c *Client) GetNotificationAs(ctx context.Context, id int64, target any) er
 // ID an UpdateEventTimeoutError carries, so retrying the call would create a
 // duplicate.
 func (c *Client) CreateNotification(ctx context.Context, notif notification.Notification) (int64, error) {
-	response, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notif, nil)
+	response, err := c.syncEmitWithConfirmedUpdateEvent(
+		ctx, "addNotification", "notificationList",
+		func(response ackResponse) bool { return c.hasNotification(response.ID) },
+		notif, nil,
+	)
 	if err != nil {
 		if errors.Is(err, ErrUpdateEventTimeout) {
 			return response.ID, withCreatedID(err, response.ID)
@@ -78,6 +82,13 @@ func (c *Client) CreateNotification(ctx context.Context, notif notification.Noti
 //
 // An error wrapping ErrUpdateEventTimeout means the notification was updated and
 // only the update event is missing.
+//
+// Unlike CreateNotification and DeleteNotification this waits for the broadcast
+// by name alone, because an edit changes no property the cache can be checked
+// against: the notification is in the list before and after it. With several
+// writes in flight the broadcast it observes may therefore be a neighbour's,
+// and the cache can hold the pre-edit values until the next one arrives. A read
+// that has to see the edit resyncs, as GetNotification documents.
 func (c *Client) UpdateNotification(ctx context.Context, notif notification.Notification) error {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "addNotification", "notificationList", notif, notif.GetID())
 	return err
@@ -88,8 +99,22 @@ func (c *Client) UpdateNotification(ctx context.Context, notif notification.Noti
 // An error wrapping ErrUpdateEventTimeout means the notification was deleted and
 // only the update event is missing.
 func (c *Client) DeleteNotification(ctx context.Context, id int64) error {
-	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteNotification", "notificationList", id)
+	_, err := c.syncEmitWithConfirmedUpdateEvent(
+		ctx, "deleteNotification", "notificationList",
+		func(ackResponse) bool { return !c.hasNotification(id) },
+		id,
+	)
+
 	return err
+}
+
+// hasNotification reports whether the state cache holds a notification with the
+// given ID.
+func (c *Client) hasNotification(id int64) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return cachedByID(c.state.notifications, id)
 }
 
 // ErrNotificationTypeNotSupported is returned by TestNotification if the server

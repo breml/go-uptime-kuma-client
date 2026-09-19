@@ -48,6 +48,23 @@ real-time communication.
 - Uses UUID-based listeners for tracking specific operations
 - Ensures state consistency before returning from operations
 
+The update events are broadcasts matched by name, so a waiting write cannot tell
+which write caused the one it sees. Two rules keep the cache correct when several
+writes are in flight on one connection (a Terraform apply runs its resource
+operations concurrently over a single client):
+
+- `syncEmitWithConfirmedUpdateEvent()` takes a confirmation and keeps waiting
+  until the state cache actually holds the write. Create and delete supply one
+  (ID present / ID gone); edit, pause and resume cannot, because they change no
+  property the cache can be checked against, and keep the plain name-matched
+  wait.
+- Writes whose broadcast replaces a whole list are serialized per event, see
+  `wholeListUpdateEvents()`. Uptime Kuma reads the list after the write and emits
+  it afterwards, so two interleaved writes can put the older snapshot last and
+  drop the newer write from the cache.
+
+`Resync()` remains the way out of a cache that missed a broadcast anyway.
+
 **NotificationIDList Handling**:
 
 - Server expects `map[string]bool` format for notification IDs

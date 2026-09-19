@@ -27,9 +27,18 @@ import (
 //nolint:gochecknoglobals // fixed table, shared by the fake server below.
 var requiredReadyEvents = []string{
 	`42["monitorList",{}]`,
-	`42["notificationList",[]]`,
+	`42["notificationList",[` + fakeSeededNotification + `]]`,
 	`42["statusPageList",{}]`,
 }
+
+// fakeSeededNotificationID is the ID of the notification the fake server has in
+// its list from the start. A delete has to name a notification the cache holds,
+// or the client sees the state the delete asks for before it emits anything.
+const fakeSeededNotificationID = 1
+
+// fakeSeededNotification is that notification, as the server sends it.
+const fakeSeededNotification = `{"id":1,"name":"seeded","active":true,"userId":1,` +
+	`"isDefault":false,"config":"{\"type\":\"generic\",\"name\":\"seeded\"}"}`
 
 // optionalReadyEvents are the best-effort update events. A server that never
 // emits them (an older version, or a reverse proxy dropping them) must not
@@ -767,7 +776,7 @@ func TestAckDeliveryAroundDeadline(t *testing.T) {
 			// The fake acks the command but never emits notificationList, so
 			// the call keeps waiting for its update event and always runs into
 			// the deadline — with the ack landing somewhere around it.
-			err := kumaClient.DeleteNotification(callCtx, 1)
+			err := kumaClient.DeleteNotification(callCtx, fakeSeededNotificationID)
 			callCancel()
 
 			// Both outcomes of the race keep wrapping the context error: the
@@ -889,7 +898,7 @@ func TestUpdateEventTimeoutKeepsSuccessfulAck(t *testing.T) {
 		callCtx, callCancel := context.WithTimeout(ctx, callTimeout)
 		defer callCancel()
 
-		err := kumaClient.DeleteNotification(callCtx, 1)
+		err := kumaClient.DeleteNotification(callCtx, fakeSeededNotificationID)
 
 		require.ErrorIs(t, err, kuma.ErrUpdateEventTimeout)
 		require.ErrorIs(t, err, context.DeadlineExceeded)
@@ -904,7 +913,7 @@ func TestUpdateEventTimeoutKeepsSuccessfulAck(t *testing.T) {
 		callCtx, callCancel := context.WithTimeout(ctx, callTimeout)
 		defer callCancel()
 
-		err := kumaClient.DeleteNotification(callCtx, 1)
+		err := kumaClient.DeleteNotification(callCtx, fakeSeededNotificationID)
 
 		require.ErrorIs(t, err, context.DeadlineExceeded)
 		require.NotErrorIs(t, err, kuma.ErrUpdateEventTimeout,
