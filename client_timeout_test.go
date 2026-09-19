@@ -13,12 +13,14 @@ import (
 	"net/http/httptest"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	kuma "github.com/breml/go-uptime-kuma-client"
+	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
 // fakeSocketIOServer implements a minimal socket.io server over HTTP long-polling.
@@ -37,6 +39,15 @@ type fakeSocketIOServer struct {
 	// The transport comes up, so the dial succeeds, but the connect event
 	// never arrives.
 	noConnectACK bool
+	// swallowACKsAfterLogin answers the login and then leaves every further
+	// command unacknowledged. The connection stays up and keeps carrying
+	// traffic, which is what makes a lost ack indistinguishable from a slow
+	// one to the client, and is how the Uptime Kuma acceptance suite hung in
+	// CI.
+	swallowACKsAfterLogin bool
+	// loggedIn records that the login has been answered, so that
+	// swallowACKsAfterLogin only applies to what comes after it.
+	loggedIn atomic.Bool
 }
 
 func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -127,7 +138,11 @@ func (s *fakeSocketIOServer) handleClientMessage(body []byte) {
 		// the connect, which is what the client waits for before it logs in.
 		s.messages <- []byte(`42["loginRequired"]`)
 
-	case '2': // socket.io EVENT — the login request
+	case '2': // socket.io EVENT — the login request, then any command
+		if s.swallowACKsAfterLogin && s.loggedIn.Swap(true) {
+			return
+		}
+
 		// Extract the ack ID: digits immediately after the "2" type byte.
 		i := 1
 		for i < len(socketIOData) && socketIOData[i] >= '0' && socketIOData[i] <= '9' {
@@ -713,4 +728,150 @@ func TestNewTransportErrorSurfaced(t *testing.T) {
 	require.NotErrorIs(t, err, context.DeadlineExceeded,
 		"a real transport error should be surfaced, not a context deadline")
 	require.Less(t, elapsed, timeout, "New() should fail fast, not wait out the connect timeout")
+}
+
+// newOperationTimeoutClient connects to a fake server that completes the login
+// and then leaves every command unacknowledged, and returns the connected
+// client. The connection itself is healthy throughout: what the test exercises
+// is an ack that never comes, not a connection that breaks.
+func newOperationTimeoutClient(t *testing.T, opts ...kuma.Option) *kuma.Client {
+	t.Helper()
+
+	server := httptest.NewServer(&fakeSocketIOServer{
+		messages:              make(chan []byte, 10),
+		swallowACKsAfterLogin: true,
+		eventsAfterLogin: []string{
+			`42["monitorList",{}]`,
+			`42["notificationList",[]]`,
+			`42["statusPageList",{}]`,
+		},
+	})
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	t.Cleanup(func() {
+		cancel()
+		server.CloseClientConnections()
+		server.Close()
+	})
+
+	client, err := kuma.New(
+		ctx, server.URL, "user", "pass",
+		append([]kuma.Option{
+			kuma.WithConnectTimeout(5 * time.Second),
+			kuma.WithReadyGracePeriod(0),
+		}, opts...)...,
+	)
+	require.NoError(t, err, "connecting to the fake server must succeed")
+
+	return client
+}
+
+// operationTimeoutMonitor is the smallest monitor CreateMonitor accepts. Its
+// contents are irrelevant: the command never gets an answer.
+func operationTimeoutMonitor() *monitor.HTTP {
+	return &monitor.HTTP{
+		Base: monitor.Base{
+			Name:       "operation timeout",
+			Interval:   60,
+			MaxRetries: 3,
+			IsActive:   true,
+		},
+		HTTPDetails: monitor.HTTPDetails{
+			URL:     "https://example.com",
+			Timeout: 48,
+			Method:  "GET",
+		},
+	}
+}
+
+// TestOperationTimeoutLostAck is the regression test for a command whose ack
+// never arrives. Before WithOperationTimeout such a command waited on the
+// caller's context alone, so a caller with no deadline - a Terraform provider
+// is handed one per RPC and Terraform sets none - blocked forever. The
+// acceptance suite of terraform-provider-uptimekuma hit exactly this: a single
+// CreateMonitor sat in the ack wait for over nine minutes until the whole test
+// binary was killed by its own -timeout.
+func TestOperationTimeoutLostAck(t *testing.T) {
+	t.Parallel()
+
+	const operationTimeout = 200 * time.Millisecond
+
+	client := newOperationTimeoutClient(t, kuma.WithOperationTimeout(operationTimeout))
+
+	// Deliberately without a deadline: it is the client's own budget that has
+	// to end this call, which is the whole point of the option. t.Context() is
+	// cancelled when the test ends, not before, so it imposes none.
+	start := time.Now()
+	_, err := client.CreateMonitor(t.Context(), operationTimeoutMonitor())
+	elapsed := time.Since(start)
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, kuma.ErrOperationTimeout,
+		"a lost ack must be reported as the client's own timeout, got: %v", err)
+	require.ErrorIs(t, err, context.DeadlineExceeded,
+		"the operation timeout must keep reporting as an expired deadline")
+	require.NotErrorIs(t, err, kuma.ErrUpdateEventTimeout,
+		"without an ack the command was never confirmed applied")
+	require.Less(t, elapsed, 20*operationTimeout,
+		"the call must return on the operation timeout, not hang")
+}
+
+// TestOperationTimeoutOnPlainCommand covers the emitAck path, which commands
+// that need no update event use.
+func TestOperationTimeoutOnPlainCommand(t *testing.T) {
+	t.Parallel()
+
+	const operationTimeout = 200 * time.Millisecond
+
+	client := newOperationTimeoutClient(t, kuma.WithOperationTimeout(operationTimeout))
+
+	start := time.Now()
+	_, err := client.GetTags(t.Context())
+	elapsed := time.Since(start)
+
+	require.ErrorIs(t, err, kuma.ErrOperationTimeout)
+	require.Less(t, elapsed, 20*operationTimeout)
+}
+
+// TestOperationTimeoutDisabled pins the opt-out: with the timeout off, a lost
+// ack is bounded by the caller's context and by nothing else, and the error is
+// the caller's own.
+func TestOperationTimeoutDisabled(t *testing.T) {
+	t.Parallel()
+
+	const callerTimeout = 200 * time.Millisecond
+
+	client := newOperationTimeoutClient(t, kuma.WithOperationTimeout(0))
+
+	ctx, cancel := context.WithTimeout(t.Context(), callerTimeout)
+	defer cancel()
+
+	_, err := client.GetTags(ctx)
+
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.NotErrorIs(t, err, kuma.ErrOperationTimeout,
+		"with the option disabled the expiry is the caller's, not the client's")
+}
+
+// TestOperationTimeoutKeepsShorterCallerDeadline pins that the option only ever
+// tightens the bound: a caller that wants to give up sooner still does, and the
+// error stays its own.
+func TestOperationTimeoutKeepsShorterCallerDeadline(t *testing.T) {
+	t.Parallel()
+
+	const callerTimeout = 200 * time.Millisecond
+
+	client := newOperationTimeoutClient(t, kuma.WithOperationTimeout(time.Minute))
+
+	ctx, cancel := context.WithTimeout(t.Context(), callerTimeout)
+	defer cancel()
+
+	start := time.Now()
+	_, err := client.GetTags(ctx)
+	elapsed := time.Since(start)
+
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.NotErrorIs(t, err, kuma.ErrOperationTimeout)
+	require.Less(t, elapsed, 20*callerTimeout,
+		"the caller's shorter deadline must win over the client's budget")
 }

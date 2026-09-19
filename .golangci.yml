@@ -760,6 +760,12 @@ linters:
         linters:
           - testpackage
 
+      # Tests the unexported operationContext and contextErr, which describe a
+      # done context and so cannot be observed from outside the package.
+      - path: 'client_operation_timeout_test\.go'
+        linters:
+          - testpackage
+
       # These linters do not make sense for monitor and notification files.
       - path: (monitor|notification|proxy)/.*\.go
         linters:
