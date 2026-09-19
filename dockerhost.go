@@ -40,7 +40,11 @@ func (c *Client) GetDockerHost(_ context.Context, id int64) (*dockerhost.DockerH
 // ID an UpdateEventTimeoutError carries, so retrying the call would create a
 // duplicate.
 func (c *Client) CreateDockerHost(ctx context.Context, config dockerhost.Config) (int64, error) {
-	response, err := c.syncEmitWithUpdateEvent(ctx, "addDockerHost", "dockerHostList", config, nil)
+	response, err := c.syncEmitWithConfirmedUpdateEvent(
+		ctx, "addDockerHost", "dockerHostList",
+		func(response ackResponse) bool { return c.hasDockerHost(response.ID) },
+		config, nil,
+	)
 	if err != nil {
 		if errors.Is(err, ErrUpdateEventTimeout) {
 			return response.ID, fmt.Errorf("create docker host: %w", withCreatedID(err, response.ID))
@@ -56,6 +60,13 @@ func (c *Client) CreateDockerHost(ctx context.Context, config dockerhost.Config)
 //
 // An error wrapping ErrUpdateEventTimeout means the Docker host was updated and
 // only the update event is missing.
+//
+// Unlike CreateDockerHost and DeleteDockerHost this waits for the broadcast by name alone,
+// because an edit changes no property the cache can be checked against: the
+// Docker host is in the list before and after it. With several writes in flight the
+// broadcast it observes may therefore be a neighbour's, and the cache can hold
+// the pre-edit values until the next one arrives. A read that has to see the
+// edit resyncs.
 func (c *Client) UpdateDockerHost(ctx context.Context, config dockerhost.Config) error {
 	if config.ID == 0 {
 		return errors.New("update docker host: config must have ID set")
@@ -74,7 +85,11 @@ func (c *Client) UpdateDockerHost(ctx context.Context, config dockerhost.Config)
 // An error wrapping ErrUpdateEventTimeout means the Docker host was deleted and
 // only the update event is missing.
 func (c *Client) DeleteDockerHost(ctx context.Context, id int64) error {
-	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteDockerHost", "dockerHostList", id)
+	_, err := c.syncEmitWithConfirmedUpdateEvent(
+		ctx, "deleteDockerHost", "dockerHostList",
+		func(ackResponse) bool { return !c.hasDockerHost(id) },
+		id,
+	)
 	if err != nil {
 		return fmt.Errorf("delete docker host %d: %w", id, err)
 	}
@@ -111,4 +126,13 @@ func (c *Client) TestDockerHost(ctx context.Context, config dockerhost.Config) (
 	}
 
 	return result, nil
+}
+
+// hasDockerHost reports whether the state cache holds a Docker host with the
+// given ID.
+func (c *Client) hasDockerHost(id int64) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return cachedByID(c.state.dockerHosts, id)
 }

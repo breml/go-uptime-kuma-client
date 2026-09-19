@@ -81,7 +81,11 @@ func (c *Client) CreateMonitor(ctx context.Context, mon monitor.Monitor) (int64,
 
 	monitorData["notificationIDList"] = notificationIDList
 
-	response, err := c.syncEmitWithUpdateEvent(ctx, "add", "updateMonitorIntoList", monitorData)
+	response, err := c.syncEmitWithConfirmedUpdateEvent(
+		ctx, "add", "updateMonitorIntoList",
+		func(response ackResponse) bool { return c.hasMonitor(response.MonitorID) },
+		monitorData,
+	)
 	if err != nil {
 		if errors.Is(err, ErrUpdateEventTimeout) {
 			return response.MonitorID, fmt.Errorf("create monitor: %w", withCreatedID(err, response.MonitorID))
@@ -102,6 +106,13 @@ func (c *Client) CreateMonitor(ctx context.Context, mon monitor.Monitor) (int64,
 //
 // An error wrapping ErrUpdateEventTimeout means the monitor was updated and only
 // the update event is missing.
+//
+// Unlike CreateMonitor and DeleteMonitor, this and the two pause/resume calls
+// wait for the broadcast by name alone, because they change no property the
+// cache can be checked against: the monitor is in the list before and after
+// them. With several writes in flight the broadcast one of them observes may
+// therefore be a neighbour's, and the cache can hold the previous values until
+// the next broadcast arrives. GetMonitor is unaffected, it asks the server.
 func (c *Client) UpdateMonitor(ctx context.Context, mon monitor.Monitor) error {
 	monitorData, err := structToMap(mon)
 	if err != nil {
@@ -129,7 +140,11 @@ func (c *Client) UpdateMonitor(ctx context.Context, mon monitor.Monitor) error {
 // An error wrapping ErrUpdateEventTimeout means the monitor was deleted and only
 // the update event is missing.
 func (c *Client) DeleteMonitor(ctx context.Context, monitorID int64) error {
-	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteMonitor", "deleteMonitorFromList", monitorID)
+	_, err := c.syncEmitWithConfirmedUpdateEvent(
+		ctx, "deleteMonitor", "deleteMonitorFromList",
+		func(ackResponse) bool { return !c.hasMonitor(monitorID) },
+		monitorID,
+	)
 	if err != nil {
 		return fmt.Errorf("delete monitor %d: %w", monitorID, err)
 	}
@@ -161,4 +176,12 @@ func (c *Client) ResumeMonitor(ctx context.Context, monitorID int64) error {
 	}
 
 	return nil
+}
+
+// hasMonitor reports whether the state cache holds a monitor with the given ID.
+func (c *Client) hasMonitor(id int64) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return cachedByID(c.state.monitors, id)
 }

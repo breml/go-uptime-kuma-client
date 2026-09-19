@@ -58,7 +58,11 @@ func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenan
 		return nil, fmt.Errorf("create maintenance: %w", err)
 	}
 
-	response, err := c.syncEmitWithUpdateEvent(ctx, "addMaintenance", "maintenanceList", maintenanceData)
+	response, err := c.syncEmitWithConfirmedUpdateEvent(
+		ctx, "addMaintenance", "maintenanceList",
+		func(response ackResponse) bool { return c.hasMaintenance(response.MaintenanceID) },
+		maintenanceData,
+	)
 	if err != nil {
 		if errors.Is(err, ErrUpdateEventTimeout) {
 			m.ID = response.MaintenanceID
@@ -80,6 +84,14 @@ func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenan
 //
 // An error wrapping ErrUpdateEventTimeout means the maintenance window was
 // updated and only the update event is missing.
+//
+// Unlike CreateMaintenance and DeleteMaintenance, this and the two
+// pause/resume calls wait for the broadcast by name alone, because they change
+// no property the cache can be checked against: the maintenance window is in
+// the list before and after them. With several writes in flight the broadcast
+// one of them observes may therefore be a neighbour's, and the cache can hold
+// the previous values until the next broadcast arrives. GetMaintenance is
+// unaffected, it asks the server.
 func (c *Client) UpdateMaintenance(ctx context.Context, m *maintenance.Maintenance) error {
 	maintenanceData, err := structToMap(m)
 	if err != nil {
@@ -99,7 +111,11 @@ func (c *Client) UpdateMaintenance(ctx context.Context, m *maintenance.Maintenan
 // An error wrapping ErrUpdateEventTimeout means the maintenance window was
 // deleted and only the update event is missing.
 func (c *Client) DeleteMaintenance(ctx context.Context, id int64) error {
-	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteMaintenance", "maintenanceList", id)
+	_, err := c.syncEmitWithConfirmedUpdateEvent(
+		ctx, "deleteMaintenance", "maintenanceList",
+		func(ackResponse) bool { return !c.hasMaintenance(id) },
+		id,
+	)
 	if err != nil {
 		return fmt.Errorf("delete maintenance: %w", err)
 	}
@@ -217,4 +233,20 @@ func (c *Client) GetMaintenanceStatusPage(ctx context.Context, maintenanceID int
 	}
 
 	return statusPageIDs, nil
+}
+
+// hasMaintenance reports whether the state cache holds a maintenance window
+// with the given ID. maintenance.Maintenance carries its ID as a plain field
+// rather than through GetID, so this cannot use cachedByID.
+func (c *Client) hasMaintenance(id int64) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for i := range c.state.maintenances {
+		if c.state.maintenances[i].ID == id {
+			return true
+		}
+	}
+
+	return false
 }

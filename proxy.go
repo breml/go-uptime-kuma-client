@@ -46,7 +46,11 @@ func (c *Client) GetProxy(_ context.Context, id int64) (*proxy.Proxy, error) {
 // UpdateEventTimeoutError carries, so retrying the call would create a
 // duplicate.
 func (c *Client) CreateProxy(ctx context.Context, config proxy.Config) (int64, error) {
-	response, err := c.syncEmitWithUpdateEvent(ctx, "addProxy", "proxyList", config, nil)
+	response, err := c.syncEmitWithConfirmedUpdateEvent(
+		ctx, "addProxy", "proxyList",
+		func(response ackResponse) bool { return c.hasProxy(response.ID) },
+		config, nil,
+	)
 	if err != nil {
 		if errors.Is(err, ErrUpdateEventTimeout) {
 			return response.ID, fmt.Errorf("create proxy: %w", withCreatedID(err, response.ID))
@@ -62,6 +66,13 @@ func (c *Client) CreateProxy(ctx context.Context, config proxy.Config) (int64, e
 //
 // An error wrapping ErrUpdateEventTimeout means the proxy was updated and only
 // the update event is missing.
+//
+// Unlike CreateProxy and DeleteProxy this waits for the broadcast by name alone,
+// because an edit changes no property the cache can be checked against: the
+// proxy is in the list before and after it. With several writes in flight the
+// broadcast it observes may therefore be a neighbour's, and the cache can hold
+// the pre-edit values until the next one arrives. A read that has to see the
+// edit resyncs.
 func (c *Client) UpdateProxy(ctx context.Context, config proxy.Config) error {
 	if config.ID == 0 {
 		return errors.New("update proxy: config must have ID set")
@@ -80,10 +91,22 @@ func (c *Client) UpdateProxy(ctx context.Context, config proxy.Config) error {
 // An error wrapping ErrUpdateEventTimeout means the proxy was deleted and only
 // the update event is missing.
 func (c *Client) DeleteProxy(ctx context.Context, id int64) error {
-	_, err := c.syncEmitWithUpdateEvent(ctx, "deleteProxy", "proxyList", id)
+	_, err := c.syncEmitWithConfirmedUpdateEvent(
+		ctx, "deleteProxy", "proxyList",
+		func(ackResponse) bool { return !c.hasProxy(id) },
+		id,
+	)
 	if err != nil {
 		return fmt.Errorf("delete proxy %d: %w", id, err)
 	}
 
 	return nil
+}
+
+// hasProxy reports whether the state cache holds a proxy with the given ID.
+func (c *Client) hasProxy(id int64) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return cachedByID(c.state.proxies, id)
 }
