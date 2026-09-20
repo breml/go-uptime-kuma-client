@@ -83,6 +83,7 @@ func TestTypeMatchesUpstreamProviderName(t *testing.T) {
 		"matrix",
 		"mattermost",
 		"max",
+		"Milky",
 		"nextcloudtalk",
 		"nostr",
 		"notifery",

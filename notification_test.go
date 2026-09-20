@@ -5451,6 +5451,66 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, pinglet)
 			},
 		},
+		{
+			name:         "Milky",
+			expectedType: "Milky",
+			create: notification.Milky{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Milky Created",
+				},
+				MilkyDetails: notification.MilkyDetails{
+					HTTPAddr:    "http://localhost:3000",
+					AccessToken: "test-token",
+					MsgType:     notification.MilkyMessageTypeGroup,
+					ReceiverID:  "123456789",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				milky, ok := n.(*notification.Milky)
+				if !ok {
+					panic("failed to assert Milky notification")
+				}
+
+				milky.Name = "Test Milky Updated"
+				milky.HTTPAddr = "http://milky.example.com:4000"
+				milky.AccessToken = "updated-token"
+				// The message type carries omitempty, unsetting it on update
+				// catches a server that merges the config instead of replacing
+				// it.
+				milky.MsgType = ""
+				milky.ReceiverID = "987654321"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Milky)
+				require.True(t, ok)
+				var milky notification.Milky
+				err := actual.As(&milky)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = milky.UserID
+				require.EqualExportedValues(t, exp, milky)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var milky notification.Milky
+				err := base.As(&milky)
+				require.NoError(t, err)
+				return &milky
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Milky)
+				require.True(t, ok)
+				var milky notification.Milky
+				err := actual.As(&milky)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, milky)
+			},
+		},
 	}
 
 	// Dispatching all provider notifications for real costs about as much wall
