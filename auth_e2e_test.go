@@ -31,7 +31,7 @@ func newKumaContainer(t *testing.T) string {
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:       fmt.Sprintf("uptime-kuma-auth-%s", randomString(8)),
 		Repository: "louislam/uptime-kuma",
-		Tag:        "2.5.0",
+		Tag:        "2.5.5",
 		ExtraHosts: []string{"host.docker.internal:host-gateway"},
 	}, func(config *docker.HostConfig) {
 		config.AutoRemove = true

@@ -96,7 +96,7 @@ type RabbitMQDetails struct {
 	// Username is an optional username for HTTP Basic authentication.
 	Username *string `json:"rabbitmqUsername"`
 	// Password is an optional password for HTTP Basic authentication.
-	Password *string `json:"rabbitmqPassword"`
+	Password *string `json:"rabbitmqPassword" secret:"true"`
 	// Timeout is an optional request timeout in seconds. The server stores it
 	// in a floating point column, so fractional values round-trip unchanged.
 	Timeout *float64 `json:"timeout"`

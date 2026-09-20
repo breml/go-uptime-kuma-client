@@ -102,9 +102,9 @@ type RadiusDetails struct {
 	// Username is the username for Radius authentication.
 	Username string `json:"radiusUsername"`
 	// Password is the password for Radius authentication.
-	Password string `json:"radiusPassword"`
+	Password string `json:"radiusPassword" secret:"true"`
 	// Secret is the shared secret for Radius server.
-	Secret string `json:"radiusSecret"`
+	Secret string `json:"radiusSecret" secret:"true"`
 	// CalledStationID is the optional Called-Station-ID attribute.
 	CalledStationID *string `json:"radiusCalledStationId"`
 	// CallingStationID is the optional Calling-Station-ID attribute.

@@ -122,9 +122,9 @@ type HTTPDetails struct {
 	Body                     string     `json:"body"`
 	Headers                  string     `json:"headers"`
 	AuthMethod               AuthMethod `json:"authMethod"`
-	BearerToken              string     `json:"bearer_token"`
+	BearerToken              string     `json:"bearer_token"             secret:"true"`
 	BasicAuthUser            string     `json:"basic_auth_user"`
-	BasicAuthPass            string     `json:"basic_auth_pass"`
+	BasicAuthPass            string     `json:"basic_auth_pass"          secret:"true"`
 	AuthDomain               string     `json:"authDomain"`
 	AuthWorkstation          string     `json:"authWorkstation"`
 	TLSCert                  string     `json:"tlsCert"`
@@ -133,7 +133,7 @@ type HTTPDetails struct {
 	OAuthAuthMethod          string     `json:"oauth_auth_method"`
 	OAuthTokenURL            string     `json:"oauth_token_url"`
 	OAuthClientID            string     `json:"oauth_client_id"`
-	OAuthClientSecret        string     `json:"oauth_client_secret"`
+	OAuthClientSecret        string     `json:"oauth_client_secret"      secret:"true"`
 	OAuthScopes              string     `json:"oauth_scopes"`
 	OAuthAudience            string     `json:"oauth_audience"`
 	CacheBust                bool       `json:"cacheBust"`

@@ -108,7 +108,7 @@ type MQTTDetails struct {
 	// MQTTUsername is the optional username for MQTT authentication.
 	MQTTUsername *string `json:"mqttUsername"`
 	// MQTTPassword is the optional password for MQTT authentication.
-	MQTTPassword *string `json:"mqttPassword"`
+	MQTTPassword *string `json:"mqttPassword" secret:"true"`
 	// MQTTWebsocketPath is the optional WebSocket path for WebSocket connections.
 	// It is only applied when Hostname uses ws:// or wss://; the server ignores
 	// it for mqtt:// and mqtts:// hostnames, even though the Uptime Kuma 2.5.0

@@ -2000,6 +2000,101 @@ func TestMonitorCRUD(t *testing.T) {
 			},
 			testPauseResume: true,
 		},
+		{
+			name: "SFTP",
+			create: &monitor.SFTP{
+				Base: monitor.Base{
+					Name:           "Test SFTP Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     3,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				// Timeout is left unset on purpose: the server column is
+				// NOT NULL, so MarshalJSON has to substitute a value.
+				SFTPDetails: monitor.SFTPDetails{
+					Hostname:      "sftp.example.com",
+					Port:          ptr.To(int64(22)),
+					SSHUsername:   "sftpuser",
+					SSHAuthMethod: monitor.SFTPAuthMethodPassword,
+					SSHPassword:   ptr.To("sftppass"),
+					SFTPPath:      ptr.To("/upload"),
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				sftp, ok := m.(*monitor.SFTP)
+				if !ok {
+					panic("failed to assert SFTP monitor")
+				}
+
+				sftp.Name = "Updated SFTP Monitor"
+				sftp.Hostname = "files.example.com"
+				sftp.Port = ptr.To(int64(2222))
+				sftp.Timeout = ptr.To(float64(20))
+				sftp.SSHUsername = "deploy"
+				sftp.SSHAuthMethod = monitor.SFTPAuthMethodPrivateKey
+				sftp.SSHPassword = nil
+				sftp.SSHPrivateKey = ptr.To(
+					"-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----",
+				)
+				sftp.SSHPassphrase = ptr.To("secret")
+				sftp.SFTPPath = ptr.To("/srv/incoming")
+			},
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var sftp monitor.SFTP
+				err := actual.As(&sftp)
+				require.NoError(t, err)
+				require.Equal(t, id, sftp.ID)
+				require.Equal(t, "Test SFTP Monitor", sftp.Name)
+				require.Equal(t, "sftp.example.com", sftp.Hostname)
+				require.NotNil(t, sftp.Port)
+				require.Equal(t, int64(22), *sftp.Port)
+				require.NotNil(t, sftp.Timeout)
+				require.InEpsilon(t, float64(10), *sftp.Timeout, 0)
+				require.Equal(t, "sftpuser", sftp.SSHUsername)
+				require.Equal(t, monitor.SFTPAuthMethodPassword, sftp.SSHAuthMethod)
+				require.NotNil(t, sftp.SSHPassword)
+				require.Equal(t, "sftppass", *sftp.SSHPassword)
+				require.NotNil(t, sftp.SFTPPath)
+				require.Equal(t, "/upload", *sftp.SFTPPath)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var sftp monitor.SFTP
+				err := base.As(&sftp)
+				require.NoError(t, err)
+				return &sftp
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var sftp monitor.SFTP
+				err := actual.As(&sftp)
+				require.NoError(t, err)
+				require.Equal(t, "Updated SFTP Monitor", sftp.Name)
+				require.Equal(t, "files.example.com", sftp.Hostname)
+				require.NotNil(t, sftp.Port)
+				require.Equal(t, int64(2222), *sftp.Port)
+				require.NotNil(t, sftp.Timeout)
+				require.InEpsilon(t, float64(20), *sftp.Timeout, 0)
+				require.Equal(t, "deploy", sftp.SSHUsername)
+				require.Equal(t, monitor.SFTPAuthMethodPrivateKey, sftp.SSHAuthMethod)
+				require.Nil(t, sftp.SSHPassword)
+				require.NotNil(t, sftp.SSHPrivateKey)
+				require.Equal(
+					t,
+					"-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----",
+					*sftp.SSHPrivateKey,
+				)
+				require.NotNil(t, sftp.SSHPassphrase)
+				require.Equal(t, "secret", *sftp.SSHPassphrase)
+				require.NotNil(t, sftp.SFTPPath)
+				require.Equal(t, "/srv/incoming", *sftp.SFTPPath)
+			},
+			testPauseResume: true,
+		},
 	}
 
 	for _, tc := range testCases {

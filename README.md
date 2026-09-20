@@ -14,7 +14,7 @@ go get github.com/breml/go-uptime-kuma-client
 
 ## Requirements
 
-Uptime Kuma 2.x, tested against 2.5.0.
+Uptime Kuma 2.x, tested against 2.5.5.
 
 Uptime Kuma 1.x is not supported and connecting to it is not expected to work.
 It speaks a different login protocol: it never announces `loginRequired`, so the
