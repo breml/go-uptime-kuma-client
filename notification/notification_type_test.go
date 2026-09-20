@@ -29,20 +29,18 @@ import (
 // transitively, Base and Generic report a type read from the notification
 // itself and have none to check.
 func TestTypeMatchesUpstreamProviderName(t *testing.T) {
-	// Provider names of Uptime Kuma 2.5.0, the `name` field of every class in
-	// server/notification-providers/*.js, plus `SMSGateway`, which upstream
-	// added in 2.5.1 and this package supports ahead of the next full sync.
-	// Regenerate after an upstream bump by running the following in a checkout
-	// of Uptime Kuma:
+	// Provider names of Uptime Kuma 2.5.5, the `name` field of every class in
+	// server/notification-providers/*.js, minus the providers this package has
+	// not implemented yet. Regenerate after an upstream bump by running the
+	// following in a checkout of Uptime Kuma:
 	//
 	//	grep -hoP '^\s*name = "\K[^"]+' server/notification-providers/*.js | sort -f
 	//
-	// The recipe run against a checkout newer than the pinned version yields
-	// more names than this list holds, one per provider upstream has and this
-	// package has not implemented yet. That gap is deliberate and the failure
-	// the assertion below reports for it is the signal to implement them, so
-	// take the recipe output wholesale only together with the providers, and
-	// drop the `SMSGateway` exception above once the pin covers it.
+	// The recipe yields more names than this list holds, one per provider
+	// upstream has and this package has not implemented yet. That gap is
+	// deliberate and the failure the assertion below reports for it is the
+	// signal to implement them, so take the recipe output wholesale only
+	// together with the providers.
 	upstreamProviderNames := []string{
 		"alerta",
 		"AlertNow",
@@ -55,6 +53,7 @@ func TestTypeMatchesUpstreamProviderName(t *testing.T) {
 		"CallMeBot",
 		"Cellsynt",
 		"clicksendsms",
+		"ClickUp",
 		"DingDing",
 		"discord",
 		"egosms",

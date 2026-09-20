@@ -2354,6 +2354,61 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "ClickUp",
+			expectedType: "ClickUp",
+			create: notification.ClickUp{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test ClickUp Created",
+				},
+				ClickUpDetails: notification.ClickUpDetails{
+					Token:       "pk_12345_ABCDEF",
+					WorkspaceID: "9001234567",
+					ChannelID:   "channel-abc",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				clickup, ok := n.(*notification.ClickUp)
+				if !ok {
+					panic("failed to assert ClickUp notification")
+				}
+
+				clickup.Name = "Test ClickUp Updated"
+				clickup.WorkspaceID = "9007654321"
+				clickup.ChannelID = "channel-xyz"
+				clickup.DisableURL = ptr.To(true)
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.ClickUp)
+				require.True(t, ok)
+				var clickup notification.ClickUp
+				err := actual.As(&clickup)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = clickup.UserID
+				require.EqualExportedValues(t, exp, clickup)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var clickup notification.ClickUp
+				err := base.As(&clickup)
+				require.NoError(t, err)
+				return &clickup
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.ClickUp)
+				require.True(t, ok)
+				var clickup notification.ClickUp
+				err := actual.As(&clickup)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, clickup)
+			},
+		},
+		{
 			name:         "Evolution",
 			expectedType: "evolution",
 			create: notification.Evolution{
