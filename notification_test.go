@@ -5280,6 +5280,68 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, zohocliq)
 			},
 		},
+		{
+			name:         "TurboSMTP",
+			expectedType: "TurboSMTP",
+			create: notification.TurboSMTP{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test TurboSMTP Created",
+				},
+				TurboSMTPDetails: notification.TurboSMTPDetails{
+					ConsumerKey:    "test_consumer_key",
+					ConsumerSecret: "test_consumer_secret",
+					Region:         notification.TurboSMTPRegionEU,
+					FromEmail:      "alerts@example.com",
+					ToEmail:        "ops@example.com,oncall@example.com",
+					CcEmail:        ptr.To("cc@example.com"),
+					BccEmail:       ptr.To("bcc@example.com"),
+					Subject:        ptr.To("Uptime Kuma Alert"),
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				turbosmtp, ok := n.(*notification.TurboSMTP)
+				if !ok {
+					panic("failed to assert TurboSMTP notification")
+				}
+
+				turbosmtp.Name = "Test TurboSMTP Updated"
+				turbosmtp.Region = notification.TurboSMTPRegionUS
+				turbosmtp.ToEmail = "updated@example.com"
+				turbosmtp.CcEmail = nil
+				turbosmtp.BccEmail = nil
+				turbosmtp.Subject = nil
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.TurboSMTP)
+				require.True(t, ok)
+				var turbosmtp notification.TurboSMTP
+				err := actual.As(&turbosmtp)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = turbosmtp.UserID
+				require.EqualExportedValues(t, exp, turbosmtp)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var turbosmtp notification.TurboSMTP
+				err := base.As(&turbosmtp)
+				require.NoError(t, err)
+				return &turbosmtp
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.TurboSMTP)
+				require.True(t, ok)
+				var turbosmtp notification.TurboSMTP
+				err := actual.As(&turbosmtp)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, turbosmtp)
+			},
+		},
 	}
 
 	// Dispatching all provider notifications for real costs about as much wall
