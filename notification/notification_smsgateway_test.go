@@ -62,6 +62,33 @@ func TestNotificationSMSGateway_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple SMS Gateway","smsgatewayUrl":"https://gateway.example.com","smsgatewayApiKey":"simple-key","smsgatewayTo":"+15551234567","type":"SMSGateway","userId":1}`,
 		},
+		{
+			// Every field is required upstream, so none of them carries
+			// omitempty and an empty value must survive the round trip as an
+			// empty key. A dropped key is silent data loss on update, because
+			// the config sent back to the server is rebuilt from this struct.
+			name: "empty fields are preserved",
+			data: []byte(
+				`{"id":3,"name":"Empty SMS Gateway","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Empty SMS Gateway\",\"smsgatewayUrl\":\"\",\"smsgatewayApiKey\":\"\",\"smsgatewayTo\":\"\",\"type\":\"SMSGateway\"}"}`,
+			),
+
+			want: notification.SMSGateway{
+				Base: notification.Base{
+					ID:            3,
+					Name:          "Empty SMS Gateway",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				SMSGatewayDetails: notification.SMSGatewayDetails{
+					URL:        "",
+					APIKey:     "",
+					Recipients: "",
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":3,"isDefault":false,"name":"Empty SMS Gateway","smsgatewayUrl":"","smsgatewayApiKey":"","smsgatewayTo":"","type":"SMSGateway","userId":1}`,
+		},
 	}
 
 	for _, tc := range tests {

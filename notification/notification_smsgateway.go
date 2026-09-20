@@ -5,8 +5,8 @@ import (
 )
 
 // SMSGateway represents an SMS Gateway notification provider.
-// SMS Gateway for Android is a self-hosted gateway that sends text messages
-// through an Android phone.
+// SMS Gateway (https://github.com/mattboston/sms-gateway) is a self-hosted
+// gateway that sends text messages through an attached USB GSM modem.
 type SMSGateway struct {
 	Base
 	SMSGatewayDetails
@@ -14,11 +14,18 @@ type SMSGateway struct {
 
 // SMSGatewayDetails contains the configuration fields for SMS Gateway notifications.
 type SMSGatewayDetails struct {
-	// URL is the base URL of the SMS Gateway server.
+	// URL is the base URL of the SMS Gateway server, without an API path
+	// (e.g. http://localhost:8080). The server strips trailing slashes and
+	// appends /api/v1/sms/send itself.
 	URL string `json:"smsgatewayUrl"`
-	// APIKey is the SMS Gateway API key for authentication.
+	// APIKey authenticates the request against the gateway and is sent as an
+	// "X-API-Key" header.
 	APIKey string `json:"smsgatewayApiKey"`
-	// Recipients is the comma separated list of recipient phone numbers.
+	// Recipients holds one or more recipient phone numbers in international
+	// format (e.g. "+15551234567, +15559876543"), separated by comma. The
+	// server trims the whitespace around every number and drops empty entries.
+	// A value that leaves no recipient at all is not an error: the server sends
+	// nothing and still reports the notification as sent successfully.
 	Recipients string `json:"smsgatewayTo"`
 }
 
