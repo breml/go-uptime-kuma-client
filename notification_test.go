@@ -4097,6 +4097,60 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "SMSGateway",
+			expectedType: "SMSGateway",
+			create: notification.SMSGateway{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test SMSGateway Created",
+				},
+				SMSGatewayDetails: notification.SMSGatewayDetails{
+					URL:        "http://localhost:8080",
+					APIKey:     "test-api-key",
+					Recipients: "+15551234567",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				smsgateway, ok := n.(*notification.SMSGateway)
+				if !ok {
+					panic("failed to assert SMSGateway notification")
+				}
+
+				smsgateway.Name = "Test SMSGateway Updated"
+				smsgateway.URL = "https://gateway.example.com"
+				smsgateway.Recipients = "+15551234567, +15559876543"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.SMSGateway)
+				require.True(t, ok)
+				var smsgateway notification.SMSGateway
+				err := actual.As(&smsgateway)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = smsgateway.UserID
+				require.EqualExportedValues(t, exp, smsgateway)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var smsgateway notification.SMSGateway
+				err := base.As(&smsgateway)
+				require.NoError(t, err)
+				return &smsgateway
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.SMSGateway)
+				require.True(t, ok)
+				var smsgateway notification.SMSGateway
+				err := actual.As(&smsgateway)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, smsgateway)
+			},
+		},
+		{
 			name:         "SMSIR",
 			expectedType: "smsir",
 			create: notification.SMSIR{
