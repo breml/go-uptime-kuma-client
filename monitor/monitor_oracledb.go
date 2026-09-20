@@ -98,7 +98,7 @@ type OracleDBDetails struct {
 	// Username is the Oracle Database user.
 	Username string `json:"basic_auth_user"`
 	// Password is the Oracle Database password.
-	Password string `json:"basic_auth_pass"`
+	Password string `json:"basic_auth_pass" secret:"true"`
 	// Conditions is an optional list of assertion clauses evaluated against the
 	// query result. When set, the query is expected to return a single value
 	// that is matched against the conditions.

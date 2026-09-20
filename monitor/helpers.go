@@ -55,6 +55,9 @@ func formatMonitor( //nolint:revive // includeType is not a control coupling fla
 		// a pointer address.
 		var valueStr string
 		switch {
+		case field.Tag.Get("secret") == "true":
+			valueStr = redactSecret(value)
+
 		case value.Kind() == reflect.String:
 			valueStr = fmt.Sprintf("%q", value.String())
 
@@ -81,6 +84,25 @@ func formatMonitor( //nolint:revive // includeType is not a control coupling fla
 	}
 
 	return buf.String()
+}
+
+// redactSecret renders a field that carries a credential. Whether the value is
+// set stays visible, its content does not, so that a monitor can be logged or
+// interpolated into an error without leaking a password or a private key.
+func redactSecret(value reflect.Value) string {
+	if value.Kind() == reflect.Pointer {
+		if value.IsNil() {
+			return "<nil>"
+		}
+
+		value = value.Elem()
+	}
+
+	if value.Kind() == reflect.String && value.String() == "" {
+		return `""`
+	}
+
+	return `"***"`
 }
 
 // notificationIDMap converts a slice of notification IDs to the map format

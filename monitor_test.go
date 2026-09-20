@@ -2081,6 +2081,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.InEpsilon(t, float64(20), *sftp.Timeout, 0)
 				require.Equal(t, "deploy", sftp.SSHUsername)
 				require.Equal(t, monitor.SFTPAuthMethodPrivateKey, sftp.SSHAuthMethod)
+				require.Nil(t, sftp.SSHPassword)
 				require.NotNil(t, sftp.SSHPrivateKey)
 				require.Equal(
 					t,

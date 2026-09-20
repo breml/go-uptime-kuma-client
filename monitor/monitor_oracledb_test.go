@@ -183,9 +183,9 @@ func TestMonitorOracleDB_String(t *testing.T) {
 				`databaseConnectionString: "localhost:1521/XEPDB1"`,
 				`databaseQuery: "SELECT 1 FROM DUAL"`,
 				`basic_auth_user: "oracle"`,
-				`basic_auth_pass: "secret"`,
+				`basic_auth_pass: "***"`,
 			},
-			wantNotContains: []string{"0x"},
+			wantNotContains: []string{"0x", `"secret"`},
 		},
 		{
 			name: "query nil",
@@ -199,9 +199,9 @@ func TestMonitorOracleDB_String(t *testing.T) {
 				`databaseConnectionString: "localhost:1521/XEPDB1"`,
 				"databaseQuery: <nil>",
 				`basic_auth_user: "oracle"`,
-				`basic_auth_pass: "secret"`,
+				`basic_auth_pass: "***"`,
 			},
-			wantNotContains: []string{"0x"},
+			wantNotContains: []string{"0x", `"secret"`},
 		},
 	}
 

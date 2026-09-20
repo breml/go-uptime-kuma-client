@@ -108,7 +108,7 @@ type GameDigDetails struct {
 	// GameDigGivenPortOnly indicates whether to use only the given port without auto-detection.
 	GameDigGivenPortOnly bool `json:"gamedigGivenPortOnly"`
 	// GameDigToken is an optional authentication token for game servers that require it.
-	GameDigToken *string `json:"gamedigToken,omitempty"`
+	GameDigToken *string `json:"gamedigToken,omitempty" secret:"true"`
 	// DomainExpiryNotification enables domain expiry notifications
 	// for the monitored domain.
 	DomainExpiryNotification bool `json:"domainExpiryNotification"`

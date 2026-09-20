@@ -88,7 +88,7 @@ func (p Push) MarshalJSON() ([]byte, error) {
 
 // PushDetails contains push-specific monitor configuration.
 type PushDetails struct {
-	PushToken string `json:"pushToken"`
+	PushToken string `json:"pushToken" secret:"true"`
 }
 
 // Type returns the monitor type.

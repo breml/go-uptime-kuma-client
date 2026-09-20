@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -62,6 +63,34 @@ func (s *SFTP) UnmarshalJSON(data []byte) error {
 
 // MarshalJSON marshals an SFTP monitor to JSON data.
 func (s SFTP) MarshalJSON() ([]byte, error) {
+	if s.Hostname == "" {
+		return nil, errors.New("marshal: hostname is required")
+	}
+
+	if s.SSHUsername == "" {
+		return nil, errors.New("marshal: ssh username is required")
+	}
+
+	// The server reads this column back as `sshAuthMethod || "password"`, so
+	// an empty value is sent as password to keep the field round-tripping.
+	// Any other value is rejected: the server stores it verbatim and the
+	// check treats everything but privateKey as password authentication, so a
+	// misspelled method silently downgrades a key-based monitor instead of
+	// failing.
+	authMethod := s.SSHAuthMethod
+
+	switch authMethod {
+	case "":
+		authMethod = SFTPAuthMethodPassword
+
+	case SFTPAuthMethodPassword, SFTPAuthMethodPrivateKey:
+	default:
+		return nil, fmt.Errorf(
+			"marshal: invalid ssh auth method %q, must be %q or %q",
+			authMethod, SFTPAuthMethodPassword, SFTPAuthMethodPrivateKey,
+		)
+	}
+
 	raw := map[string]any{}
 	raw["id"] = s.ID
 	raw["type"] = "sftp"
@@ -94,13 +123,6 @@ func (s SFTP) MarshalJSON() ([]byte, error) {
 	raw["sshPassphrase"] = s.SSHPassphrase
 	raw["sftpPath"] = s.SFTPPath
 
-	// The server reads this column back as `sshAuthMethod || "password"`, so a
-	// value is always sent to keep the field round-tripping.
-	authMethod := s.SSHAuthMethod
-	if authMethod == "" {
-		authMethod = SFTPAuthMethodPassword
-	}
-
 	raw["sshAuthMethod"] = authMethod
 
 	// The monitor.timeout column is NOT NULL, so an unset Timeout is sent as
@@ -130,9 +152,14 @@ func (s SFTP) MarshalJSON() ([]byte, error) {
 //
 // The behaviour described below was verified against Uptime Kuma 2.5.5.
 //
-// SSHUsername, SSHPassword, SSHPrivateKey and SSHPassphrase are only part of
-// the sensitive section of the server's monitor representation, so they read
-// back empty for anyone but the owner of the monitor.
+// SSHUsername, SSHPassword, SSHPrivateKey and SSHPassphrase live in the
+// sensitive section of the server's monitor representation. The server sends
+// that section to the owning user's socket, so the credentials do round-trip
+// through this client; it omits them only from the monitor JSON handed to
+// notification templating, which never reaches a client. Should a redacted
+// payload ever be unmarshalled, MarshalJSON refuses it for the empty
+// SSHUsername, because writing it back would erase the credentials on the
+// server.
 type SFTPDetails struct {
 	// Hostname is the SFTP server address. It is required, the check fails on
 	// every heartbeat while it is empty.
@@ -145,24 +172,31 @@ type SFTPDetails struct {
 	// the other optional fields a nil value is not sent as null: MarshalJSON
 	// substitutes 10, the value the check itself falls back to. The column is
 	// a floating point column, so fractional values round-trip unchanged.
+	// The check applies its fallback to any value that is not greater than
+	// zero, so a stored 0 or a negative value round-trips verbatim while the
+	// check still uses 10: nil is the only unambiguous way to ask for the
+	// fallback.
 	Timeout *float64 `json:"timeout"`
 	// SSHUsername is the user to authenticate as. It is required, the check
 	// fails on every heartbeat while it is empty.
 	SSHUsername string `json:"sshUsername"`
 	// SSHAuthMethod selects how the check authenticates. An empty value is
 	// sent as SFTPAuthMethodPassword, which is what the server reads back for
-	// a NULL column.
+	// a NULL column. MarshalJSON rejects any other unknown value, because the
+	// check treats everything but SFTPAuthMethodPrivateKey as password
+	// authentication.
 	SSHAuthMethod SFTPAuthMethod `json:"sshAuthMethod"`
 	// SSHPassword is the password used when SSHAuthMethod is not
 	// SFTPAuthMethodPrivateKey.
-	SSHPassword *string `json:"sshPassword"`
+	SSHPassword *string `json:"sshPassword" secret:"true"`
 	// SSHPrivateKey is the private key used when SSHAuthMethod is
 	// SFTPAuthMethodPrivateKey. The check errors out when the method is
 	// SFTPAuthMethodPrivateKey and no key is set.
-	SSHPrivateKey *string `json:"sshPrivateKey"`
+	SSHPrivateKey *string `json:"sshPrivateKey" secret:"true"`
 	// SSHPassphrase is the optional passphrase of SSHPrivateKey. It is only
-	// applied while it is non-empty.
-	SSHPassphrase *string `json:"sshPassphrase"`
+	// applied while SSHAuthMethod is SFTPAuthMethodPrivateKey and the
+	// passphrase is non-empty; password authentication ignores it.
+	SSHPassphrase *string `json:"sshPassphrase" secret:"true"`
 	// SFTPPath is an optional remote path. While it is non-empty the check
 	// additionally verifies that the path exists on the server.
 	SFTPPath *string `json:"sftpPath"`

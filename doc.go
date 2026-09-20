@@ -65,7 +65,7 @@
 //
 // # Server Versions
 //
-// The client targets Uptime Kuma 2.x and is tested against 2.5.0. Uptime Kuma
+// The client targets Uptime Kuma 2.x and is tested against 2.5.5. Uptime Kuma
 // 1.x is not supported and connecting to it is not expected to work: it never
 // announces loginRequired, so New cannot tell a server that wants a login from
 // one that does not and takes the full auth barrier wait on every connect, and

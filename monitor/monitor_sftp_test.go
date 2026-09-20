@@ -17,8 +17,9 @@ func TestMonitorSFTP_Unmarshal(t *testing.T) {
 		name string
 		data []byte
 
-		want     monitor.SFTP
-		wantJSON string
+		want           monitor.SFTP
+		wantJSON       string
+		wantMarshalErr string
 	}{
 		{
 			name: "password authentication",
@@ -122,8 +123,11 @@ func TestMonitorSFTP_Unmarshal(t *testing.T) {
 			),
 
 			// The SSH credentials are only part of the sensitive section of
-			// the server representation, so they unmarshal to their zero
-			// values for anyone but the owner of the monitor.
+			// the server representation. No socket path of the server sends
+			// such a payload to a client -- includeSensitiveData defaults to
+			// true and only notification templating passes false -- but were
+			// one ever unmarshalled, the credentials come back as their zero
+			// values.
 			want: monitor.SFTP{
 				Base: monitor.Base{
 					ID:             7,
@@ -144,7 +148,9 @@ func TestMonitorSFTP_Unmarshal(t *testing.T) {
 					SFTPPath:      ptr.To("/upload"),
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":null,"hostname":"sftp.example.com","id":7,"interval":60,"maxretries":0,"name":"sftp-foreign","notificationIDList":{},"parent":null,"port":22,"resendInterval":0,"retryInterval":60,"sftpPath":"/upload","sshAuthMethod":"privateKey","sshPassphrase":null,"sshPassword":null,"sshPrivateKey":null,"sshUsername":"","timeout":10,"type":"sftp","upsideDown":false}`,
+			// Marshalling such a monitor back is refused: the write would
+			// replace every credential column with the zero values above.
+			wantMarshalErr: "ssh username is required",
 		},
 	}
 
@@ -158,6 +164,14 @@ func TestMonitorSFTP_Unmarshal(t *testing.T) {
 			require.EqualExportedValues(t, tc.want, sftpMonitor)
 
 			data, err := json.Marshal(sftpMonitor)
+
+			if tc.wantMarshalErr != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.wantMarshalErr)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			require.JSONEq(t, tc.wantJSON, string(data))
@@ -180,4 +194,134 @@ func TestMonitorSFTP_MarshalDefaultsAuthMethod(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, string(monitor.SFTPAuthMethodPassword), raw["sshAuthMethod"])
+}
+
+func TestMonitorSFTP_MarshalRequiresHostname(t *testing.T) {
+	sftpMonitor := monitor.SFTP{
+		Base:        monitor.Base{Name: "sftp-without-hostname"},
+		SFTPDetails: monitor.SFTPDetails{SSHUsername: "sftpuser"},
+	}
+
+	_, err := json.Marshal(sftpMonitor)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "hostname is required")
+}
+
+func TestMonitorSFTP_MarshalRequiresSSHUsername(t *testing.T) {
+	sftpMonitor := monitor.SFTP{
+		Base:        monitor.Base{Name: "sftp-without-ssh-username"},
+		SFTPDetails: monitor.SFTPDetails{Hostname: "sftp.example.com"},
+	}
+
+	_, err := json.Marshal(sftpMonitor)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "ssh username is required")
+}
+
+func TestMonitorSFTP_MarshalRejectsUnknownAuthMethod(t *testing.T) {
+	tests := []struct {
+		name       string
+		authMethod monitor.SFTPAuthMethod
+	}{
+		{
+			name:       "misspelled private key",
+			authMethod: "privatekey",
+		},
+		{
+			name:       "unknown method",
+			authMethod: "keyboard-interactive",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			sftpMonitor := monitor.SFTP{
+				Base: monitor.Base{Name: "sftp-with-unknown-auth-method"},
+				SFTPDetails: monitor.SFTPDetails{
+					Hostname:      "sftp.example.com",
+					SSHUsername:   "sftpuser",
+					SSHAuthMethod: tc.authMethod,
+				},
+			}
+
+			_, err := json.Marshal(sftpMonitor)
+			require.Error(t, err)
+			require.ErrorContains(t, err, "invalid ssh auth method")
+		})
+	}
+}
+
+func TestMonitorSFTP_String(t *testing.T) {
+	tests := []struct {
+		name string
+
+		details monitor.SFTPDetails
+
+		wantContains    []string
+		wantNotContains []string
+	}{
+		{
+			name: "all optional fields set",
+			details: monitor.SFTPDetails{
+				Hostname:      "sftp.example.com",
+				Port:          ptr.To(int64(22)),
+				Timeout:       ptr.To(float64(10)),
+				SSHUsername:   "sftpuser",
+				SSHAuthMethod: monitor.SFTPAuthMethodPrivateKey,
+				SSHPassword:   ptr.To("sftppass"),
+				SSHPrivateKey: ptr.To("-----BEGIN OPENSSH PRIVATE KEY-----\nabc"),
+				SSHPassphrase: ptr.To("secret"),
+				SFTPPath:      ptr.To("/upload"),
+			},
+			wantContains: []string{
+				`hostname: "sftp.example.com"`,
+				"port: 22",
+				"timeout: 10",
+				`sshUsername: "sftpuser"`,
+				`sshAuthMethod: "privateKey"`,
+				`sshPassword: "***"`,
+				`sshPrivateKey: "***"`,
+				`sshPassphrase: "***"`,
+				`sftpPath: "/upload"`,
+			},
+			wantNotContains: []string{
+				"0x",
+				"sftppass",
+				"BEGIN OPENSSH PRIVATE KEY",
+				"secret",
+			},
+		},
+		{
+			name: "all optional fields nil",
+			details: monitor.SFTPDetails{
+				Hostname:      "sftp.example.com",
+				SSHUsername:   "sftpuser",
+				SSHAuthMethod: monitor.SFTPAuthMethodPassword,
+			},
+			wantContains: []string{
+				`hostname: "sftp.example.com"`,
+				"port: <nil>",
+				"timeout: <nil>",
+				"sshPassword: <nil>",
+				"sshPrivateKey: <nil>",
+				"sshPassphrase: <nil>",
+				"sftpPath: <nil>",
+			},
+			wantNotContains: []string{"0x"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := monitor.SFTP{SFTPDetails: tc.details}.String()
+
+			for _, want := range tc.wantContains {
+				require.Contains(t, got, want)
+			}
+
+			for _, notWant := range tc.wantNotContains {
+				require.NotContains(t, got, notWant)
+			}
+		})
+	}
 }
