@@ -5342,6 +5342,62 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, turbosmtp)
 			},
 		},
+		{
+			name:         "BearSMS",
+			expectedType: "bearsms",
+			create: notification.BearSMS{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test BearSMS Created",
+				},
+				BearSMSDetails: notification.BearSMSDetails{
+					Username:    "bear-user",
+					HashKey:     "hash-key-123",
+					SenderID:    ptr.To("UptimeKuma"),
+					PhoneNumber: "972501234567",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				bearsms, ok := n.(*notification.BearSMS)
+				if !ok {
+					panic("failed to assert BearSMS notification")
+				}
+
+				bearsms.Name = "Test BearSMS Updated"
+				bearsms.HashKey = "hash-key-456"
+				bearsms.PhoneNumber = "972509876543"
+				bearsms.SenderID = nil
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.BearSMS)
+				require.True(t, ok)
+				var bearsms notification.BearSMS
+				err := actual.As(&bearsms)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = bearsms.UserID
+				require.EqualExportedValues(t, exp, bearsms)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var bearsms notification.BearSMS
+				err := base.As(&bearsms)
+				require.NoError(t, err)
+				return &bearsms
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.BearSMS)
+				require.True(t, ok)
+				var bearsms notification.BearSMS
+				err := actual.As(&bearsms)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, bearsms)
+			},
+		},
 	}
 
 	// Dispatching all provider notifications for real costs about as much wall
