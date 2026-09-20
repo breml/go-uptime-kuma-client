@@ -95,6 +95,7 @@ func TestTypeMatchesUpstreamProviderName(t *testing.T) {
 		"Opsgenie",
 		"PagerDuty",
 		"PagerTree",
+		"pinglet",
 		"plivo",
 		"promosms",
 		"pumble",
