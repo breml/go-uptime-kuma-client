@@ -31,3 +31,16 @@ func SetSetupEventGrace(d time.Duration) func() {
 
 	return func() { setupEventGrace = previous }
 }
+
+// SetDefaultOperationTimeout shortens the budget New applies when the caller
+// configures none, and returns the function that puts it back.
+//
+// It exists so a test can exercise the default itself rather than a value it
+// passed in: without it, removing the default from New would leave every
+// command unbounded and the suite green.
+func SetDefaultOperationTimeout(d time.Duration) func() {
+	previous := defaultOperationTimeout
+	defaultOperationTimeout = d
+
+	return func() { defaultOperationTimeout = previous }
+}
