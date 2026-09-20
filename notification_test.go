@@ -5475,8 +5475,12 @@ func TestNotificationCRUD(t *testing.T) {
 				}
 
 				milky.Name = "Test Milky Updated"
+				milky.HTTPAddr = "http://milky.example.com:4000"
 				milky.AccessToken = "updated-token"
-				milky.MsgType = notification.MilkyMessageTypePrivate
+				// The message type carries omitempty, unsetting it on update
+				// catches a server that merges the config instead of replacing
+				// it.
+				milky.MsgType = ""
 				milky.ReceiverID = "987654321"
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
