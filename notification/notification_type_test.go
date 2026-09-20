@@ -48,6 +48,7 @@ func TestTypeMatchesUpstreamProviderName(t *testing.T) {
 		"apprise",
 		"bale",
 		"Bark",
+		"bearsms",
 		"Bitrix24",
 		"Brevo",
 		"CallMeBot",
