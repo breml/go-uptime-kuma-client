@@ -5,8 +5,9 @@ import (
 )
 
 // Pinglet represents a Pinglet notification provider.
-// Pinglet forwards the raw Uptime Kuma webhook payload to a publish URL, where
-// its Uptime Kuma rewriter turns it into a titled message.
+// Pinglet (https://app.pinglet.co.uk/) is a topic based push service, the raw
+// Uptime Kuma webhook payload is posted to a topic endpoint, where Pinglet's
+// Uptime Kuma rewriter turns it into a titled message with level and priority.
 type Pinglet struct {
 	Base
 	PingletDetails
@@ -14,9 +15,15 @@ type Pinglet struct {
 
 // PingletDetails contains the configuration fields for Pinglet notifications.
 type PingletDetails struct {
-	// PublishURL is the Pinglet topic endpoint the payload is posted to.
+	// PublishURL is the publish URL of the Pinglet topic the payload is posted
+	// to (e.g. https://app.pinglet.co.uk/your-namespace/alerts). The topic is
+	// created on the first publish, if it does not exist yet. The server strips
+	// a single trailing slash before the request and always appends the
+	// rewrite=uptimekuma query parameter, so the rewriter is not configurable.
+	// The URL is stored verbatim, a trailing slash survives the round trip.
 	PublishURL string `json:"pingletPublishUrl"`
-	// APIKey is the Pinglet API key, sent as a bearer token.
+	// APIKey authenticates the request against Pinglet and is sent as an
+	// "Authorization: Bearer <key>" header.
 	APIKey string `json:"pingletApiKey"`
 }
 

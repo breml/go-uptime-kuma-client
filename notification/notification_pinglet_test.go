@@ -11,10 +11,12 @@ import (
 
 func TestNotificationPinglet_Unmarshal(t *testing.T) {
 	tests := []struct {
-		name     string
-		data     []byte
+		name string
+		data []byte
+
 		want     notification.Pinglet
 		wantJSON string
+		wantErr  bool
 	}{
 		{
 			name: "success with all fields",
@@ -61,7 +63,11 @@ func TestNotificationPinglet_Unmarshal(t *testing.T) {
 			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Pinglet","pingletPublishUrl":"https://app.pinglet.co.uk/simple/alerts","pingletApiKey":"simple-key","type":"pinglet","userId":1}`,
 		},
 		{
-			name: "publish url with trailing slash",
+			// The server strips a single trailing slash from the publish URL
+			// before it posts, this client does not. The URL has to survive the
+			// round trip exactly as stored, otherwise an edit would rewrite the
+			// value the user entered.
+			name: "trailing slash in publish url is not normalized",
 			data: []byte(
 				`{"id":3,"name":"Pinglet Trailing Slash","active":false,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Pinglet Trailing Slash\",\"pingletPublishUrl\":\"https://pinglet.example.com/team/alerts/\",\"pingletApiKey\":\"trailing-key-123\",\"type\":\"pinglet\"}"}`,
 			),
@@ -82,6 +88,51 @@ func TestNotificationPinglet_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"id":3,"isDefault":false,"name":"Pinglet Trailing Slash","pingletPublishUrl":"https://pinglet.example.com/team/alerts/","pingletApiKey":"trailing-key-123","type":"pinglet","userId":1}`,
 		},
+		{
+			// The publish URL and the API key are required upstream, so neither
+			// carries omitempty and an empty value must survive the round trip
+			// as an empty key. A dropped key is silent data loss on update,
+			// because the config sent back to the server is rebuilt from this
+			// struct, and a missing publish URL makes the provider throw
+			// instead of merely failing the request.
+			name: "empty fields are preserved",
+			data: []byte(
+				`{"id":4,"name":"Empty Pinglet","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Empty Pinglet\",\"pingletPublishUrl\":\"\",\"pingletApiKey\":\"\",\"type\":\"pinglet\"}"}`,
+			),
+
+			want: notification.Pinglet{
+				Base: notification.Base{
+					ID:            4,
+					Name:          "Empty Pinglet",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				PingletDetails: notification.PingletDetails{
+					PublishURL: "",
+					APIKey:     "",
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":4,"isDefault":false,"name":"Empty Pinglet","pingletPublishUrl":"","pingletApiKey":"","type":"pinglet","userId":1}`,
+		},
+		{
+			name:    "missing config field",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
+			wantErr: true,
+		},
+		{
+			name:    "invalid config json",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"not-json"}`),
+			wantErr: true,
+		},
+		{
+			name: "invalid config detail type",
+			data: []byte(
+				`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"{\"pingletPublishUrl\":123,\"type\":\"pinglet\"}"}`,
+			),
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -89,6 +140,12 @@ func TestNotificationPinglet_Unmarshal(t *testing.T) {
 			pinglet := notification.Pinglet{}
 
 			err := json.Unmarshal(tc.data, &pinglet)
+			if tc.wantErr {
+				require.Error(t, err)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			require.EqualExportedValues(t, tc.want, pinglet)
