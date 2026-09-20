@@ -5398,6 +5398,59 @@ func TestNotificationCRUD(t *testing.T) {
 				require.EqualExportedValues(t, *exp, bearsms)
 			},
 		},
+		{
+			name:         "Pinglet",
+			expectedType: "pinglet",
+			create: notification.Pinglet{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Pinglet Created",
+				},
+				PingletDetails: notification.PingletDetails{
+					PublishURL: "https://app.pinglet.co.uk/my-namespace/alerts",
+					APIKey:     "pinglet-api-key-123",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				pinglet, ok := n.(*notification.Pinglet)
+				if !ok {
+					panic("failed to assert Pinglet notification")
+				}
+
+				pinglet.Name = "Test Pinglet Updated"
+				pinglet.PublishURL = "https://app.pinglet.co.uk/other-namespace/alerts"
+				pinglet.APIKey = "pinglet-api-key-456"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Pinglet)
+				require.True(t, ok)
+				var pinglet notification.Pinglet
+				err := actual.As(&pinglet)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = pinglet.UserID
+				require.EqualExportedValues(t, exp, pinglet)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var pinglet notification.Pinglet
+				err := base.As(&pinglet)
+				require.NoError(t, err)
+				return &pinglet
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Pinglet)
+				require.True(t, ok)
+				var pinglet notification.Pinglet
+				err := actual.As(&pinglet)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, pinglet)
+			},
+		},
 	}
 
 	// Dispatching all provider notifications for real costs about as much wall
