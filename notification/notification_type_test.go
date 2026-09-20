@@ -36,11 +36,11 @@ func TestTypeMatchesUpstreamProviderName(t *testing.T) {
 	//
 	//	grep -hoP '^\s*name = "\K[^"]+' server/notification-providers/*.js | sort -f
 	//
-	// The recipe yields more names than this list holds, one per provider
-	// upstream has and this package has not implemented yet. That gap is
-	// deliberate and the failure the assertion below reports for it is the
-	// signal to implement them, so take the recipe output wholesale only
-	// together with the providers.
+	// The recipe yields this list plus one name per provider upstream has and
+	// this package has not implemented yet, if any. That gap is deliberate and
+	// the failure the assertion below reports for it is the signal to implement
+	// them, so take the recipe output wholesale only together with the
+	// providers.
 	upstreamProviderNames := []string{
 		"alerta",
 		"AlertNow",

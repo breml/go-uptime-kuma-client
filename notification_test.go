@@ -2367,6 +2367,7 @@ func TestNotificationCRUD(t *testing.T) {
 					Token:       "pk_12345_ABCDEF",
 					WorkspaceID: "9001234567",
 					ChannelID:   "channel-abc",
+					DisableURL:  ptr.To(true),
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -2378,7 +2379,7 @@ func TestNotificationCRUD(t *testing.T) {
 				clickup.Name = "Test ClickUp Updated"
 				clickup.WorkspaceID = "9007654321"
 				clickup.ChannelID = "channel-xyz"
-				clickup.DisableURL = ptr.To(true)
+				clickup.DisableURL = nil
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
 				t.Helper()
