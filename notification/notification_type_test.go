@@ -129,6 +129,7 @@ func TestTypeMatchesUpstreamProviderName(t *testing.T) {
 		"telnyx",
 		"Teltonika",
 		"threema",
+		"TurboSMTP",
 		"twilio",
 		"VK",
 		"VKTeams",
