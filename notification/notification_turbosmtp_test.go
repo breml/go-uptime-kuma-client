@@ -72,6 +72,35 @@ func TestNotificationTurboSMTP_Unmarshal(t *testing.T) {
 			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple TurboSMTP","turbosmtpConsumerKey":"test_consumer_key","turbosmtpConsumerSecret":"test_consumer_secret","turbosmtpFromEmail":"alerts@example.com","turbosmtpToEmail":"ops@example.com","type":"TurboSMTP","userId":1}`,
 		},
 		{
+			// The consumer key, the consumer secret and both addresses are
+			// required upstream, so none of them carries omitempty and an empty
+			// value must survive the round trip as an empty key. A dropped key
+			// is silent data loss on update, because the config sent back to
+			// the server is rebuilt from this struct.
+			name: "empty fields are preserved",
+			data: []byte(
+				`{"id":3,"name":"Empty TurboSMTP","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Empty TurboSMTP\",\"turbosmtpConsumerKey\":\"\",\"turbosmtpConsumerSecret\":\"\",\"turbosmtpFromEmail\":\"\",\"turbosmtpToEmail\":\"\",\"type\":\"TurboSMTP\"}"}`,
+			),
+
+			want: notification.TurboSMTP{
+				Base: notification.Base{
+					ID:            3,
+					Name:          "Empty TurboSMTP",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				TurboSMTPDetails: notification.TurboSMTPDetails{
+					ConsumerKey:    "",
+					ConsumerSecret: "",
+					FromEmail:      "",
+					ToEmail:        "",
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":3,"isDefault":false,"name":"Empty TurboSMTP","turbosmtpConsumerKey":"","turbosmtpConsumerSecret":"","turbosmtpFromEmail":"","turbosmtpToEmail":"","type":"TurboSMTP","userId":1}`,
+		},
+		{
 			name:    "missing config field",
 			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
 			wantErr: true,

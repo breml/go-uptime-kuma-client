@@ -4,33 +4,54 @@ import (
 	"fmt"
 )
 
-// TurboSMTP represents a turboSMTP notification.
+// TurboSMTP represents a TurboSMTP notification provider.
+// TurboSMTP (https://serversmtp.com/turbo-api/) is a transactional email
+// relay, the alert is sent as an email through its HTTP API.
 type TurboSMTP struct {
 	Base
 	TurboSMTPDetails
 }
 
-// TurboSMTPDetails contains turboSMTP-specific notification configuration.
+// TurboSMTPDetails contains the configuration fields for TurboSMTP
+// notifications.
 type TurboSMTPDetails struct {
-	ConsumerKey    string `json:"turbosmtpConsumerKey"`
+	// ConsumerKey identifies the TurboSMTP API account. It is sent verbatim as
+	// the "consumerKey" request header.
+	ConsumerKey string `json:"turbosmtpConsumerKey"`
+	// ConsumerSecret authenticates the request. It is sent verbatim as the
+	// "consumerSecret" request header.
 	ConsumerSecret string `json:"turbosmtpConsumerSecret"`
-	// Region selects the turboSMTP API host the alert is sent to. The server
+	// Region selects the TurboSMTP API host the alert is sent to. The server
 	// uses the EU host for TurboSMTPRegionEU and the US host for anything
 	// else, including an unset region.
-	Region    TurboSMTPRegion `json:"turbosmtpRegion,omitempty"`
-	FromEmail string          `json:"turbosmtpFromEmail"`
-	// ToEmail is a comma-separated list of recipient email addresses.
+	//
+	// Unlike the other fields Uptime Kuma marks as required, the region carries
+	// omitempty. The server reads an absent and an empty region exactly like
+	// TurboSMTPRegionUS, so omitting the key keeps the config free of a value
+	// the form never stores. An empty region read from the server is therefore
+	// written back as an absent key.
+	Region TurboSMTPRegion `json:"turbosmtpRegion,omitempty"`
+	// FromEmail is the sender address. The server trims the whitespace around
+	// it before the mail is sent.
+	FromEmail string `json:"turbosmtpFromEmail"`
+	// ToEmail is a comma-separated list of recipient email addresses. Unlike
+	// CcEmail and BccEmail, it is passed on verbatim, so the whitespace around
+	// an individual address is not trimmed.
 	ToEmail string `json:"turbosmtpToEmail"`
-	// CcEmail is a comma-separated list of CC email addresses.
+	// CcEmail is a comma-separated list of CC email addresses. The server trims
+	// the whitespace around every address. If unset or empty, the mail carries
+	// no CC recipients.
 	CcEmail *string `json:"turbosmtpCcEmail,omitempty"`
-	// BccEmail is a comma-separated list of BCC email addresses.
+	// BccEmail is a comma-separated list of BCC email addresses. The server
+	// trims the whitespace around every address. If unset or empty, the mail
+	// carries no BCC recipients.
 	BccEmail *string `json:"turbosmtpBccEmail,omitempty"`
-	// Subject is the subject of the email. If unset, the server uses
+	// Subject is the subject of the email. If unset or empty, the server uses
 	// "Notification from Your Uptime Kuma".
 	Subject *string `json:"turbosmtpSubject,omitempty"`
 }
 
-// TurboSMTPRegion represents the turboSMTP API region.
+// TurboSMTPRegion represents the TurboSMTP API region.
 type TurboSMTPRegion string
 
 // TurboSMTP regions.
@@ -39,27 +60,27 @@ const (
 	TurboSMTPRegionEU TurboSMTPRegion = "eu"
 )
 
-// String returns the string representation of the turboSMTP region.
+// String returns the string representation of the TurboSMTP region.
 func (r TurboSMTPRegion) String() string {
 	return string(r)
 }
 
-// Type returns the notification type.
+// Type returns the notification type identifier for TurboSMTP.
 func (t TurboSMTP) Type() string {
 	return t.TurboSMTPDetails.Type()
 }
 
-// Type returns the notification type.
+// Type returns the notification type identifier for TurboSMTPDetails.
 func (TurboSMTPDetails) Type() string {
 	return "TurboSMTP"
 }
 
-// String returns a string representation of the notification.
+// String returns a string representation of the TurboSMTP notification.
 func (t TurboSMTP) String() string {
 	return fmt.Sprintf("%s, %s", formatNotification(t.Base, false), formatNotification(t.TurboSMTPDetails, true))
 }
 
-// UnmarshalJSON unmarshals a JSON byte slice into a notification.
+// UnmarshalJSON unmarshals JSON data into a TurboSMTP notification.
 func (t *TurboSMTP) UnmarshalJSON(data []byte) error {
 	detail := TurboSMTPDetails{}
 	base, err := unmarshalTo(data, &detail)
@@ -75,7 +96,7 @@ func (t *TurboSMTP) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON marshals a notification into a JSON byte slice.
+// MarshalJSON marshals the TurboSMTP notification into JSON.
 func (t TurboSMTP) MarshalJSON() ([]byte, error) {
 	return marshalJSON(t.Base, &t.TurboSMTPDetails)
 }
