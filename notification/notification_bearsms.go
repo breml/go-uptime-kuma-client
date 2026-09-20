@@ -5,8 +5,8 @@ import (
 )
 
 // BearSMS represents a BearSMS notification provider.
-// BearSMS is an Israeli SMS gateway; the alert is sent as an HTTP GET with the
-// credentials and the message in the query string.
+// BearSMS (https://app.bearsms.com/) is an SMS gateway, the alert is sent as
+// an HTTP GET with the credentials and the message in the query string.
 type BearSMS struct {
 	Base
 	BearSMSDetails
@@ -18,16 +18,19 @@ type BearSMSDetails struct {
 	Username string `json:"bearsmsUsername"`
 	// HashKey is the secret belonging to the account.
 	HashKey string `json:"bearsmsHashKey"`
-	// SenderID is the sender name or number shown to the recipient, at most 11
-	// characters.
+	// SenderID is the sender name or number shown to the recipient. Uptime
+	// Kuma's form caps it at 11 characters and notes that the sender has to be
+	// approved in the BearSMS account, neither of which this client or the
+	// server enforces.
 	//
 	// Upstream appends it to the request only when it is non-empty, so an
-	// absent key and an empty string behave alike. The pointer keeps an unset
-	// sender distinguishable from an explicitly empty one, so an edit does not
-	// send back a value the server never stored.
+	// absent key and an empty string behave alike and the pointer buys no
+	// semantics, only round trip fidelity: it keeps an unset sender
+	// distinguishable from an explicitly empty one, so an edit does not rewrite
+	// a stored empty sender as an absent one.
 	SenderID *string `json:"bearsmsSenderId,omitempty"`
-	// PhoneNumber is the recipient number in international format, without a
-	// leading plus, for example 9725XXXXXXXX.
+	// PhoneNumber is the recipient number with country code and without a "+"
+	// or "00" prefix, for example 9725XXXXXXXX.
 	PhoneNumber string `json:"bearsmsPhoneNumber"`
 }
 
@@ -49,7 +52,6 @@ func (b BearSMS) String() string {
 // UnmarshalJSON unmarshals JSON data into a BearSMS notification.
 func (b *BearSMS) UnmarshalJSON(data []byte) error {
 	detail := BearSMSDetails{}
-
 	base, err := unmarshalTo(data, &detail)
 	if err != nil {
 		return err

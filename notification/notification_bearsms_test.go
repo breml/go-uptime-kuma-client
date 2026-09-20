@@ -17,6 +17,7 @@ func TestNotificationBearSMS_Unmarshal(t *testing.T) {
 
 		want     notification.BearSMS
 		wantJSON string
+		wantErr  bool
 	}{
 		{
 			name: "success with all fields",
@@ -89,6 +90,51 @@ func TestNotificationBearSMS_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"bearsmsUsername":"user","bearsmsHashKey":"key","bearsmsSenderId":"","bearsmsPhoneNumber":"972501112222","id":3,"isDefault":false,"name":"BearSMS Empty Sender","type":"bearsms","userId":1}`,
 		},
+		{
+			// The username, the hash key and the phone number are required
+			// upstream, so none of them carries omitempty and an empty value
+			// must survive the round trip as an empty key. A dropped key is
+			// silent data loss on update, because the config sent back to the
+			// server is rebuilt from this struct.
+			name: "empty fields are preserved",
+			data: []byte(
+				`{"id":4,"name":"Empty BearSMS","active":true,"userId":1,"isDefault":false,"config":"{\"applyExisting\":false,\"isDefault\":false,\"name\":\"Empty BearSMS\",\"bearsmsUsername\":\"\",\"bearsmsHashKey\":\"\",\"bearsmsPhoneNumber\":\"\",\"type\":\"bearsms\"}"}`,
+			),
+
+			want: notification.BearSMS{
+				Base: notification.Base{
+					ID:            4,
+					Name:          "Empty BearSMS",
+					IsActive:      true,
+					UserID:        1,
+					IsDefault:     false,
+					ApplyExisting: false,
+				},
+				BearSMSDetails: notification.BearSMSDetails{
+					Username:    "",
+					HashKey:     "",
+					PhoneNumber: "",
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"bearsmsUsername":"","bearsmsHashKey":"","bearsmsPhoneNumber":"","id":4,"isDefault":false,"name":"Empty BearSMS","type":"bearsms","userId":1}`,
+		},
+		{
+			name:    "missing config field",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
+			wantErr: true,
+		},
+		{
+			name:    "invalid config json",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"not-json"}`),
+			wantErr: true,
+		},
+		{
+			name: "invalid config detail type",
+			data: []byte(
+				`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"{\"bearsmsUsername\":123,\"type\":\"bearsms\"}"}`,
+			),
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -96,6 +142,12 @@ func TestNotificationBearSMS_Unmarshal(t *testing.T) {
 			bearsms := notification.BearSMS{}
 
 			err := json.Unmarshal(tc.data, &bearsms)
+			if tc.wantErr {
+				require.Error(t, err)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			require.EqualExportedValues(t, tc.want, bearsms)
