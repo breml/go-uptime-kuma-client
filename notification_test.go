@@ -2465,6 +2465,67 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "OpenWa",
+			expectedType: "openwa",
+			create: notification.OpenWa{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test OpenWa Created",
+				},
+				OpenWaDetails: notification.OpenWaDetails{
+					APIURL:           "http://localhost:2785",
+					APIKey:           "secret-key",
+					Session:          "default",
+					ChatID:           "00117612345678@c.us,123456789012345678@g.us",
+					UseCustomMessage: new(true),
+					CustomMessage:    new("Alert: {{ msg }}"),
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				openwa, ok := n.(*notification.OpenWa)
+				if !ok {
+					panic("failed to assert OpenWa notification")
+				}
+
+				openwa.Name = "Test OpenWa Updated"
+				openwa.APIURL = "https://wa.example.com/"
+				openwa.APIKey = "updated-key"
+				openwa.Session = "alerts"
+				openwa.ChatID = "1234567890@lid"
+				openwa.UseCustomMessage = new(false)
+				openwa.CustomMessage = nil
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.OpenWa)
+				require.True(t, ok)
+				var openwa notification.OpenWa
+				err := actual.As(&openwa)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = openwa.UserID
+				require.EqualExportedValues(t, exp, openwa)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var openwa notification.OpenWa
+				err := base.As(&openwa)
+				require.NoError(t, err)
+				return &openwa
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.OpenWa)
+				require.True(t, ok)
+				var openwa notification.OpenWa
+				err := actual.As(&openwa)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, openwa)
+			},
+		},
+		{
 			name:         "FlashDuty",
 			expectedType: "FlashDuty",
 			create: notification.FlashDuty{
