@@ -93,6 +93,7 @@ func TestTypeMatchesUpstreamProviderName(t *testing.T) {
 		"OneChat",
 		"Onesender",
 		"Ooredoo",
+		"openwa",
 		"Opsgenie",
 		"PagerDuty",
 		"PagerTree",
