@@ -87,6 +87,7 @@ func TestTypeMatchesUpstreamProviderName(t *testing.T) {
 		"nextcloudtalk",
 		"nostr",
 		"notifery",
+		"notifyapp",
 		"ntfy",
 		"octopush",
 		"OneBot",

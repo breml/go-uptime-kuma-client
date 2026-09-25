@@ -3395,6 +3395,61 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "NotifyApp",
+			expectedType: "notifyapp",
+			create: notification.NotifyApp{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test NotifyApp Created",
+				},
+				NotifyAppDetails: notification.NotifyAppDetails{
+					DeviceID: "ABC12345",
+					Token:    "test-token",
+					IconURL:  new("https://example.com/icon.png"),
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				notifyApp, ok := n.(*notification.NotifyApp)
+				if !ok {
+					panic("failed to assert NotifyApp notification")
+				}
+
+				notifyApp.Name = "Test NotifyApp Updated"
+				notifyApp.DeviceID = "XYZ98765"
+				notifyApp.Token = "updated-token"
+				notifyApp.IconURL = new("https://example.com/updated-icon.png")
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.NotifyApp)
+				require.True(t, ok)
+				var notifyApp notification.NotifyApp
+				err := actual.As(&notifyApp)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = notifyApp.UserID
+				require.EqualExportedValues(t, exp, notifyApp)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var notifyApp notification.NotifyApp
+				err := base.As(&notifyApp)
+				require.NoError(t, err)
+				return &notifyApp
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.NotifyApp)
+				require.True(t, ok)
+				var notifyApp notification.NotifyApp
+				err := actual.As(&notifyApp)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, notifyApp)
+			},
+		},
+		{
 			name:         "OneSender",
 			expectedType: "Onesender",
 			create: notification.OneSender{
