@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -105,8 +104,8 @@ func TestNotificationSignal_Unmarshal(t *testing.T) {
 					URL:         "http://localhost:9998",
 					Number:      "+1234567890",
 					Recipients:  "+9876543210",
-					UseTemplate: ptr.To(true),
-					Template:    ptr.To("Alert: {{ msg }}"),
+					UseTemplate: new(true),
+					Template:    new("Alert: {{ msg }}"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":4,"isDefault":false,"name":"Signal Template","signalURL":"http://localhost:9998","signalNumber":"+1234567890","signalRecipients":"+9876543210","signalUseTemplate":true,"signalTemplate":"Alert: {{ msg }}","type":"signal","userId":1}`,
@@ -130,8 +129,8 @@ func TestNotificationSignal_Unmarshal(t *testing.T) {
 					URL:         "http://localhost:9998",
 					Number:      "+1234567890",
 					Recipients:  "+9876543210",
-					UseTemplate: ptr.To(false),
-					Template:    ptr.To(""),
+					UseTemplate: new(false),
+					Template:    new(""),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":5,"isDefault":false,"name":"Signal Explicit False","signalURL":"http://localhost:9998","signalNumber":"+1234567890","signalRecipients":"+9876543210","signalUseTemplate":false,"signalTemplate":"","type":"signal","userId":1}`,

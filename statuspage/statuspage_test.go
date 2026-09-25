@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
 
@@ -30,7 +29,7 @@ func TestStatusPage_MarshalUnmarshal(t *testing.T) {
 				Published:             true,
 				ShowTags:              true,
 				DomainNameList:        []string{"status.example.com"},
-				AnalyticsType:         ptr.To("google"),
+				AnalyticsType:         new("google"),
 				AnalyticsID:           "UA-123456-1",
 				AnalyticsScriptURL:    "",
 				CustomCSS:             "body { background: #fff; }",
@@ -43,7 +42,7 @@ func TestStatusPage_MarshalUnmarshal(t *testing.T) {
 						Name:   "Web Services",
 						Weight: 1,
 						MonitorList: []statuspage.PublicMonitor{
-							{ID: 100, SendURL: &sendURLTrue, URL: ptr.To("https://example.com/")},
+							{ID: 100, SendURL: &sendURLTrue, URL: new("https://example.com/")},
 							{ID: 101, SendURL: &sendURLFalse},
 						},
 					},
@@ -95,7 +94,7 @@ func TestPublicGroup_MarshalUnmarshal(t *testing.T) {
 				Name:   "Test Group",
 				Weight: 5,
 				MonitorList: []statuspage.PublicMonitor{
-					{ID: 10, SendURL: &sendURL, URL: ptr.To("https://example.com/")},
+					{ID: 10, SendURL: &sendURL, URL: new("https://example.com/")},
 					{ID: 20, SendURL: nil},
 				},
 			},
@@ -144,7 +143,7 @@ func TestPublicMonitor_MarshalUnmarshal(t *testing.T) {
 		},
 		{
 			name:    "monitor with custom url",
-			monitor: statuspage.PublicMonitor{ID: 4, SendURL: &sendURLTrue, URL: ptr.To("https://example.com/")},
+			monitor: statuspage.PublicMonitor{ID: 4, SendURL: &sendURLTrue, URL: new("https://example.com/")},
 		},
 		{
 			name:    "monitor without custom url",

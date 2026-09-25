@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -132,7 +131,7 @@ func TestNotificationSMTP_Unmarshal(t *testing.T) {
 					IgnoreTLSError:    false,
 					From:              "sender@example.com",
 					To:                "recipient@example.com",
-					AdditionalHeaders: ptr.To(`{"X-Custom-Header": "Additional Header"}`),
+					AdditionalHeaders: new(`{"X-Custom-Header": "Additional Header"}`),
 					HTMLBody:          false,
 				},
 			},
@@ -160,7 +159,7 @@ func TestNotificationSMTP_Unmarshal(t *testing.T) {
 					IgnoreTLSError:    false,
 					From:              "sender@example.com",
 					To:                "recipient@example.com",
-					AdditionalHeaders: ptr.To(""),
+					AdditionalHeaders: new(""),
 					HTMLBody:          false,
 				},
 			},

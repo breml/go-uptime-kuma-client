@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kuma "github.com/breml/go-uptime-kuma-client"
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -68,10 +67,10 @@ func TestNotificationCRUD(t *testing.T) {
 				ntfy.Password = "testpass"
 				ntfy.Priority = 3
 				ntfy.PriorityDown = 5
-				ntfy.Call = ptr.To("+12223334444")
-				ntfy.UseTemplate = ptr.To(true)
-				ntfy.CustomTitle = ptr.To("{{ name }} is {{ status }}")
-				ntfy.CustomMessage = ptr.To("{{ msg }}")
+				ntfy.Call = new("+12223334444")
+				ntfy.UseTemplate = new(true)
+				ntfy.CustomTitle = new("{{ name }} is {{ status }}")
+				ntfy.CustomMessage = new("{{ msg }}")
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
 				t.Helper()
@@ -290,7 +289,7 @@ func TestNotificationCRUD(t *testing.T) {
 					CustomSubject:     "Alert: {{ monitorJSON['name'] }}",
 					CustomBody:        "Status: {{ msg }}",
 					HTMLBody:          true,
-					AdditionalHeaders: ptr.To(`{"X-Custom-Header": "Additional Header"}`),
+					AdditionalHeaders: new(`{"X-Custom-Header": "Additional Header"}`),
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -1004,7 +1003,7 @@ func TestNotificationCRUD(t *testing.T) {
 				},
 				TelnyxDetails: notification.TelnyxDetails{
 					APIKey:             "KEYxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-					MessagingProfileID: ptr.To("4001763e-7f7d-4c87-a8b1-1c5a0e5a3f48"),
+					MessagingProfileID: new("4001763e-7f7d-4c87-a8b1-1c5a0e5a3f48"),
 					PhoneNumber:        "+15559876543",
 					ToNumber:           "+15551234567",
 				},
@@ -1062,7 +1061,7 @@ func TestNotificationCRUD(t *testing.T) {
 					FromNumber:  "+15559876543",
 					ToNumber:    "+15551234567",
 					MessageType: notification.PlivoMessageTypeCall,
-					AnswerURL:   ptr.To("https://example.com/answer.xml"),
+					AnswerURL:   new("https://example.com/answer.xml"),
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -1119,7 +1118,7 @@ func TestNotificationCRUD(t *testing.T) {
 					AccessKey:   "test_access_key",
 					BearerToken: "test_bearer_token",
 					ToNumber:    "7712345, 9607798765",
-					ServerURL:   ptr.To("https://o-papi1-lb01.ooredoo.mv/bulk_sms/v2"),
+					ServerURL:   new("https://o-papi1-lb01.ooredoo.mv/bulk_sms/v2"),
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -1172,7 +1171,7 @@ func TestNotificationCRUD(t *testing.T) {
 				},
 				FlowtriqDetails: notification.FlowtriqDetails{
 					WebhookURL: "https://app.flowtriq.com/api/webhooks/created",
-					APIKey:     ptr.To("test_api_key"),
+					APIKey:     new("test_api_key"),
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -1226,7 +1225,7 @@ func TestNotificationCRUD(t *testing.T) {
 				EgoSMSDetails: notification.EgoSMSDetails{
 					Username:    "myuser",
 					Password:    "mypassword",
-					Sender:      ptr.To("TESTSENDER"),
+					Sender:      new("TESTSENDER"),
 					PhoneNumber: "+41791234567",
 				},
 			},
@@ -2367,7 +2366,7 @@ func TestNotificationCRUD(t *testing.T) {
 					Token:       "pk_12345_ABCDEF",
 					WorkspaceID: "9001234567",
 					ChannelID:   "channel-abc",
-					DisableURL:  ptr.To(true),
+					DisableURL:  new(true),
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -5296,9 +5295,9 @@ func TestNotificationCRUD(t *testing.T) {
 					Region:         notification.TurboSMTPRegionEU,
 					FromEmail:      "alerts@example.com",
 					ToEmail:        "ops@example.com,oncall@example.com",
-					CcEmail:        ptr.To("cc@example.com"),
-					BccEmail:       ptr.To("bcc@example.com"),
-					Subject:        ptr.To("Uptime Kuma Alert"),
+					CcEmail:        new("cc@example.com"),
+					BccEmail:       new("bcc@example.com"),
+					Subject:        new("Uptime Kuma Alert"),
 				},
 			},
 			updateFunc: func(n notification.Notification) {
@@ -5355,7 +5354,7 @@ func TestNotificationCRUD(t *testing.T) {
 				BearSMSDetails: notification.BearSMSDetails{
 					Username:    "bear-user",
 					HashKey:     "hash-key-123",
-					SenderID:    ptr.To("UptimeKuma"),
+					SenderID:    new("UptimeKuma"),
 					PhoneNumber: "972501234567",
 				},
 			},

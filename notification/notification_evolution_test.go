@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -110,8 +109,8 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					InstanceName:     "myinstance",
 					AuthToken:        "token123",
 					Recipient:        "5511999999999",
-					UseCustomMessage: ptr.To(true),
-					CustomMessage:    ptr.To("Alert: {{ msg }}"),
+					UseCustomMessage: new(true),
+					CustomMessage:    new("Alert: {{ msg }}"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"evolutionApiUrl":"https://evolapicloud.com","evolutionAuthToken":"token123","evolutionCustomMessage":"Alert: {{ msg }}","evolutionInstanceName":"myinstance","evolutionRecipient":"5511999999999","evolutionUseCustomMessage":true,"id":4,"isDefault":false,"name":"Evolution Template","type":"evolution","userId":1}`,
@@ -136,8 +135,8 @@ func TestNotificationEvolution_Unmarshal(t *testing.T) {
 					InstanceName:     "myinstance",
 					AuthToken:        "token123",
 					Recipient:        "5511999999999",
-					UseCustomMessage: ptr.To(false),
-					CustomMessage:    ptr.To(""),
+					UseCustomMessage: new(false),
+					CustomMessage:    new(""),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"evolutionApiUrl":"https://evolapicloud.com","evolutionAuthToken":"token123","evolutionCustomMessage":"","evolutionInstanceName":"myinstance","evolutionRecipient":"5511999999999","evolutionUseCustomMessage":false,"id":5,"isDefault":false,"name":"Evolution Explicit False","type":"evolution","userId":1}`,

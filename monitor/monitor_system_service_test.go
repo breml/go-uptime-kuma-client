@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorSystemService_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              4,
 					Name:            "system-service-monitor",
-					Description:     ptr.To("Test System Service monitor"),
+					Description:     new("Test System Service monitor"),
 					PathName:        "group / system-service-monitor",
 					Parent:          &parent1,
 					Interval:        60,

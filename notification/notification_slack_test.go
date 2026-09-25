@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -63,7 +62,7 @@ func TestNotificationSlack_Unmarshal(t *testing.T) {
 					WebhookURL:       "https://hooks.slack.com/services/aaa/bbb/ccc",
 					RichMessage:      true,
 					ChannelNotify:    false,
-					IncludeGroupName: ptr.To(true),
+					IncludeGroupName: new(true),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Slack Group Path","slackIncludeGroupName":true,"slackchannel":"","slackchannelnotify":false,"slackiconemo":"","slackrichmessage":true,"slackusername":"","slackwebhookURL":"https://hooks.slack.com/services/aaa/bbb/ccc","type":"slack","userId":1}`,
@@ -87,8 +86,8 @@ func TestNotificationSlack_Unmarshal(t *testing.T) {
 					WebhookURL:    "https://hooks.slack.com/services/ddd/eee/fff",
 					RichMessage:   false,
 					ChannelNotify: false,
-					UseTemplate:   ptr.To(true),
-					Template:      ptr.To("Alert: {{ msg }}"),
+					UseTemplate:   new(true),
+					Template:      new("Alert: {{ msg }}"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":3,"isDefault":false,"name":"Slack Template","slackTemplate":"Alert: {{ msg }}","slackUseTemplate":true,"slackchannel":"","slackchannelnotify":false,"slackiconemo":"","slackrichmessage":false,"slackusername":"","slackwebhookURL":"https://hooks.slack.com/services/ddd/eee/fff","type":"slack","userId":1}`,
@@ -112,9 +111,9 @@ func TestNotificationSlack_Unmarshal(t *testing.T) {
 					WebhookURL:       "https://hooks.slack.com/services/ggg/hhh/iii",
 					RichMessage:      false,
 					ChannelNotify:    false,
-					IncludeGroupName: ptr.To(false),
-					UseTemplate:      ptr.To(false),
-					Template:         ptr.To(""),
+					IncludeGroupName: new(false),
+					UseTemplate:      new(false),
+					Template:         new(""),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":4,"isDefault":false,"name":"Slack Explicit False","slackIncludeGroupName":false,"slackTemplate":"","slackUseTemplate":false,"slackchannel":"","slackchannelnotify":false,"slackiconemo":"","slackrichmessage":false,"slackusername":"","slackwebhookURL":"https://hooks.slack.com/services/ggg/hhh/iii","type":"slack","userId":1}`,

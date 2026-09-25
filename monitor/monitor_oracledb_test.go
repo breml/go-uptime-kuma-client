@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorOracleDB_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              1,
 					Name:            "oracledb-monitor",
-					Description:     ptr.To("Test OracleDB monitor"),
+					Description:     new("Test OracleDB monitor"),
 					PathName:        "group / oracledb-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -60,7 +59,7 @@ func TestMonitorOracleDB_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              2,
 					Name:            "oracledb-query",
-					Description:     ptr.To("Test OracleDB with query"),
+					Description:     new("Test OracleDB with query"),
 					PathName:        "group / oracledb-query",
 					Parent:          &parent1,
 					Interval:        120,
@@ -73,7 +72,7 @@ func TestMonitorOracleDB_Unmarshal(t *testing.T) {
 				},
 				OracleDBDetails: monitor.OracleDBDetails{
 					DatabaseConnectionString: "oracle.example.com:1521/PROD",
-					DatabaseQuery:            ptr.To("SELECT COUNT(*) FROM user_tables"),
+					DatabaseQuery:            new("SELECT COUNT(*) FROM user_tables"),
 					Username:                 "admin",
 					Password:                 "adminpass",
 				},
@@ -103,7 +102,7 @@ func TestMonitorOracleDB_Unmarshal(t *testing.T) {
 				},
 				OracleDBDetails: monitor.OracleDBDetails{
 					DatabaseConnectionString: "db.example.com:1521/ORCL",
-					DatabaseQuery:            ptr.To("SELECT banner FROM v$version WHERE banner LIKE 'Oracle%'"),
+					DatabaseQuery:            new("SELECT banner FROM v$version WHERE banner LIKE 'Oracle%'"),
 					Username:                 "system",
 					Password:                 "oracle",
 					Conditions: []monitor.Condition{
@@ -175,7 +174,7 @@ func TestMonitorOracleDB_String(t *testing.T) {
 			name: "query set",
 			details: monitor.OracleDBDetails{
 				DatabaseConnectionString: "localhost:1521/XEPDB1",
-				DatabaseQuery:            ptr.To("SELECT 1 FROM DUAL"),
+				DatabaseQuery:            new("SELECT 1 FROM DUAL"),
 				Username:                 "oracle",
 				Password:                 "secret",
 			},

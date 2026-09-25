@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorSQLServer_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              1,
 					Name:            "sqlserver-monitor",
-					Description:     ptr.To("Test SQL Server monitor"),
+					Description:     new("Test SQL Server monitor"),
 					PathName:        "group / sqlserver-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -58,7 +57,7 @@ func TestMonitorSQLServer_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              2,
 					Name:            "sqlserver-query",
-					Description:     ptr.To("Test SQL Server with query"),
+					Description:     new("Test SQL Server with query"),
 					PathName:        "group / sqlserver-query",
 					Parent:          &parent1,
 					Interval:        120,
@@ -71,7 +70,7 @@ func TestMonitorSQLServer_Unmarshal(t *testing.T) {
 				},
 				SQLServerDetails: monitor.SQLServerDetails{
 					DatabaseConnectionString: "Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;",
-					DatabaseQuery:            ptr.To("SELECT COUNT(*) FROM sys.tables;"),
+					DatabaseQuery:            new("SELECT COUNT(*) FROM sys.tables;"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;","databaseQuery":"SELECT COUNT(*) FROM sys.tables;","description":"Test SQL Server with query","id":2,"interval":120,"maxretries":3,"name":"sqlserver-query","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"type":"sqlserver","upsideDown":false}`,
@@ -99,7 +98,7 @@ func TestMonitorSQLServer_Unmarshal(t *testing.T) {
 				},
 				SQLServerDetails: monitor.SQLServerDetails{
 					DatabaseConnectionString: "Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;",
-					DatabaseQuery:            ptr.To("SELECT COUNT(*) FROM sys.tables;"),
+					DatabaseQuery:            new("SELECT COUNT(*) FROM sys.tables;"),
 					Conditions: []monitor.Condition{
 						{Variable: "result", Operator: ">", Value: "10", AndOr: monitor.ConditionAnd},
 					},

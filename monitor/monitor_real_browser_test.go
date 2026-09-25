@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -48,7 +47,7 @@ func TestMonitorRealBrowser_Unmarshal(t *testing.T) {
 					IgnoreTLS:           false,
 					MaxRedirects:        10,
 					AcceptedStatusCodes: []string{"200-299"},
-					ScreenshotDelay:     ptr.To(1500),
+					ScreenshotDelay:     new(1500),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"conditions":[],"description":null,"domainExpiryNotification":false,"id":2,"ignoreTls":false,"interval":60,"maxredirects":10,"maxretries":2,"name":"example.com","notificationIDList":{"1":true},"parent":1,"proxyId":null,"remote_browser":null,"resendInterval":0,"retryInterval":60,"screenshot_delay":1500,"timeout":48,"type":"real-browser","upsideDown":false,"url":"https://www.example.com"}`,
@@ -81,7 +80,7 @@ func TestMonitorRealBrowser_Unmarshal(t *testing.T) {
 					IgnoreTLS:           false,
 					MaxRedirects:        10,
 					AcceptedStatusCodes: []string{"200-299"},
-					ScreenshotDelay:     ptr.To(1500),
+					ScreenshotDelay:     new(1500),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"conditions":[],"description":null,"domainExpiryNotification":false,"id":2,"ignoreTls":false,"interval":60,"maxredirects":10,"maxretries":2,"name":"example.com","notificationIDList":{"1":true},"parent":1,"proxyId":null,"remote_browser":null,"resendInterval":0,"retryInterval":60,"screenshot_delay":1500,"timeout":0.5,"type":"real-browser","upsideDown":false,"url":"https://www.example.com"}`,

@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorTailscalePing_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              1,
 					Name:            "tailscale-monitor",
-					Description:     ptr.To("Test Tailscale Ping monitor"),
+					Description:     new("Test Tailscale Ping monitor"),
 					PathName:        "group / tailscale-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -57,7 +56,7 @@ func TestMonitorTailscalePing_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              2,
 					Name:            "tailscale-hostname",
-					Description:     ptr.To("Test Tailscale with hostname"),
+					Description:     new("Test Tailscale with hostname"),
 					PathName:        "group / tailscale-hostname",
 					Parent:          &parent1,
 					Interval:        120,

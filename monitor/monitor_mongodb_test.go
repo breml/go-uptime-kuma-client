@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorMongoDB_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              1,
 					Name:            "mongodb-monitor",
-					Description:     ptr.To("Test MongoDB monitor"),
+					Description:     new("Test MongoDB monitor"),
 					PathName:        "group / mongodb-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -60,7 +59,7 @@ func TestMonitorMongoDB_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              2,
 					Name:            "mongodb-query",
-					Description:     ptr.To("Test MongoDB with command"),
+					Description:     new("Test MongoDB with command"),
 					PathName:        "group / mongodb-query",
 					Parent:          &parent1,
 					Interval:        120,
@@ -73,9 +72,9 @@ func TestMonitorMongoDB_Unmarshal(t *testing.T) {
 				},
 				MongoDBDetails: monitor.MongoDBDetails{
 					DatabaseConnectionString: "mongodb://user:pass@mongodb.example.com:27017/admin",
-					DatabaseQuery:            ptr.To("{\"dbStats\": 1}"),
-					JSONPath:                 ptr.To("$.ok"),
-					ExpectedValue:            ptr.To("1"),
+					DatabaseQuery:            new("{\"dbStats\": 1}"),
+					JSONPath:                 new("$.ok"),
+					ExpectedValue:            new("1"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"mongodb://user:pass@mongodb.example.com:27017/admin","databaseQuery":"{\"dbStats\": 1}","description":"Test MongoDB with command","expectedValue":"1","id":2,"interval":120,"jsonPath":"$.ok","maxretries":3,"name":"mongodb-query","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"type":"mongodb","upsideDown":false}`,

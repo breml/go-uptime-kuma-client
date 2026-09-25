@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -31,7 +30,7 @@ func TestMonitorPing_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              3,
 					Name:            "ping-monitor",
-					Description:     ptr.To("Test ping monitor"),
+					Description:     new("Test ping monitor"),
 					PathName:        "group / ping-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -60,7 +59,7 @@ func TestMonitorPing_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              3,
 					Name:            "ping-monitor",
-					Description:     ptr.To("Test ping monitor"),
+					Description:     new("Test ping monitor"),
 					PathName:        "group / ping-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -74,7 +73,7 @@ func TestMonitorPing_Unmarshal(t *testing.T) {
 				PingDetails: monitor.PingDetails{
 					Hostname:   "8.8.8.8",
 					PacketSize: 64,
-					Timeout:    ptr.To(0.5),
+					Timeout:    new(0.5),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test ping monitor","domainExpiryNotification":false,"hostname":"8.8.8.8","id":3,"interval":60,"maxretries":2,"name":"ping-monitor","notificationIDList":{"1":true,"2":true},"packetSize":64,"parent":1,"resendInterval":0,"retryInterval":60,"timeout":0.5,"type":"ping","upsideDown":false}`,

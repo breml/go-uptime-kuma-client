@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -33,7 +32,7 @@ func TestMonitorSMTP_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              7,
 					Name:            "smtp-monitor",
-					Description:     ptr.To("Test SMTP monitor"),
+					Description:     new("Test SMTP monitor"),
 					PathName:        "group / smtp-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -62,7 +61,7 @@ func TestMonitorSMTP_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              8,
 					Name:            "smtp-secure-monitor",
-					Description:     ptr.To("Test SMTP secure monitor"),
+					Description:     new("Test SMTP secure monitor"),
 					PathName:        "group / smtp-secure-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -76,7 +75,7 @@ func TestMonitorSMTP_Unmarshal(t *testing.T) {
 				SMTPDetails: monitor.SMTPDetails{
 					Hostname:     "mail.example.com",
 					Port:         &portSecure,
-					SMTPSecurity: ptr.To("secure"),
+					SMTPSecurity: new("secure"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SMTP secure monitor","domainExpiryNotification":false,"hostname":"mail.example.com","id":8,"interval":60,"maxretries":2,"name":"smtp-secure-monitor","notificationIDList":{"1":true},"parent":1,"port":465,"resendInterval":0,"retryInterval":60,"smtpSecurity":"secure","type":"smtp","upsideDown":false}`,
@@ -91,7 +90,7 @@ func TestMonitorSMTP_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              9,
 					Name:            "smtp-starttls-monitor",
-					Description:     ptr.To("Test SMTP STARTTLS monitor"),
+					Description:     new("Test SMTP STARTTLS monitor"),
 					PathName:        "group / smtp-starttls-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -105,7 +104,7 @@ func TestMonitorSMTP_Unmarshal(t *testing.T) {
 				SMTPDetails: monitor.SMTPDetails{
 					Hostname:     "mail.example.com",
 					Port:         &portSTARTTLS,
-					SMTPSecurity: ptr.To("starttls"),
+					SMTPSecurity: new("starttls"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SMTP STARTTLS monitor","domainExpiryNotification":false,"hostname":"mail.example.com","id":9,"interval":60,"maxretries":2,"name":"smtp-starttls-monitor","notificationIDList":{},"parent":1,"port":587,"resendInterval":0,"retryInterval":60,"smtpSecurity":"starttls","type":"smtp","upsideDown":false}`,
@@ -120,7 +119,7 @@ func TestMonitorSMTP_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              10,
 					Name:            "smtp-nostarttls-monitor",
-					Description:     ptr.To("Test SMTP no STARTTLS monitor"),
+					Description:     new("Test SMTP no STARTTLS monitor"),
 					PathName:        "group / smtp-nostarttls-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -134,7 +133,7 @@ func TestMonitorSMTP_Unmarshal(t *testing.T) {
 				SMTPDetails: monitor.SMTPDetails{
 					Hostname:     "mail.example.com",
 					Port:         &port25,
-					SMTPSecurity: ptr.To("nostarttls"),
+					SMTPSecurity: new("nostarttls"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SMTP no STARTTLS monitor","domainExpiryNotification":false,"hostname":"mail.example.com","id":10,"interval":60,"maxretries":2,"name":"smtp-nostarttls-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":25,"resendInterval":0,"retryInterval":60,"smtpSecurity":"nostarttls","type":"smtp","upsideDown":false}`,

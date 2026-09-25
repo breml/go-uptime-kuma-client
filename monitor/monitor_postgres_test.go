@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorPostgres_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              5,
 					Name:            "postgres-default",
-					Description:     ptr.To("PostgreSQL with default query"),
+					Description:     new("PostgreSQL with default query"),
 					PathName:        "group / postgres-default",
 					Parent:          &parent1,
 					Interval:        60,
@@ -58,7 +57,7 @@ func TestMonitorPostgres_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              6,
 					Name:            "postgres-monitor",
-					Description:     ptr.To("Test PostgreSQL monitor"),
+					Description:     new("Test PostgreSQL monitor"),
 					PathName:        "group / postgres-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -71,7 +70,7 @@ func TestMonitorPostgres_Unmarshal(t *testing.T) {
 				},
 				PostgresDetails: monitor.PostgresDetails{
 					DatabaseConnectionString: "postgres://username:password@host:port/database",
-					DatabaseQuery:            ptr.To("SELECT 1"),
+					DatabaseQuery:            new("SELECT 1"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"postgres://username:password@host:port/database","databaseQuery":"SELECT 1","description":"Test PostgreSQL monitor","id":6,"interval":60,"maxretries":2,"name":"postgres-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"type":"postgres","upsideDown":false}`,
@@ -99,7 +98,7 @@ func TestMonitorPostgres_Unmarshal(t *testing.T) {
 				},
 				PostgresDetails: monitor.PostgresDetails{
 					DatabaseConnectionString: "postgres://user:pass@localhost:5432/app",
-					DatabaseQuery:            ptr.To("SELECT version()"),
+					DatabaseQuery:            new("SELECT version()"),
 					Conditions: []monitor.Condition{
 						{Variable: "result", Operator: "contains", Value: "PostgreSQL", AndOr: monitor.ConditionAnd},
 					},
@@ -139,7 +138,7 @@ func TestMonitorPostgres_String(t *testing.T) {
 			name: "query set",
 			details: monitor.PostgresDetails{
 				DatabaseConnectionString: "postgres://user:pass@localhost:5432/app",
-				DatabaseQuery:            ptr.To("SELECT 1"),
+				DatabaseQuery:            new("SELECT 1"),
 			},
 			wantContains: []string{
 				`databaseConnectionString: "postgres://user:pass@localhost:5432/app"`,

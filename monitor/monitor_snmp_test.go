@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -31,7 +30,7 @@ func TestMonitorSNMP_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              10,
 					Name:            "snmp-monitor",
-					Description:     ptr.To("Test SNMP monitor"),
+					Description:     new("Test SNMP monitor"),
 					PathName:        "group / snmp-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -48,9 +47,9 @@ func TestMonitorSNMP_Unmarshal(t *testing.T) {
 					SNMPVersion:      "2c",
 					SNMPOID:          "1.3.6.1.2.1.2.2.1.5.1",
 					SNMPCommunity:    "public",
-					JSONPath:         ptr.To("ifSpeed"),
-					JSONPathOperator: ptr.To("=="),
-					ExpectedValue:    ptr.To("1000000000"),
+					JSONPath:         new("ifSpeed"),
+					JSONPathOperator: new("=="),
+					ExpectedValue:    new("1000000000"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SNMP monitor","domainExpiryNotification":false,"expectedValue":"1000000000","hostname":"192.168.1.1","id":10,"interval":60,"jsonPath":"ifSpeed","jsonPathOperator":"==","maxretries":2,"name":"snmp-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":161,"radiusPassword":"public","resendInterval":0,"retryInterval":60,"snmpOid":"1.3.6.1.2.1.2.2.1.5.1","snmpV3Username":null,"snmpVersion":"2c","type":"snmp","upsideDown":false}`,
@@ -99,7 +98,7 @@ func TestMonitorSNMP_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              12,
 					Name:            "snmp-v3",
-					Description:     ptr.To("Test SNMPv3 monitor"),
+					Description:     new("Test SNMPv3 monitor"),
 					PathName:        "snmp-v3",
 					Parent:          nil,
 					Interval:        60,
@@ -116,7 +115,7 @@ func TestMonitorSNMP_Unmarshal(t *testing.T) {
 					SNMPVersion:      "3",
 					SNMPOID:          "1.3.6.1.2.1.1.3.0",
 					SNMPCommunity:    "",
-					SNMPV3Username:   ptr.To("snmpuser"),
+					SNMPV3Username:   new("snmpuser"),
 					JSONPath:         nil,
 					JSONPathOperator: nil,
 					ExpectedValue:    nil,

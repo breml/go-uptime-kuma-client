@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -89,7 +88,7 @@ func TestNotificationAliyunSMS_Unmarshal(t *testing.T) {
 					PhoneNumber:        "8613800000003",
 					SignName:           "Alert",
 					TemplateCode:       "SMS_0000000002",
-					OptionalParameters: ptr.To(true),
+					OptionalParameters: new(true),
 				},
 			},
 			wantJSON: `{"accessKeyId":"AKIA456","active":true,"applyExisting":false,"id":3,"isDefault":false,"name":"Aliyun SMS Optional","optionalParameters":true,"phonenumber":"8613800000003","secretAccessKey":"secret456","signName":"Alert","templateCode":"SMS_0000000002","type":"AliyunSMS","userId":1}`,
@@ -115,7 +114,7 @@ func TestNotificationAliyunSMS_Unmarshal(t *testing.T) {
 					PhoneNumber:        "8613800000004",
 					SignName:           "Alert",
 					TemplateCode:       "SMS_0000000003",
-					OptionalParameters: ptr.To(false),
+					OptionalParameters: new(false),
 				},
 			},
 			wantJSON: `{"accessKeyId":"AKIA789","active":true,"applyExisting":false,"id":4,"isDefault":false,"name":"Aliyun SMS NoOptional","optionalParameters":false,"phonenumber":"8613800000004","secretAccessKey":"secret789","signName":"Alert","templateCode":"SMS_0000000003","type":"AliyunSMS","userId":1}`,

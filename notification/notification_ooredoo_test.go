@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -39,7 +38,7 @@ func TestNotificationOoredoo_Unmarshal(t *testing.T) {
 					AccessKey:   "test_access_key",
 					BearerToken: "test_bearer_token",
 					ToNumber:    "7712345, 9607798765",
-					ServerURL:   ptr.To("https://o-papi1-lb01.ooredoo.mv/bulk_sms/v2"),
+					ServerURL:   new("https://o-papi1-lb01.ooredoo.mv/bulk_sms/v2"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My Ooredoo Alert","ooredooAccessKey":"test_access_key","ooredooBearerToken":"test_bearer_token","ooredooServerUrl":"https://o-papi1-lb01.ooredoo.mv/bulk_sms/v2","ooredooToNumber":"7712345, 9607798765","ooredooUsername":"test_user","type":"Ooredoo","userId":1}`,

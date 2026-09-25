@@ -106,8 +106,7 @@ func (e *UpdateEventTimeoutError) Unwrap() []error {
 // is one, and returns err unchanged otherwise. The command layer knows which
 // field of the ack carries the ID, the layer that builds the error does not.
 func withCreatedID(err error, id int64) error {
-	var timeoutErr *UpdateEventTimeoutError
-	if errors.As(err, &timeoutErr) {
+	if timeoutErr, ok := errors.AsType[*UpdateEventTimeoutError](err); ok {
 		timeoutErr.ID = id
 	}
 
@@ -164,8 +163,7 @@ func (*operationTimeoutError) Unwrap() []error {
 //
 //nolint:wrapcheck // Both returns are the context's own error, which the callers wrap with the command they belong to.
 func contextErr(ctx context.Context) error {
-	var operationTimeout *operationTimeoutError
-	if errors.As(context.Cause(ctx), &operationTimeout) {
+	if operationTimeout, ok := errors.AsType[*operationTimeoutError](context.Cause(ctx)); ok {
 		return operationTimeout
 	}
 

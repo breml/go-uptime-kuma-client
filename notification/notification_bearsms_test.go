@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -37,7 +36,7 @@ func TestNotificationBearSMS_Unmarshal(t *testing.T) {
 				BearSMSDetails: notification.BearSMSDetails{
 					Username:    "bear-user",
 					HashKey:     "hash-key-123",
-					SenderID:    ptr.To("UptimeKuma"),
+					SenderID:    new("UptimeKuma"),
 					PhoneNumber: "972501234567",
 				},
 			},
@@ -84,7 +83,7 @@ func TestNotificationBearSMS_Unmarshal(t *testing.T) {
 				BearSMSDetails: notification.BearSMSDetails{
 					Username:    "user",
 					HashKey:     "key",
-					SenderID:    ptr.To(""),
+					SenderID:    new(""),
 					PhoneNumber: "972501112222",
 				},
 			},

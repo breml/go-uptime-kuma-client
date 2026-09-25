@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -37,8 +36,8 @@ func TestNotificationWhatsapp360messenger_Unmarshal(t *testing.T) {
 					AuthToken:   "token123",
 					Recipient:   "447488888888",
 					GroupIDs:    []string{"group1", "group2"},
-					UseTemplate: ptr.To(true),
-					Template:    ptr.To("Alert: {{ msg }}"),
+					UseTemplate: new(true),
+					Template:    new("Alert: {{ msg }}"),
 				},
 			},
 			wantJSON: `{"Whatsapp360messengerAuthToken":"token123","Whatsapp360messengerGroupIds":["group1","group2"],"Whatsapp360messengerRecipient":"447488888888","Whatsapp360messengerTemplate":"Alert: {{ msg }}","Whatsapp360messengerUseTemplate":true,"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My 360messenger Alert","type":"Whatsapp360messenger","userId":1}`,
@@ -106,7 +105,7 @@ func TestNotificationWhatsapp360messenger_Unmarshal(t *testing.T) {
 				Whatsapp360messengerDetails: notification.Whatsapp360messengerDetails{
 					AuthToken: "legtoken",
 					Recipient: "",
-					GroupID:   ptr.To("legacygrp"),
+					GroupID:   new("legacygrp"),
 				},
 			},
 			wantJSON: `{"Whatsapp360messengerAuthToken":"legtoken","Whatsapp360messengerGroupId":"legacygrp","Whatsapp360messengerRecipient":"","active":true,"applyExisting":false,"id":4,"isDefault":false,"name":"Legacy 360messenger","type":"Whatsapp360messenger","userId":1}`,
@@ -129,8 +128,8 @@ func TestNotificationWhatsapp360messenger_Unmarshal(t *testing.T) {
 				Whatsapp360messengerDetails: notification.Whatsapp360messengerDetails{
 					AuthToken:   "tok",
 					Recipient:   "447488888888",
-					UseTemplate: ptr.To(false),
-					Template:    ptr.To(""),
+					UseTemplate: new(false),
+					Template:    new(""),
 				},
 			},
 			wantJSON: `{"Whatsapp360messengerAuthToken":"tok","Whatsapp360messengerRecipient":"447488888888","Whatsapp360messengerTemplate":"","Whatsapp360messengerUseTemplate":false,"active":true,"applyExisting":false,"id":5,"isDefault":false,"name":"No Template 360messenger","type":"Whatsapp360messenger","userId":1}`,

@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -80,7 +79,7 @@ func TestNotificationFluxer_Unmarshal(t *testing.T) {
 				},
 				FluxerDetails: notification.FluxerDetails{
 					WebhookURL:    "https://fluxer.app/api/webhooks/min/webhook",
-					MessageFormat: ptr.To("minimalist"),
+					MessageFormat: new("minimalist"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"fluxerMessageFormat":"minimalist","fluxerPrefixMessage":"","fluxerUsername":"","fluxerWebhookUrl":"https://fluxer.app/api/webhooks/min/webhook","id":3,"isDefault":false,"name":"Minimalist Fluxer","type":"fluxer","userId":1}`,
@@ -102,8 +101,8 @@ func TestNotificationFluxer_Unmarshal(t *testing.T) {
 				},
 				FluxerDetails: notification.FluxerDetails{
 					WebhookURL:      "https://fluxer.app/api/webhooks/custom/webhook",
-					MessageFormat:   ptr.To("custom"),
-					MessageTemplate: ptr.To("Service {{name}} is {{status}}"),
+					MessageFormat:   new("custom"),
+					MessageTemplate: new("Service {{name}} is {{status}}"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"fluxerMessageFormat":"custom","fluxerMessageTemplate":"Service {{name}} is {{status}}","fluxerPrefixMessage":"","fluxerUsername":"","fluxerWebhookUrl":"https://fluxer.app/api/webhooks/custom/webhook","id":4,"isDefault":false,"name":"Custom Fluxer","type":"fluxer","userId":1}`,
@@ -125,8 +124,8 @@ func TestNotificationFluxer_Unmarshal(t *testing.T) {
 				},
 				FluxerDetails: notification.FluxerDetails{
 					WebhookURL:         "https://fluxer.app/api/webhooks/legacy/webhook",
-					UseMessageTemplate: ptr.To(true),
-					MessageTemplate:    ptr.To("Alert: {{name}}"),
+					UseMessageTemplate: new(true),
+					MessageTemplate:    new("Alert: {{name}}"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"fluxerMessageTemplate":"Alert: {{name}}","fluxerPrefixMessage":"","fluxerUseMessageTemplate":true,"fluxerUsername":"","fluxerWebhookUrl":"https://fluxer.app/api/webhooks/legacy/webhook","id":5,"isDefault":false,"name":"Legacy Template Fluxer","type":"fluxer","userId":1}`,
@@ -148,8 +147,8 @@ func TestNotificationFluxer_Unmarshal(t *testing.T) {
 				},
 				FluxerDetails: notification.FluxerDetails{
 					WebhookURL:         "https://fluxer.app/api/webhooks/explicit/webhook",
-					UseMessageTemplate: ptr.To(false),
-					MessageFormat:      ptr.To(""),
+					UseMessageTemplate: new(false),
+					MessageFormat:      new(""),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"fluxerMessageFormat":"","fluxerPrefixMessage":"","fluxerUseMessageTemplate":false,"fluxerUsername":"","fluxerWebhookUrl":"https://fluxer.app/api/webhooks/explicit/webhook","id":6,"isDefault":false,"name":"Explicit False Fluxer","type":"fluxer","userId":1}`,
@@ -183,9 +182,9 @@ func TestNotificationFluxer_String(t *testing.T) {
 		},
 		FluxerDetails: notification.FluxerDetails{
 			WebhookURL:         "https://fluxer.app/api/webhooks/123/abc",
-			UseMessageTemplate: ptr.To(true),
-			MessageFormat:      ptr.To("minimalist"),
-			MessageTemplate:    ptr.To(""),
+			UseMessageTemplate: new(true),
+			MessageFormat:      new("minimalist"),
+			MessageTemplate:    new(""),
 		},
 	}
 

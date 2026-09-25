@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -37,7 +36,7 @@ func TestNotificationEgoSMS_Unmarshal(t *testing.T) {
 				EgoSMSDetails: notification.EgoSMSDetails{
 					Username:    "myuser",
 					Password:    "mypassword",
-					Sender:      ptr.To("MYAPP"),
+					Sender:      new("MYAPP"),
 					PhoneNumber: "2567XXXXXXXX",
 				},
 			},

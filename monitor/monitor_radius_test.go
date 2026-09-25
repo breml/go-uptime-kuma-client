@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -34,7 +33,7 @@ func TestMonitorRadius_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              1,
 					Name:            "radius-monitor",
-					Description:     ptr.To("Test Radius monitor"),
+					Description:     new("Test Radius monitor"),
 					PathName:        "group / radius-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -67,7 +66,7 @@ func TestMonitorRadius_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              2,
 					Name:            "radius-advanced",
-					Description:     ptr.To("Test Radius with station IDs"),
+					Description:     new("Test Radius with station IDs"),
 					PathName:        "group / radius-advanced",
 					Parent:          &parent1,
 					Interval:        120,

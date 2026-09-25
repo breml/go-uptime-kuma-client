@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorGlobalping_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              10,
 					Name:            "globalping-ping",
-					Description:     ptr.To("Globalping ping"),
+					Description:     new("Globalping ping"),
 					PathName:        "globalping-ping",
 					Parent:          &parent1,
 					Interval:        60,
@@ -120,7 +119,7 @@ func TestMonitorGlobalping_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:             12,
 					Name:           "globalping-http",
-					Description:    ptr.To("Globalping HTTP"),
+					Description:    new("Globalping HTTP"),
 					PathName:       "globalping-http",
 					Parent:         nil,
 					Interval:       60,
@@ -166,7 +165,7 @@ func TestMonitorGlobalping_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:             12,
 					Name:           "globalping-http",
-					Description:    ptr.To("Globalping HTTP"),
+					Description:    new("Globalping HTTP"),
 					PathName:       "globalping-http",
 					Parent:         nil,
 					Interval:       60,

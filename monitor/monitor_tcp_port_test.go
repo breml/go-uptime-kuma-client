@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorTCPPort_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              4,
 					Name:            "tcp-port-monitor",
-					Description:     ptr.To("Test TCP Port monitor"),
+					Description:     new("Test TCP Port monitor"),
 					PathName:        "group / tcp-port-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -58,7 +57,7 @@ func TestMonitorTCPPort_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:             5,
 					Name:           "tcp-tls-monitor",
-					Description:    ptr.To("TCP monitor with TLS"),
+					Description:    new("TCP monitor with TLS"),
 					PathName:       "tcp-tls-monitor",
 					Interval:       120,
 					RetryInterval:  60,
@@ -70,9 +69,9 @@ func TestMonitorTCPPort_Unmarshal(t *testing.T) {
 				TCPPortDetails: monitor.TCPPortDetails{
 					Hostname:           "smtp.example.com",
 					Port:               465,
-					SMTPSecurity:       ptr.To("secure"),
+					SMTPSecurity:       new("secure"),
 					ExpiryNotification: true,
-					ExpectedTLSAlert:   ptr.To("certificate_required"),
+					ExpectedTLSAlert:   new("certificate_required"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"TCP monitor with TLS","domainExpiryNotification":false,"expectedTlsAlert":"certificate_required","expiryNotification":true,"hostname":"smtp.example.com","id":5,"interval":120,"maxretries":3,"name":"tcp-tls-monitor","notificationIDList":{},"parent":null,"port":465,"resendInterval":0,"retryInterval":60,"smtpSecurity":"secure","type":"port","upsideDown":false}`,

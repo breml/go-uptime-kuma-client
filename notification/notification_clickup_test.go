@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -36,7 +35,7 @@ func TestNotificationClickUp_Unmarshal(t *testing.T) {
 					Token:       "pk_12345_ABCDEF",
 					WorkspaceID: "9001234567",
 					ChannelID:   "channel-abc",
-					DisableURL:  ptr.To(true),
+					DisableURL:  new(true),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My ClickUp Alert","clickupToken":"pk_12345_ABCDEF","clickupWorkspaceId":"9001234567","clickupChannelId":"channel-abc","clickupDisableUrl":true,"type":"ClickUp","userId":1}`,
@@ -63,7 +62,7 @@ func TestNotificationClickUp_Unmarshal(t *testing.T) {
 					Token:       "pk_67890_GHIJKL",
 					WorkspaceID: "9007654321",
 					ChannelID:   "channel-xyz",
-					DisableURL:  ptr.To(false),
+					DisableURL:  new(false),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"ClickUp With Address","clickupToken":"pk_67890_GHIJKL","clickupWorkspaceId":"9007654321","clickupChannelId":"channel-xyz","clickupDisableUrl":false,"type":"ClickUp","userId":1}`,

@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -62,13 +61,13 @@ func TestNotificationNtfy_Unmarshal(t *testing.T) {
 				},
 				NtfyDetails: notification.NtfyDetails{
 					AuthenticationMethod: "usernamePassword",
-					Call:                 ptr.To("+12223334444"),
-					CustomMessage:        ptr.To("custom message"),
-					CustomTitle:          ptr.To("custom title"),
+					Call:                 new("+12223334444"),
+					CustomMessage:        new("custom message"),
+					CustomTitle:          new("custom title"),
 					Icon:                 "http://symbol.url",
 					Priority:             3,
 					PriorityDown:         5,
-					UseTemplate:          ptr.To(true),
+					UseTemplate:          new(true),
 					Password:             "password",
 					ServerURL:            "https://ntfy.sh",
 					Topic:                "topic",
@@ -94,13 +93,13 @@ func TestNotificationNtfy_Unmarshal(t *testing.T) {
 				},
 				NtfyDetails: notification.NtfyDetails{
 					AuthenticationMethod: "none",
-					Call:                 ptr.To(""),
-					CustomMessage:        ptr.To(""),
-					CustomTitle:          ptr.To(""),
+					Call:                 new(""),
+					CustomMessage:        new(""),
+					CustomTitle:          new(""),
 					Priority:             5,
 					ServerURL:            "https://ntfy.sh",
 					Topic:                "topic",
-					UseTemplate:          ptr.To(false),
+					UseTemplate:          new(false),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":true,"id":3,"isDefault":true,"name":"My Ntfy Alert","ntfyAuthenticationMethod":"none","ntfyCall":"","ntfyCustomMessage":"","ntfyCustomTitle":"","ntfyIcon":"","ntfyPriority":5,"ntfyUseTemplate":false,"ntfyaccesstoken":"","ntfypassword":"","ntfyserverurl":"https://ntfy.sh","ntfytopic":"topic","ntfyusername":"","type":"ntfy","userId":1}`,
