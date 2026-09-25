@@ -5,6 +5,9 @@ import (
 )
 
 // Signalgrid represents a Signalgrid push notification provider.
+// Signalgrid (https://signalgrid.co/) is a push notification service. The
+// server posts the alert to "https://api.signalgrid.co/v1/push" as a form with
+// a type derived from the heartbeat status (INFO, CRIT or SUCCESS).
 type Signalgrid struct {
 	Base
 	SignalgridDetails
@@ -12,9 +15,10 @@ type Signalgrid struct {
 
 // SignalgridDetails contains the configuration fields for Signalgrid notifications.
 type SignalgridDetails struct {
-	// ClientKey is the Signalgrid client key.
+	// ClientKey is the Signalgrid client key, sent as "client_key". It is a
+	// secret, the Uptime Kuma form masks it.
 	ClientKey string `json:"signalgridClientKey"`
-	// Channel is the Signalgrid channel the push is sent to.
+	// Channel is the Signalgrid channel the push is sent to, sent as "channel".
 	Channel string `json:"signalgridChannel"`
 }
 

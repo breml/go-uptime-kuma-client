@@ -16,6 +16,7 @@ func TestNotificationSignalgrid_Unmarshal(t *testing.T) {
 
 		want     notification.Signalgrid
 		wantJSON string
+		wantErr  bool
 	}{
 		{
 			name: "success with all fields",
@@ -59,6 +60,41 @@ func TestNotificationSignalgrid_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Signalgrid","signalgridChannel":"ops","signalgridClientKey":"key-abc","type":"signalgrid","userId":1}`,
 		},
+		{
+			// The client key and channel are required in the Uptime Kuma form,
+			// so neither carries omitempty and an empty value survives the
+			// round trip as an empty key.
+			name: "empty required fields are kept",
+			data: []byte(
+				`{"id":3,"name":"Signalgrid Empty","active":false,"userId":1,"isDefault":false,"config":"{\"signalgridClientKey\":\"\",\"signalgridChannel\":\"\",\"type\":\"signalgrid\"}"}`,
+			),
+
+			want: notification.Signalgrid{
+				Base: notification.Base{
+					ID:     3,
+					Name:   "Signalgrid Empty",
+					UserID: 1,
+				},
+			},
+			wantJSON: `{"active":false,"applyExisting":false,"id":3,"isDefault":false,"name":"Signalgrid Empty","signalgridChannel":"","signalgridClientKey":"","type":"signalgrid","userId":1}`,
+		},
+		{
+			name:    "missing config field",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
+			wantErr: true,
+		},
+		{
+			name:    "invalid config json",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"not-json"}`),
+			wantErr: true,
+		},
+		{
+			name: "invalid config detail type",
+			data: []byte(
+				`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"{\"signalgridClientKey\":123,\"type\":\"signalgrid\"}"}`,
+			),
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -66,6 +102,12 @@ func TestNotificationSignalgrid_Unmarshal(t *testing.T) {
 			signalgrid := notification.Signalgrid{}
 
 			err := json.Unmarshal(tc.data, &signalgrid)
+			if tc.wantErr {
+				require.Error(t, err)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			require.EqualExportedValues(t, tc.want, signalgrid)

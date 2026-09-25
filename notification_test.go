@@ -4068,6 +4068,7 @@ func TestNotificationCRUD(t *testing.T) {
 				}
 
 				signalgrid.Name = "Test Signalgrid Updated"
+				signalgrid.ClientKey = "updated-client-key"
 				signalgrid.Channel = "ops"
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
