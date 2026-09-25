@@ -2491,9 +2491,11 @@ func TestNotificationCRUD(t *testing.T) {
 
 				openwa.Name = "Test OpenWa Updated"
 				openwa.APIURL = "https://wa.example.com/"
+				openwa.APIKey = "updated-key"
 				openwa.Session = "alerts"
 				openwa.ChatID = "1234567890@lid"
 				openwa.UseCustomMessage = new(false)
+				openwa.CustomMessage = nil
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
 				t.Helper()

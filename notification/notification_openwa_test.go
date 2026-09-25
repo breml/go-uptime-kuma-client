@@ -16,6 +16,7 @@ func TestNotificationOpenWa_Unmarshal(t *testing.T) {
 
 		want     notification.OpenWa
 		wantJSON string
+		wantErr  bool
 	}{
 		{
 			name: "minimal configuration",
@@ -117,7 +118,7 @@ func TestNotificationOpenWa_Unmarshal(t *testing.T) {
 			wantJSON: `{"active":true,"applyExisting":false,"id":4,"isDefault":false,"name":"OpenWA Trailing Slash","openwaApiKey":"secret-key","openwaApiUrl":"http://localhost:2785/","openwaChatId":"00117612345678@c.us","openwaSession":"default","type":"openwa","userId":1}`,
 		},
 		{
-			// The API URL, API key, session and chat ID are required upstream,
+			// The API URL, API key, session and chat ID are required in the Uptime Kuma form,
 			// so none of them carries omitempty and an empty value survives the
 			// round trip as an empty key.
 			name: "empty required fields are kept",
@@ -134,6 +135,23 @@ func TestNotificationOpenWa_Unmarshal(t *testing.T) {
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"id":5,"isDefault":false,"name":"OpenWA Empty","openwaApiKey":"","openwaApiUrl":"","openwaChatId":"","openwaSession":"","type":"openwa","userId":1}`,
 		},
+		{
+			name:    "missing config field",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
+			wantErr: true,
+		},
+		{
+			name:    "invalid config json",
+			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"not-json"}`),
+			wantErr: true,
+		},
+		{
+			name: "invalid config detail type",
+			data: []byte(
+				`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"{\"openwaUseCustomMessage\":\"yes\",\"type\":\"openwa\"}"}`,
+			),
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -141,6 +159,12 @@ func TestNotificationOpenWa_Unmarshal(t *testing.T) {
 			openwa := notification.OpenWa{}
 
 			err := json.Unmarshal(tc.data, &openwa)
+			if tc.wantErr {
+				require.Error(t, err)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			require.EqualExportedValues(t, tc.want, openwa)
