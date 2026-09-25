@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorNTP_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:             4,
 					Name:           "ntp-monitor",
-					Description:    ptr.To("Test NTP monitor"),
+					Description:    new("Test NTP monitor"),
 					PathName:       "ntp-monitor",
 					Interval:       300,
 					RetryInterval:  60,
@@ -41,8 +40,8 @@ func TestMonitorNTP_Unmarshal(t *testing.T) {
 				},
 				NTPDetails: monitor.NTPDetails{
 					Hostname: "pool.ntp.org",
-					Port:     ptr.To(int64(123)),
-					Timeout:  ptr.To(float64(10)),
+					Port:     new(int64(123)),
+					Timeout:  new(float64(10)),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test NTP monitor","hostname":"pool.ntp.org","id":4,"interval":300,"maxretries":2,"name":"ntp-monitor","notificationIDList":{},"ntpRootDispersionThreshold":null,"ntpStratumThreshold":null,"ntpTimeOffsetThreshold":null,"parent":null,"port":123,"resendInterval":0,"retryInterval":60,"timeout":10,"type":"ntp","upsideDown":false}`,
@@ -57,7 +56,7 @@ func TestMonitorNTP_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:             4,
 					Name:           "ntp-monitor",
-					Description:    ptr.To("Test NTP monitor"),
+					Description:    new("Test NTP monitor"),
 					PathName:       "ntp-monitor",
 					Interval:       300,
 					RetryInterval:  60,
@@ -68,8 +67,8 @@ func TestMonitorNTP_Unmarshal(t *testing.T) {
 				},
 				NTPDetails: monitor.NTPDetails{
 					Hostname: "pool.ntp.org",
-					Port:     ptr.To(int64(123)),
-					Timeout:  ptr.To(0.5),
+					Port:     new(int64(123)),
+					Timeout:  new(0.5),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test NTP monitor","hostname":"pool.ntp.org","id":4,"interval":300,"maxretries":2,"name":"ntp-monitor","notificationIDList":{},"ntpRootDispersionThreshold":null,"ntpStratumThreshold":null,"ntpTimeOffsetThreshold":null,"parent":null,"port":123,"resendInterval":0,"retryInterval":60,"timeout":0.5,"type":"ntp","upsideDown":false}`,
@@ -84,7 +83,7 @@ func TestMonitorNTP_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              5,
 					Name:            "ntp-thresholds-monitor",
-					Description:     ptr.To("NTP monitor with thresholds"),
+					Description:     new("NTP monitor with thresholds"),
 					PathName:        "group / ntp-thresholds-monitor",
 					Parent:          &parent1,
 					Interval:        600,
@@ -97,11 +96,11 @@ func TestMonitorNTP_Unmarshal(t *testing.T) {
 				},
 				NTPDetails: monitor.NTPDetails{
 					Hostname:                   "time.cloudflare.com",
-					Port:                       ptr.To(int64(1123)),
-					Timeout:                    ptr.To(float64(20)),
-					NTPStratumThreshold:        ptr.To(int64(3)),
-					NTPTimeOffsetThreshold:     ptr.To(int64(250)),
-					NTPRootDispersionThreshold: ptr.To(int64(100)),
+					Port:                       new(int64(1123)),
+					Timeout:                    new(float64(20)),
+					NTPStratumThreshold:        new(int64(3)),
+					NTPTimeOffsetThreshold:     new(int64(250)),
+					NTPRootDispersionThreshold: new(int64(100)),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"NTP monitor with thresholds","hostname":"time.cloudflare.com","id":5,"interval":600,"maxretries":3,"name":"ntp-thresholds-monitor","notificationIDList":{"1":true,"2":true},"ntpRootDispersionThreshold":100,"ntpStratumThreshold":3,"ntpTimeOffsetThreshold":250,"parent":1,"port":1123,"resendInterval":0,"retryInterval":120,"timeout":20,"type":"ntp","upsideDown":false}`,

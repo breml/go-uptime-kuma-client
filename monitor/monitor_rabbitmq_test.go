@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -33,7 +32,7 @@ func TestMonitorRabbitMQ_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              1,
 					Name:            "rabbitmq-monitor",
-					Description:     ptr.To("Test RabbitMQ monitor"),
+					Description:     new("Test RabbitMQ monitor"),
 					PathName:        "group / rabbitmq-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -63,7 +62,7 @@ func TestMonitorRabbitMQ_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              1,
 					Name:            "rabbitmq-monitor",
-					Description:     ptr.To("Test RabbitMQ monitor"),
+					Description:     new("Test RabbitMQ monitor"),
 					PathName:        "group / rabbitmq-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -78,7 +77,7 @@ func TestMonitorRabbitMQ_Unmarshal(t *testing.T) {
 					Nodes:    "[\"http://rabbitmq.example.com:15672/\"]",
 					Username: &username,
 					Password: &password,
-					Timeout:  ptr.To(0.5),
+					Timeout:  new(0.5),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test RabbitMQ monitor","id":1,"interval":60,"maxretries":2,"name":"rabbitmq-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"rabbitmqNodes":"[\"http://rabbitmq.example.com:15672/\"]","rabbitmqPassword":"guest","rabbitmqUsername":"guest","resendInterval":0,"retryInterval":60,"timeout":0.5,"type":"rabbitmq","upsideDown":false}`,
@@ -93,7 +92,7 @@ func TestMonitorRabbitMQ_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              2,
 					Name:            "rabbitmq-cluster",
-					Description:     ptr.To("Test RabbitMQ cluster monitor"),
+					Description:     new("Test RabbitMQ cluster monitor"),
 					PathName:        "group / rabbitmq-cluster",
 					Parent:          &parent1,
 					Interval:        120,
@@ -108,7 +107,7 @@ func TestMonitorRabbitMQ_Unmarshal(t *testing.T) {
 					Nodes:    "[\"http://rabbitmq1.example.com:15672/\",\"http://rabbitmq2.example.com:15672/\",\"http://rabbitmq3.example.com:15672/\"]",
 					Username: nil,
 					Password: nil,
-					Timeout:  ptr.To(float64(30)),
+					Timeout:  new(float64(30)),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test RabbitMQ cluster monitor","id":2,"interval":120,"maxretries":3,"name":"rabbitmq-cluster","notificationIDList":{},"parent":1,"rabbitmqNodes":"[\"http://rabbitmq1.example.com:15672/\",\"http://rabbitmq2.example.com:15672/\",\"http://rabbitmq3.example.com:15672/\"]","rabbitmqPassword":null,"rabbitmqUsername":null,"resendInterval":0,"retryInterval":60,"timeout":30,"type":"rabbitmq","upsideDown":false}`,

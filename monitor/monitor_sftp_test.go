@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -31,7 +30,7 @@ func TestMonitorSFTP_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:             4,
 					Name:           "sftp-monitor",
-					Description:    ptr.To("Test SFTP monitor"),
+					Description:    new("Test SFTP monitor"),
 					PathName:       "sftp-monitor",
 					Interval:       60,
 					RetryInterval:  60,
@@ -42,12 +41,12 @@ func TestMonitorSFTP_Unmarshal(t *testing.T) {
 				},
 				SFTPDetails: monitor.SFTPDetails{
 					Hostname:      "sftp.example.com",
-					Port:          ptr.To(int64(22)),
-					Timeout:       ptr.To(float64(10)),
+					Port:          new(int64(22)),
+					Timeout:       new(float64(10)),
 					SSHUsername:   "sftpuser",
 					SSHAuthMethod: monitor.SFTPAuthMethodPassword,
-					SSHPassword:   ptr.To("sftppass"),
-					SFTPPath:      ptr.To("/upload"),
+					SSHPassword:   new("sftppass"),
+					SFTPPath:      new("/upload"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test SFTP monitor","hostname":"sftp.example.com","id":4,"interval":60,"maxretries":2,"name":"sftp-monitor","notificationIDList":{},"parent":null,"port":22,"resendInterval":0,"retryInterval":60,"sftpPath":"/upload","sshAuthMethod":"password","sshPassphrase":null,"sshPassword":"sftppass","sshPrivateKey":null,"sshUsername":"sftpuser","timeout":10,"type":"sftp","upsideDown":false}`,
@@ -62,7 +61,7 @@ func TestMonitorSFTP_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              5,
 					Name:            "sftp-key-monitor",
-					Description:     ptr.To("SFTP monitor with key auth"),
+					Description:     new("SFTP monitor with key auth"),
 					PathName:        "group / sftp-key-monitor",
 					Parent:          &parent1,
 					Interval:        120,
@@ -75,15 +74,15 @@ func TestMonitorSFTP_Unmarshal(t *testing.T) {
 				},
 				SFTPDetails: monitor.SFTPDetails{
 					Hostname:      "files.example.com",
-					Port:          ptr.To(int64(2222)),
-					Timeout:       ptr.To(2.5),
+					Port:          new(int64(2222)),
+					Timeout:       new(2.5),
 					SSHUsername:   "deploy",
 					SSHAuthMethod: monitor.SFTPAuthMethodPrivateKey,
-					SSHPrivateKey: ptr.To(
+					SSHPrivateKey: new(
 						"-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----",
 					),
-					SSHPassphrase: ptr.To("secret"),
-					SFTPPath:      ptr.To("/srv/incoming"),
+					SSHPassphrase: new("secret"),
+					SFTPPath:      new("/srv/incoming"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"SFTP monitor with key auth","hostname":"files.example.com","id":5,"interval":120,"maxretries":3,"name":"sftp-key-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":2222,"resendInterval":0,"retryInterval":120,"sftpPath":"/srv/incoming","sshAuthMethod":"privateKey","sshPassphrase":"secret","sshPassword":null,"sshPrivateKey":"-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----","sshUsername":"deploy","timeout":2.5,"type":"sftp","upsideDown":false}`,
@@ -142,10 +141,10 @@ func TestMonitorSFTP_Unmarshal(t *testing.T) {
 				},
 				SFTPDetails: monitor.SFTPDetails{
 					Hostname:      "sftp.example.com",
-					Port:          ptr.To(int64(22)),
-					Timeout:       ptr.To(float64(10)),
+					Port:          new(int64(22)),
+					Timeout:       new(float64(10)),
 					SSHAuthMethod: monitor.SFTPAuthMethodPrivateKey,
-					SFTPPath:      ptr.To("/upload"),
+					SFTPPath:      new("/upload"),
 				},
 			},
 			// Marshalling such a monitor back is refused: the write would
@@ -264,14 +263,14 @@ func TestMonitorSFTP_String(t *testing.T) {
 			name: "all optional fields set",
 			details: monitor.SFTPDetails{
 				Hostname:      "sftp.example.com",
-				Port:          ptr.To(int64(22)),
-				Timeout:       ptr.To(float64(10)),
+				Port:          new(int64(22)),
+				Timeout:       new(float64(10)),
 				SSHUsername:   "sftpuser",
 				SSHAuthMethod: monitor.SFTPAuthMethodPrivateKey,
-				SSHPassword:   ptr.To("sftppass"),
-				SSHPrivateKey: ptr.To("-----BEGIN OPENSSH PRIVATE KEY-----\nabc"),
-				SSHPassphrase: ptr.To("secret"),
-				SFTPPath:      ptr.To("/upload"),
+				SSHPassword:   new("sftppass"),
+				SSHPrivateKey: new("-----BEGIN OPENSSH PRIVATE KEY-----\nabc"),
+				SSHPassphrase: new("secret"),
+				SFTPPath:      new("/upload"),
 			},
 			wantContains: []string{
 				`hostname: "sftp.example.com"`,

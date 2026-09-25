@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -40,7 +39,7 @@ func TestNotificationPlivo_Unmarshal(t *testing.T) {
 					FromNumber:  "+15559876543",
 					ToNumber:    "+15551234567",
 					MessageType: notification.PlivoMessageTypeCall,
-					AnswerURL:   ptr.To("https://example.com/answer.xml"),
+					AnswerURL:   new("https://example.com/answer.xml"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My Plivo Alert","plivoAnswerUrl":"https://example.com/answer.xml","plivoAuthID":"MAXXXXXXXXXXXXXXXXXX","plivoAuthToken":"test_auth_token","plivoFromNumber":"+15559876543","plivoMessageType":"call","plivoToNumber":"+15551234567","type":"plivo","userId":1}`,

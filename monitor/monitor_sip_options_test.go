@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorSIPOptions_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              4,
 					Name:            "sip-options-monitor",
-					Description:     ptr.To("Test SIP Options monitor"),
+					Description:     new("Test SIP Options monitor"),
 					PathName:        "group / sip-options-monitor",
 					Parent:          &parent1,
 					Interval:        60,

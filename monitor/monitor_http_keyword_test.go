@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -140,7 +139,7 @@ func TestMonitorHTTPKeyword_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              4,
 					Name:            "keyword-inverted",
-					Description:     ptr.To("Testing inverted keyword"),
+					Description:     new("Testing inverted keyword"),
 					PathName:        "keyword-inverted",
 					Parent:          nil,
 					ProxyID:         nil,

@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -32,7 +31,7 @@ func TestMonitorSteam_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              5,
 					Name:            "steam-monitor",
-					Description:     ptr.To("Test Steam monitor"),
+					Description:     new("Test Steam monitor"),
 					PathName:        "group / steam-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -61,7 +60,7 @@ func TestMonitorSteam_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              5,
 					Name:            "steam-monitor",
-					Description:     ptr.To("Test Steam monitor"),
+					Description:     new("Test Steam monitor"),
 					PathName:        "group / steam-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -75,7 +74,7 @@ func TestMonitorSteam_Unmarshal(t *testing.T) {
 				SteamDetails: monitor.SteamDetails{
 					Hostname: "192.168.1.100",
 					Port:     27015,
-					Timeout:  ptr.To(0.5),
+					Timeout:  new(0.5),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Steam monitor","domainExpiryNotification":false,"hostname":"192.168.1.100","id":5,"interval":60,"maxretries":2,"name":"steam-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"port":27015,"resendInterval":0,"retryInterval":60,"timeout":0.5,"type":"steam","upsideDown":false}`,

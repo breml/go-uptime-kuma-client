@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -32,7 +31,7 @@ func TestMonitorKafkaProducer_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              1,
 					Name:            "kafka-monitor",
-					Description:     ptr.To("Test Kafka monitor"),
+					Description:     new("Test Kafka monitor"),
 					PathName:        "group / kafka-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -50,7 +49,7 @@ func TestMonitorKafkaProducer_Unmarshal(t *testing.T) {
 					SSL:                    true,
 					AllowAutoTopicCreation: false,
 					SASLOptions:            &saslOptionsNone,
-					Timeout:                ptr.To(float64(1)),
+					Timeout:                new(float64(1)),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Kafka monitor","id":1,"interval":60,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerBrokers":["localhost:9092"],"kafkaProducerMessage":"test message","kafkaProducerSaslOptions":{"mechanism":"None"},"kafkaProducerSsl":true,"kafkaProducerTopic":"test-topic","maxretries":2,"name":"kafka-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"timeout":1,"type":"kafka-producer","upsideDown":false}`,
@@ -65,7 +64,7 @@ func TestMonitorKafkaProducer_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              1,
 					Name:            "kafka-monitor",
-					Description:     ptr.To("Test Kafka monitor"),
+					Description:     new("Test Kafka monitor"),
 					PathName:        "group / kafka-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -83,7 +82,7 @@ func TestMonitorKafkaProducer_Unmarshal(t *testing.T) {
 					SSL:                    true,
 					AllowAutoTopicCreation: false,
 					SASLOptions:            &saslOptionsNone,
-					Timeout:                ptr.To(0.5),
+					Timeout:                new(0.5),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Kafka monitor","id":1,"interval":60,"kafkaProducerAllowAutoTopicCreation":false,"kafkaProducerBrokers":["localhost:9092"],"kafkaProducerMessage":"test message","kafkaProducerSaslOptions":{"mechanism":"None"},"kafkaProducerSsl":true,"kafkaProducerTopic":"test-topic","maxretries":2,"name":"kafka-monitor","notificationIDList":{"1":true,"2":true},"parent":1,"resendInterval":0,"retryInterval":60,"timeout":0.5,"type":"kafka-producer","upsideDown":false}`,
@@ -98,7 +97,7 @@ func TestMonitorKafkaProducer_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              2,
 					Name:            "kafka-cluster",
-					Description:     ptr.To("Test Kafka cluster"),
+					Description:     new("Test Kafka cluster"),
 					PathName:        "group / kafka-cluster",
 					Parent:          &parent1,
 					Interval:        120,
@@ -116,7 +115,7 @@ func TestMonitorKafkaProducer_Unmarshal(t *testing.T) {
 					SSL:                    false,
 					AllowAutoTopicCreation: true,
 					SASLOptions:            &saslOptionsBasic,
-					Timeout:                ptr.To(float64(5)),
+					Timeout:                new(float64(5)),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"description":"Test Kafka cluster","id":2,"interval":120,"kafkaProducerAllowAutoTopicCreation":true,"kafkaProducerBrokers":["kafka1:9092","kafka2:9092","kafka3:9092"],"kafkaProducerMessage":"health check","kafkaProducerSaslOptions":{"mechanism":"plain","password":"pass","username":"user"},"kafkaProducerSsl":false,"kafkaProducerTopic":"events","maxretries":3,"name":"kafka-cluster","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"timeout":5,"type":"kafka-producer","upsideDown":false}`,

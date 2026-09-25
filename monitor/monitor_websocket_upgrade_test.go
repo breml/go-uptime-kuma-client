@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -142,7 +141,7 @@ func TestMonitorWebsocketUpgrade_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              21,
 					Name:            "ws-basic",
-					Description:     ptr.To("WebSocket with basic auth"),
+					Description:     new("WebSocket with basic auth"),
 					PathName:        "ws-basic",
 					Parent:          nil,
 					ProxyID:         nil,
@@ -254,7 +253,7 @@ func TestMonitorWebsocketUpgrade_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              23,
 					Name:            "ws-mtls",
-					Description:     ptr.To("mTLS WebSocket"),
+					Description:     new("mTLS WebSocket"),
 					PathName:        "ws-mtls",
 					Parent:          nil,
 					ProxyID:         nil,

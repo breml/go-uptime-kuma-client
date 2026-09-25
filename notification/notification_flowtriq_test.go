@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -36,7 +35,7 @@ func TestNotificationFlowtriq_Unmarshal(t *testing.T) {
 				},
 				FlowtriqDetails: notification.FlowtriqDetails{
 					WebhookURL: "https://app.flowtriq.com/api/webhooks/test",
-					APIKey:     ptr.To("test_api_key"),
+					APIKey:     new("test_api_key"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":true,"flowtriqApiKey":"test_api_key","flowtriqWebhookUrl":"https://app.flowtriq.com/api/webhooks/test","id":1,"isDefault":true,"name":"My Flowtriq Alert","type":"Flowtriq","userId":1}`,
@@ -79,7 +78,7 @@ func TestNotificationFlowtriq_Unmarshal(t *testing.T) {
 				},
 				FlowtriqDetails: notification.FlowtriqDetails{
 					WebhookURL: "https://app.flowtriq.com/api/webhooks/test",
-					APIKey:     ptr.To(""),
+					APIKey:     new(""),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"flowtriqApiKey":"","flowtriqWebhookUrl":"https://app.flowtriq.com/api/webhooks/test","id":3,"isDefault":false,"name":"Cleared Flowtriq","type":"Flowtriq","userId":1}`,

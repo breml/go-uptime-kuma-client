@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorDocker_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              12,
 					Name:            "docker-monitor",
-					Description:     ptr.To("Test Docker monitor"),
+					Description:     new("Test Docker monitor"),
 					PathName:        "group / docker-monitor",
 					Parent:          &parent1,
 					Interval:        60,

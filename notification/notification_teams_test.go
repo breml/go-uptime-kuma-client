@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -56,7 +55,7 @@ func TestNotificationTeams_Unmarshal(t *testing.T) {
 				},
 				TeamsDetails: notification.TeamsDetails{
 					WebhookURL: "https://outlook.office.com/webhook/yyy",
-					EnableTags: ptr.To(true),
+					EnableTags: new(true),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":2,"isDefault":false,"name":"Teams With Tags","teamsEnableTags":true,"type":"teams","userId":1,"webhookUrl":"https://outlook.office.com/webhook/yyy"}`,
@@ -78,7 +77,7 @@ func TestNotificationTeams_Unmarshal(t *testing.T) {
 				},
 				TeamsDetails: notification.TeamsDetails{
 					WebhookURL: "https://outlook.office.com/webhook/zzz",
-					EnableTags: ptr.To(false),
+					EnableTags: new(false),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"id":3,"isDefault":false,"name":"Teams Without Tags","teamsEnableTags":false,"type":"teams","userId":1,"webhookUrl":"https://outlook.office.com/webhook/zzz"}`,

@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -107,7 +106,7 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 				},
 				DiscordDetails: notification.DiscordDetails{
 					WebhookURL:            "https://discordapp.com/api/webhooks/silent/webhook",
-					SuppressNotifications: ptr.To(true),
+					SuppressNotifications: new(true),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordPrefixMessage":"","discordSuppressNotifications":true,"discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/silent/webhook","id":4,"isDefault":false,"name":"Silent Discord","postName":"","threadId":"","type":"discord","userId":1}`,
@@ -129,7 +128,7 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 				},
 				DiscordDetails: notification.DiscordDetails{
 					WebhookURL:    "https://discordapp.com/api/webhooks/min/webhook",
-					MessageFormat: ptr.To("minimalist"),
+					MessageFormat: new("minimalist"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordMessageFormat":"minimalist","discordPrefixMessage":"","discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/min/webhook","id":5,"isDefault":false,"name":"Minimalist Discord","postName":"","threadId":"","type":"discord","userId":1}`,
@@ -151,8 +150,8 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 				},
 				DiscordDetails: notification.DiscordDetails{
 					WebhookURL:      "https://discordapp.com/api/webhooks/custom/webhook",
-					MessageFormat:   ptr.To("custom"),
-					MessageTemplate: ptr.To("Service {{name}} is {{status}}"),
+					MessageFormat:   new("custom"),
+					MessageTemplate: new("Service {{name}} is {{status}}"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordMessageFormat":"custom","discordMessageTemplate":"Service {{name}} is {{status}}","discordPrefixMessage":"","discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/custom/webhook","id":6,"isDefault":false,"name":"Custom Discord","postName":"","threadId":"","type":"discord","userId":1}`,
@@ -174,8 +173,8 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 				},
 				DiscordDetails: notification.DiscordDetails{
 					WebhookURL:            "https://discordapp.com/api/webhooks/explicit/webhook",
-					SuppressNotifications: ptr.To(false),
-					MessageFormat:         ptr.To(""),
+					SuppressNotifications: new(false),
+					MessageFormat:         new(""),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordMessageFormat":"","discordPrefixMessage":"","discordSuppressNotifications":false,"discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/explicit/webhook","id":8,"isDefault":false,"name":"Explicit False Discord","postName":"","threadId":"","type":"discord","userId":1}`,
@@ -197,8 +196,8 @@ func TestNotificationDiscord_Unmarshal(t *testing.T) {
 				},
 				DiscordDetails: notification.DiscordDetails{
 					WebhookURL:         "https://discordapp.com/api/webhooks/legacy/webhook",
-					UseMessageTemplate: ptr.To(true),
-					MessageTemplate:    ptr.To("Alert: {{name}}"),
+					UseMessageTemplate: new(true),
+					MessageTemplate:    new("Alert: {{name}}"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":false,"disableUrl":false,"discordChannelType":"","discordMessageTemplate":"Alert: {{name}}","discordPrefixMessage":"","discordUseMessageTemplate":true,"discordUsername":"","discordWebhookUrl":"https://discordapp.com/api/webhooks/legacy/webhook","id":7,"isDefault":false,"name":"Legacy Template Discord","postName":"","threadId":"","type":"discord","userId":1}`,
@@ -232,9 +231,9 @@ func TestNotificationDiscord_String(t *testing.T) {
 		},
 		DiscordDetails: notification.DiscordDetails{
 			WebhookURL:            "https://discordapp.com/api/webhooks/123/abc",
-			SuppressNotifications: ptr.To(true),
-			MessageFormat:         ptr.To("minimalist"),
-			MessageTemplate:       ptr.To(""),
+			SuppressNotifications: new(true),
+			MessageFormat:         new("minimalist"),
+			MessageTemplate:       new(""),
 		},
 	}
 

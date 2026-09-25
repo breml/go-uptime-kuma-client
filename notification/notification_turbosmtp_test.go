@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -40,9 +39,9 @@ func TestNotificationTurboSMTP_Unmarshal(t *testing.T) {
 					Region:         notification.TurboSMTPRegionEU,
 					FromEmail:      "alerts@example.com",
 					ToEmail:        "ops@example.com,oncall@example.com",
-					CcEmail:        ptr.To("cc1@example.com,cc2@example.com"),
-					BccEmail:       ptr.To("bcc@example.com"),
-					Subject:        ptr.To("Uptime Kuma Alert"),
+					CcEmail:        new("cc1@example.com,cc2@example.com"),
+					BccEmail:       new("bcc@example.com"),
+					Subject:        new("Uptime Kuma Alert"),
 				},
 			},
 			wantJSON: `{"active":true,"applyExisting":true,"id":1,"isDefault":true,"name":"My TurboSMTP Alert","turbosmtpBccEmail":"bcc@example.com","turbosmtpCcEmail":"cc1@example.com,cc2@example.com","turbosmtpConsumerKey":"test_consumer_key","turbosmtpConsumerSecret":"test_consumer_secret","turbosmtpFromEmail":"alerts@example.com","turbosmtpRegion":"eu","turbosmtpSubject":"Uptime Kuma Alert","turbosmtpToEmail":"ops@example.com,oncall@example.com","type":"TurboSMTP","userId":1}`,

@@ -3,7 +3,6 @@ package statuspage_test
 import (
 	"testing"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
 
@@ -220,37 +219,37 @@ func TestValidAnalyticsType(t *testing.T) {
 		},
 		{
 			name:          "google is valid",
-			analyticsType: ptr.To("google"),
+			analyticsType: new("google"),
 			want:          true,
 		},
 		{
 			name:          "umami is valid",
-			analyticsType: ptr.To("umami"),
+			analyticsType: new("umami"),
 			want:          true,
 		},
 		{
 			name:          "plausible is valid",
-			analyticsType: ptr.To("plausible"),
+			analyticsType: new("plausible"),
 			want:          true,
 		},
 		{
 			name:          "matomo is valid",
-			analyticsType: ptr.To("matomo"),
+			analyticsType: new("matomo"),
 			want:          true,
 		},
 		{
 			name:          "rybbit is valid",
-			analyticsType: ptr.To("rybbit"),
+			analyticsType: new("rybbit"),
 			want:          true,
 		},
 		{
 			name:          "invalid analytics type",
-			analyticsType: ptr.To("invalid"),
+			analyticsType: new("invalid"),
 			want:          false,
 		},
 		{
 			name:          "empty string is invalid",
-			analyticsType: ptr.To(""),
+			analyticsType: new(""),
 			want:          false,
 		},
 	}

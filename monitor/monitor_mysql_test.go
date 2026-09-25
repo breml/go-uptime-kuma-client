@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -30,7 +29,7 @@ func TestMonitorMySQL_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              1,
 					Name:            "mysql-monitor",
-					Description:     ptr.To("Test MySQL monitor"),
+					Description:     new("Test MySQL monitor"),
 					PathName:        "group / mysql-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -58,7 +57,7 @@ func TestMonitorMySQL_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              2,
 					Name:            "mysql-query",
-					Description:     ptr.To("Test MySQL with query"),
+					Description:     new("Test MySQL with query"),
 					PathName:        "group / mysql-query",
 					Parent:          &parent1,
 					Interval:        120,
@@ -71,7 +70,7 @@ func TestMonitorMySQL_Unmarshal(t *testing.T) {
 				},
 				MySQLDetails: monitor.MySQLDetails{
 					DatabaseConnectionString: "mysql://admin:secret@mysql.example.com:3306/mydb",
-					DatabaseQuery:            ptr.To("SELECT COUNT(*) FROM information_schema.tables;"),
+					DatabaseQuery:            new("SELECT COUNT(*) FROM information_schema.tables;"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":true,"conditions":[],"databaseConnectionString":"mysql://admin:secret@mysql.example.com:3306/mydb","databaseQuery":"SELECT COUNT(*) FROM information_schema.tables;","description":"Test MySQL with query","id":2,"interval":120,"maxretries":3,"name":"mysql-query","notificationIDList":{},"parent":1,"resendInterval":0,"retryInterval":60,"type":"mysql","upsideDown":false}`,
@@ -99,7 +98,7 @@ func TestMonitorMySQL_Unmarshal(t *testing.T) {
 				},
 				MySQLDetails: monitor.MySQLDetails{
 					DatabaseConnectionString: "mysql://user:pass@localhost:3306/app",
-					DatabaseQuery:            ptr.To("SELECT COUNT(*) FROM users;"),
+					DatabaseQuery:            new("SELECT COUNT(*) FROM users;"),
 					Conditions: []monitor.Condition{
 						{Variable: "result", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
 						{Variable: "result", Operator: "<", Value: "100", AndOr: monitor.ConditionAnd},

@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
@@ -36,7 +35,7 @@ func TestNotificationTelnyx_Unmarshal(t *testing.T) {
 				},
 				TelnyxDetails: notification.TelnyxDetails{
 					APIKey:             "KEYxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-					MessagingProfileID: ptr.To("4001763e-7f7d-4c87-a8b1-1c5a0e5a3f48"),
+					MessagingProfileID: new("4001763e-7f7d-4c87-a8b1-1c5a0e5a3f48"),
 					PhoneNumber:        "+15559876543",
 					ToNumber:           "+15551234567",
 				},

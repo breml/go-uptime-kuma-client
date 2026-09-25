@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -35,7 +34,7 @@ func TestMonitorMQTT_Unmarshal(t *testing.T) {
 				Base: monitor.Base{
 					ID:              5,
 					Name:            "mqtt-monitor",
-					Description:     ptr.To("Test MQTT monitor"),
+					Description:     new("Test MQTT monitor"),
 					PathName:        "group / mqtt-monitor",
 					Parent:          &parent1,
 					Interval:        60,
@@ -91,8 +90,8 @@ func TestMonitorMQTT_Unmarshal(t *testing.T) {
 					MQTTWebsocketPath:  nil,
 					MQTTCheckType:      monitor.MQTTCheckTypeJSONQuery,
 					MQTTSuccessMessage: nil,
-					JSONPath:           ptr.To("temperature"),
-					ExpectedValue:      ptr.To("25"),
+					JSONPath:           new("temperature"),
+					ExpectedValue:      new("25"),
 				},
 			},
 			wantJSON: `{"accepted_statuscodes":[],"active":false,"conditions":[],"description":null,"domainExpiryNotification":false,"expectedValue":"25","hostname":"mqtt.local","id":6,"interval":60,"jsonPath":"temperature","maxretries":3,"mqttCheckType":"json-query","mqttPassword":null,"mqttSuccessMessage":null,"mqttTopic":"home/data","mqttUsername":null,"mqttWebsocketPath":null,"name":"mqtt-json-monitor","notificationIDList":{},"parent":null,"port":8883,"resendInterval":0,"retryInterval":60,"type":"mqtt","upsideDown":false}`,
@@ -122,11 +121,11 @@ func TestMonitorMQTT_Unmarshal(t *testing.T) {
 					Hostname:           "wss://mqtt.cloud.com",
 					Port:               &port443,
 					MQTTTopic:          "sensor/humidity",
-					MQTTUsername:       ptr.To("clouduser"),
-					MQTTPassword:       ptr.To("cloudpass"),
-					MQTTWebsocketPath:  ptr.To("/mqtt"),
+					MQTTUsername:       new("clouduser"),
+					MQTTPassword:       new("cloudpass"),
+					MQTTWebsocketPath:  new("/mqtt"),
 					MQTTCheckType:      monitor.MQTTCheckTypeKeyword,
-					MQTTSuccessMessage: ptr.To("valid"),
+					MQTTSuccessMessage: new("valid"),
 					JSONPath:           nil,
 					ExpectedValue:      nil,
 				},

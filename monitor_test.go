@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/breml/go-uptime-kuma-client/dockerhost"
-	"github.com/breml/go-uptime-kuma-client/internal/ptr"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
 
@@ -148,7 +147,7 @@ func TestMonitorCRUD(t *testing.T) {
 				PingDetails: monitor.PingDetails{
 					Hostname:   "8.8.8.8",
 					PacketSize: 56,
-					Timeout:    ptr.To(float64(48)),
+					Timeout:    new(float64(48)),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -264,9 +263,9 @@ func TestMonitorCRUD(t *testing.T) {
 				tcp.Name = "Updated TCP Port Monitor"
 				tcp.Hostname = "cloudflare.com"
 				tcp.Port = 465
-				tcp.SMTPSecurity = ptr.To("secure")
+				tcp.SMTPSecurity = new("secure")
 				tcp.ExpiryNotification = true
-				tcp.ExpectedTLSAlert = ptr.To("certificate_required")
+				tcp.ExpectedTLSAlert = new("certificate_required")
 				tcp.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
@@ -510,7 +509,7 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 				PostgresDetails: monitor.PostgresDetails{
 					DatabaseConnectionString: "postgres://testuser:testpass@localhost:5432/testdb",
-					DatabaseQuery:            ptr.To("SELECT 1"),
+					DatabaseQuery:            new("SELECT 1"),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -521,7 +520,7 @@ func TestMonitorCRUD(t *testing.T) {
 
 				postgres.Name = "Updated Postgres Monitor"
 				postgres.DatabaseConnectionString = "postgres://newuser:newpass@localhost:5432/newdb"
-				postgres.DatabaseQuery = ptr.To("SELECT version()")
+				postgres.DatabaseQuery = new("SELECT version()")
 				postgres.Conditions = []monitor.Condition{
 					{Variable: "result", Operator: "contains", Value: "PostgreSQL", AndOr: monitor.ConditionAnd},
 				}
@@ -548,7 +547,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "Updated Postgres Monitor", postgres.Name)
 				require.Equal(t, "postgres://newuser:newpass@localhost:5432/newdb", postgres.DatabaseConnectionString)
-				require.Equal(t, ptr.To("SELECT version()"), postgres.DatabaseQuery)
+				require.Equal(t, new("SELECT version()"), postgres.DatabaseQuery)
 				require.Equal(t, []monitor.Condition{
 					{Variable: "result", Operator: "contains", Value: "PostgreSQL", AndOr: monitor.ConditionAnd},
 				}, postgres.Conditions)
@@ -569,7 +568,7 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 				OracleDBDetails: monitor.OracleDBDetails{
 					DatabaseConnectionString: "localhost:1521/XEPDB1",
-					DatabaseQuery:            ptr.To("SELECT 1 FROM DUAL"),
+					DatabaseQuery:            new("SELECT 1 FROM DUAL"),
 					Username:                 "oracle",
 					Password:                 "oraclepass",
 				},
@@ -582,7 +581,7 @@ func TestMonitorCRUD(t *testing.T) {
 
 				oracledb.Name = "Updated OracleDB Monitor"
 				oracledb.DatabaseConnectionString = "oracle.example.com:1521/PROD"
-				oracledb.DatabaseQuery = ptr.To("SELECT banner FROM v$version WHERE banner LIKE 'Oracle%'")
+				oracledb.DatabaseQuery = new("SELECT banner FROM v$version WHERE banner LIKE 'Oracle%'")
 				oracledb.Username = "system"
 				oracledb.Password = "newsecret"
 				oracledb.Conditions = []monitor.Condition{
@@ -615,7 +614,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "oracle.example.com:1521/PROD", oracledb.DatabaseConnectionString)
 				require.Equal(
 					t,
-					ptr.To("SELECT banner FROM v$version WHERE banner LIKE 'Oracle%'"),
+					new("SELECT banner FROM v$version WHERE banner LIKE 'Oracle%'"),
 					oracledb.DatabaseQuery,
 				)
 				require.Equal(t, "system", oracledb.Username)
@@ -644,7 +643,7 @@ func TestMonitorCRUD(t *testing.T) {
 					IgnoreTLS:           false,
 					MaxRedirects:        10,
 					AcceptedStatusCodes: []string{"200-299"},
-					ScreenshotDelay:     ptr.To(1500),
+					ScreenshotDelay:     new(1500),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -655,7 +654,7 @@ func TestMonitorCRUD(t *testing.T) {
 
 				browser.Name = "Updated RealBrowser Monitor"
 				browser.URL = "https://httpbin.org/status/201"
-				browser.ScreenshotDelay = ptr.To(2500)
+				browser.ScreenshotDelay = new(2500)
 				browser.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
@@ -665,7 +664,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, id, browser.ID)
 				require.Equal(t, "Test RealBrowser Monitor", browser.Name)
-				require.Equal(t, ptr.To(1500), browser.ScreenshotDelay)
+				require.Equal(t, new(1500), browser.ScreenshotDelay)
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()
@@ -681,7 +680,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "Updated RealBrowser Monitor", browser.Name)
 				require.Equal(t, "https://httpbin.org/status/201", browser.URL)
-				require.Equal(t, ptr.To(2500), browser.ScreenshotDelay)
+				require.Equal(t, new(2500), browser.ScreenshotDelay)
 				require.True(t, browser.DomainExpiryNotification)
 			},
 			testPauseResume: true,
@@ -881,7 +880,7 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 				SNMPDetails: monitor.SNMPDetails{
 					Hostname:      "192.168.1.1",
-					Port:          ptr.To(int64(161)),
+					Port:          new(int64(161)),
 					SNMPVersion:   "2c",
 					SNMPOID:       "1.3.6.1.2.1.1.3.0",
 					SNMPCommunity: "public",
@@ -945,10 +944,10 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 				SNMPDetails: monitor.SNMPDetails{
 					Hostname:       "192.168.1.1",
-					Port:           ptr.To(int64(161)),
+					Port:           new(int64(161)),
 					SNMPVersion:    "3",
 					SNMPOID:        "1.3.6.1.2.1.1.3.0",
-					SNMPV3Username: ptr.To("snmpuser"),
+					SNMPV3Username: new("snmpuser"),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -959,7 +958,7 @@ func TestMonitorCRUD(t *testing.T) {
 
 				snmp.Name = "Updated SNMPv3 Monitor"
 				snmp.Hostname = "10.0.0.1"
-				snmp.SNMPV3Username = ptr.To("updateduser")
+				snmp.SNMPV3Username = new("updateduser")
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1058,7 +1057,7 @@ func TestMonitorCRUD(t *testing.T) {
 				SteamDetails: monitor.SteamDetails{
 					Hostname: "192.168.1.100",
 					Port:     27015,
-					Timeout:  ptr.To(float64(48)),
+					Timeout:  new(float64(48)),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -1174,13 +1173,13 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 				MQTTDetails: monitor.MQTTDetails{
 					Hostname:           "mqtt.example.com",
-					Port:               ptr.To(int64(1883)),
+					Port:               new(int64(1883)),
 					MQTTTopic:          "home/temperature",
-					MQTTUsername:       ptr.To("user"),
-					MQTTPassword:       ptr.To("pass"),
+					MQTTUsername:       new("user"),
+					MQTTPassword:       new("pass"),
 					MQTTWebsocketPath:  nil,
 					MQTTCheckType:      monitor.MQTTCheckTypeKeyword,
-					MQTTSuccessMessage: ptr.To("OK"),
+					MQTTSuccessMessage: new("OK"),
 					JSONPath:           nil,
 					ExpectedValue:      nil,
 				},
@@ -1193,11 +1192,11 @@ func TestMonitorCRUD(t *testing.T) {
 
 				mqtt.Name = "Updated MQTT Monitor"
 				mqtt.Hostname = "mqtt-new.example.com"
-				mqtt.Port = ptr.To(int64(8883))
+				mqtt.Port = new(int64(8883))
 				mqtt.MQTTCheckType = monitor.MQTTCheckTypeJSONQuery
 				mqtt.MQTTSuccessMessage = nil
-				mqtt.JSONPath = ptr.To("status")
-				mqtt.ExpectedValue = ptr.To("online")
+				mqtt.JSONPath = new("status")
+				mqtt.ExpectedValue = new("online")
 				mqtt.Conditions = []monitor.Condition{
 					{Variable: "topic", Operator: "==", Value: "home/temperature", AndOr: monitor.ConditionAnd},
 					{Variable: "message", Operator: "contains", Value: "online", AndOr: monitor.ConditionAnd},
@@ -1252,9 +1251,9 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 				RabbitMQDetails: monitor.RabbitMQDetails{
 					Nodes:    "[\"http://rabbitmq.example.com:15672/\"]",
-					Username: ptr.To("guest"),
-					Password: ptr.To("guest"),
-					Timeout:  ptr.To(float64(48)),
+					Username: new("guest"),
+					Password: new("guest"),
+					Timeout:  new(float64(48)),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -1265,9 +1264,9 @@ func TestMonitorCRUD(t *testing.T) {
 
 				rmq.Name = "Updated RabbitMQ Monitor"
 				rmq.Nodes = "[\"http://rabbitmq-new.example.com:15672/\"]"
-				rmq.Username = ptr.To("admin")
-				rmq.Password = ptr.To("newpassword")
-				rmq.Timeout = ptr.To(float64(60))
+				rmq.Username = new("admin")
+				rmq.Password = new("newpassword")
+				rmq.Timeout = new(float64(60))
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1334,7 +1333,7 @@ func TestMonitorCRUD(t *testing.T) {
 				kafka.AllowAutoTopicCreation = true
 				// The monitor.timeout column is a floating point column, so a
 				// fractional timeout survives the round-trip.
-				kafka.Timeout = ptr.To(5.5)
+				kafka.Timeout = new(5.5)
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -1394,7 +1393,7 @@ func TestMonitorCRUD(t *testing.T) {
 
 				sqlserver.Name = "Updated SQL Server Monitor"
 				sqlserver.DatabaseConnectionString = "Server=sqlserver.example.com,1433;Database=testdb;User Id=user;Password=pass;"
-				sqlserver.DatabaseQuery = ptr.To("SELECT COUNT(*) FROM sys.tables;")
+				sqlserver.DatabaseQuery = new("SELECT COUNT(*) FROM sys.tables;")
 				sqlserver.Conditions = []monitor.Condition{
 					{Variable: "result", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
 				}
@@ -1457,7 +1456,7 @@ func TestMonitorCRUD(t *testing.T) {
 
 				mysql.Name = "Updated MySQL Monitor"
 				mysql.DatabaseConnectionString = "mysql://admin:secret@mysql.example.com:3306/mydb"
-				mysql.DatabaseQuery = ptr.To("SELECT COUNT(*) FROM information_schema.tables;")
+				mysql.DatabaseQuery = new("SELECT COUNT(*) FROM information_schema.tables;")
 				mysql.Conditions = []monitor.Condition{
 					{Variable: "result", Operator: ">", Value: "0", AndOr: monitor.ConditionAnd},
 				}
@@ -1518,9 +1517,9 @@ func TestMonitorCRUD(t *testing.T) {
 
 				mongodb.Name = "Updated MongoDB Monitor"
 				mongodb.DatabaseConnectionString = "mongodb://user:pass@mongodb.example.com:27017/admin"
-				mongodb.DatabaseQuery = ptr.To("{\"dbStats\": 1}")
-				mongodb.JSONPath = ptr.To("$.ok")
-				mongodb.ExpectedValue = ptr.To("1")
+				mongodb.DatabaseQuery = new("{\"dbStats\": 1}")
+				mongodb.JSONPath = new("$.ok")
+				mongodb.ExpectedValue = new("1")
 				mongodb.Conditions = []monitor.Condition{
 					{Variable: "numericValue", Operator: ">=", Value: "1", AndOr: monitor.ConditionAnd},
 				}
@@ -1574,7 +1573,7 @@ func TestMonitorCRUD(t *testing.T) {
 				},
 				RadiusDetails: monitor.RadiusDetails{
 					Hostname:         "radius.example.com",
-					Port:             ptr.To(int64(1812)),
+					Port:             new(int64(1812)),
 					Username:         "testuser",
 					Password:         "testpass",
 					Secret:           "sharedsecret",
@@ -1590,12 +1589,12 @@ func TestMonitorCRUD(t *testing.T) {
 
 				radius.Name = "Updated Radius Monitor"
 				radius.Hostname = "auth.example.com"
-				radius.Port = ptr.To(int64(1813))
+				radius.Port = new(int64(1813))
 				radius.Username = "admin"
 				radius.Password = "adminpass"
 				radius.Secret = "newsecret"
-				radius.CalledStationID = ptr.To("555-1234")
-				radius.CallingStationID = ptr.To("555-9999")
+				radius.CalledStationID = new("555-1234")
+				radius.CallingStationID = new("555-9999")
 				radius.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
@@ -1934,10 +1933,10 @@ func TestMonitorCRUD(t *testing.T) {
 				// NOT NULL, so MarshalJSON has to substitute a value.
 				NTPDetails: monitor.NTPDetails{
 					Hostname:                   "pool.ntp.org",
-					Port:                       ptr.To(int64(1123)),
-					NTPStratumThreshold:        ptr.To(int64(4)),
-					NTPTimeOffsetThreshold:     ptr.To(int64(500)),
-					NTPRootDispersionThreshold: ptr.To(int64(250)),
+					Port:                       new(int64(1123)),
+					NTPStratumThreshold:        new(int64(4)),
+					NTPTimeOffsetThreshold:     new(int64(500)),
+					NTPRootDispersionThreshold: new(int64(250)),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -1948,11 +1947,11 @@ func TestMonitorCRUD(t *testing.T) {
 
 				ntp.Name = "Updated NTP Monitor"
 				ntp.Hostname = "time.cloudflare.com"
-				ntp.Port = ptr.To(int64(1123))
-				ntp.Timeout = ptr.To(float64(20))
-				ntp.NTPStratumThreshold = ptr.To(int64(3))
-				ntp.NTPTimeOffsetThreshold = ptr.To(int64(250))
-				ntp.NTPRootDispersionThreshold = ptr.To(int64(100))
+				ntp.Port = new(int64(1123))
+				ntp.Timeout = new(float64(20))
+				ntp.NTPStratumThreshold = new(int64(3))
+				ntp.NTPTimeOffsetThreshold = new(int64(250))
+				ntp.NTPRootDispersionThreshold = new(int64(100))
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -2016,11 +2015,11 @@ func TestMonitorCRUD(t *testing.T) {
 				// NOT NULL, so MarshalJSON has to substitute a value.
 				SFTPDetails: monitor.SFTPDetails{
 					Hostname:      "sftp.example.com",
-					Port:          ptr.To(int64(22)),
+					Port:          new(int64(22)),
 					SSHUsername:   "sftpuser",
 					SSHAuthMethod: monitor.SFTPAuthMethodPassword,
-					SSHPassword:   ptr.To("sftppass"),
-					SFTPPath:      ptr.To("/upload"),
+					SSHPassword:   new("sftppass"),
+					SFTPPath:      new("/upload"),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -2031,16 +2030,16 @@ func TestMonitorCRUD(t *testing.T) {
 
 				sftp.Name = "Updated SFTP Monitor"
 				sftp.Hostname = "files.example.com"
-				sftp.Port = ptr.To(int64(2222))
-				sftp.Timeout = ptr.To(float64(20))
+				sftp.Port = new(int64(2222))
+				sftp.Timeout = new(float64(20))
 				sftp.SSHUsername = "deploy"
 				sftp.SSHAuthMethod = monitor.SFTPAuthMethodPrivateKey
 				sftp.SSHPassword = nil
-				sftp.SSHPrivateKey = ptr.To(
+				sftp.SSHPrivateKey = new(
 					"-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----",
 				)
-				sftp.SSHPassphrase = ptr.To("secret")
-				sftp.SFTPPath = ptr.To("/srv/incoming")
+				sftp.SSHPassphrase = new("secret")
+				sftp.SFTPPath = new("/srv/incoming")
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
