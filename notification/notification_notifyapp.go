@@ -22,7 +22,7 @@ type NotifyAppDetails struct {
 	// Token authenticates the push. It is a secret, the Uptime Kuma form
 	// masks it.
 	Token string `json:"notifyAppToken"`
-	// IconURL is sent as "iconUrl" only when set.
+	// IconURL is sent as "iconUrl" only when non-empty.
 	IconURL *string `json:"notifyAppIconUrl,omitempty"`
 }
 

@@ -62,6 +62,27 @@ func TestNotificationNotifyApp_Unmarshal(t *testing.T) {
 			wantJSON: `{"active":false,"applyExisting":false,"id":2,"isDefault":false,"name":"Simple Notify","notifyAppDeviceId":"XYZ98765","notifyAppToken":"token-abc","type":"notifyapp","userId":1}`,
 		},
 		{
+			name: "empty icon url is preserved",
+			data: []byte(
+				`{"id":4,"name":"Notify Empty Icon","active":true,"userId":1,"isDefault":false,"config":"{\"name\":\"Notify Empty Icon\",\"notifyAppDeviceId\":\"XYZ98765\",\"notifyAppToken\":\"token-abc\",\"notifyAppIconUrl\":\"\",\"type\":\"notifyapp\"}"}`,
+			),
+
+			want: notification.NotifyApp{
+				Base: notification.Base{
+					ID:       4,
+					Name:     "Notify Empty Icon",
+					IsActive: true,
+					UserID:   1,
+				},
+				NotifyAppDetails: notification.NotifyAppDetails{
+					DeviceID: "XYZ98765",
+					Token:    "token-abc",
+					IconURL:  new(""),
+				},
+			},
+			wantJSON: `{"active":true,"applyExisting":false,"id":4,"isDefault":false,"name":"Notify Empty Icon","notifyAppDeviceId":"XYZ98765","notifyAppIconUrl":"","notifyAppToken":"token-abc","type":"notifyapp","userId":1}`,
+		},
+		{
 			// The device id and token are required in the Uptime Kuma form, so
 			// neither carries omitempty and an empty value survives the round
 			// trip as an empty key.

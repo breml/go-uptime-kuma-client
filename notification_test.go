@@ -3419,7 +3419,7 @@ func TestNotificationCRUD(t *testing.T) {
 				notifyApp.Name = "Test NotifyApp Updated"
 				notifyApp.DeviceID = "XYZ98765"
 				notifyApp.Token = "updated-token"
-				notifyApp.IconURL = new("https://example.com/updated-icon.png")
+				notifyApp.IconURL = nil
 			},
 			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
 				t.Helper()
