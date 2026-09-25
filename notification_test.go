@@ -4047,6 +4047,59 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "Signalgrid",
+			expectedType: "signalgrid",
+			create: notification.Signalgrid{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test Signalgrid Created",
+				},
+				SignalgridDetails: notification.SignalgridDetails{
+					ClientKey: "test-client-key",
+					Channel:   "alerts",
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				signalgrid, ok := n.(*notification.Signalgrid)
+				if !ok {
+					panic("failed to assert Signalgrid notification")
+				}
+
+				signalgrid.Name = "Test Signalgrid Updated"
+				signalgrid.ClientKey = "updated-client-key"
+				signalgrid.Channel = "ops"
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.Signalgrid)
+				require.True(t, ok)
+				var signalgrid notification.Signalgrid
+				err := actual.As(&signalgrid)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = signalgrid.UserID
+				require.EqualExportedValues(t, exp, signalgrid)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var signalgrid notification.Signalgrid
+				err := base.As(&signalgrid)
+				require.NoError(t, err)
+				return &signalgrid
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.Signalgrid)
+				require.True(t, ok)
+				var signalgrid notification.Signalgrid
+				err := actual.As(&signalgrid)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, signalgrid)
+			},
+		},
+		{
 			name:         "SIGNL4",
 			expectedType: "SIGNL4",
 			create: notification.SIGNL4{

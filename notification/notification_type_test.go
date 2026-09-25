@@ -114,6 +114,7 @@ func TestTypeMatchesUpstreamProviderName(t *testing.T) {
 		"serwersms",
 		"SevenIO",
 		"signal",
+		"signalgrid",
 		"SIGNL4",
 		"slack",
 		"smsc",
