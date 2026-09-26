@@ -96,9 +96,10 @@ type PingDetails struct {
 	// Timeout is an optional request timeout in seconds. Although the server
 	// stores it in a floating point column, it rounds the value to whole
 	// seconds before storing it for ping monitors and rejects anything
-	// outside 1 to 300 seconds or below the per-request ping timeout, which
-	// defaults to 2. A fractional value therefore does not round-trip
-	// unchanged.
+	// outside 1 to 300 seconds or below the per-request ping timeout. A
+	// fractional value therefore does not round-trip unchanged. The
+	// per-request timeout ranges from 1 to 60 seconds and defaults to 2; this
+	// client does not expose it.
 	Timeout *float64 `json:"timeout"`
 	// DomainExpiryNotification enables domain expiry notifications
 	// for the monitored domain.

@@ -338,3 +338,55 @@ func TestClient_StatusPageThemes(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestClient_StatusPageAnalyticsType(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	slug := "test-analytics-type"
+	err := client.AddStatusPage(ctx, "Test Analytics Type", slug)
+	require.NoError(t, err)
+
+	defer func() {
+		err := client.DeleteStatusPage(t.Context(), slug)
+		require.NoError(t, err)
+	}()
+
+	analyticsTypes := []string{
+		statuspage.AnalyticsTypeGoogle(),
+		statuspage.AnalyticsTypeUmami(),
+		statuspage.AnalyticsTypePlausible(),
+		statuspage.AnalyticsTypeMatomo(),
+		statuspage.AnalyticsTypeRybbit(),
+	}
+
+	for _, analyticsType := range analyticsTypes {
+		t.Run(analyticsType, func(t *testing.T) {
+			sp, err := client.GetStatusPage(ctx, slug)
+			require.NoError(t, err)
+
+			sp.AnalyticsType = new(analyticsType)
+			sp.AnalyticsID = "analytics-id"
+			_, err = client.SaveStatusPage(ctx, sp)
+			require.NoError(t, err)
+
+			updated, err := client.GetStatusPage(ctx, slug)
+			require.NoError(t, err)
+			require.NotNil(t, updated.AnalyticsType)
+			require.Equal(t, analyticsType, *updated.AnalyticsType)
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		sp, err := client.GetStatusPage(ctx, slug)
+		require.NoError(t, err)
+
+		sp.AnalyticsType = new("unknown")
+		_, err = client.SaveStatusPage(ctx, sp)
+		require.ErrorContains(t, err, "Invalid analytics type")
+	})
+}

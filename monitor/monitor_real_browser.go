@@ -100,9 +100,12 @@ type RealBrowserDetails struct {
 	// floating point column, so fractional values round-trip unchanged, but
 	// the realbrowser check never reads the column: it derives its timeout
 	// from 80 percent of the interval instead.
-	Timeout             float64  `json:"timeout"`
-	IgnoreTLS           bool     `json:"ignoreTls"`
-	MaxRedirects        int      `json:"maxredirects"`
+	Timeout      float64 `json:"timeout"`
+	IgnoreTLS    bool    `json:"ignoreTls"`
+	MaxRedirects int     `json:"maxredirects"`
+	// AcceptedStatusCodes lists the status codes counted as up, either single
+	// codes such as "200" or ranges such as "200-299". The list is sent to the
+	// server verbatim.
 	AcceptedStatusCodes []string `json:"accepted_statuscodes"`
 	RemoteBrowser       *int64   `json:"remote_browser,omitempty"`
 	// ScreenshotDelay is the delay in milliseconds the browser waits before
