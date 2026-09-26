@@ -1930,7 +1930,7 @@ func TestMonitorCRUD(t *testing.T) {
 					IsActive:       true,
 				},
 				ManualDetails: monitor.ManualDetails{
-					ManualStatus: new(int64(1)),
+					ManualStatus: new(monitor.ManualStatusUp),
 				},
 			},
 			updateFunc: func(m monitor.Monitor) {
@@ -1940,10 +1940,10 @@ func TestMonitorCRUD(t *testing.T) {
 				}
 
 				manual.Name = "Updated Manual Monitor"
-				manual.ManualStatus = new(int64(0))
+				manual.ManualStatus = new(monitor.ManualStatusDown)
 			},
-			// ManualStatus is not asserted: the server never emits
-			// manual_status, so it always reads back as nil.
+			// ManualStatus is write-only: the server never emits manual_status,
+			// so it always reads back as nil.
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
 				var manual monitor.Manual
@@ -1952,6 +1952,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "manual", manual.Type())
 				require.Equal(t, id, manual.ID)
 				require.Equal(t, "Test Manual Monitor", manual.Name)
+				require.Nil(t, manual.ManualStatus)
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()
@@ -1967,6 +1968,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "manual", manual.Type())
 				require.Equal(t, "Updated Manual Monitor", manual.Name)
+				require.Nil(t, manual.ManualStatus)
 			},
 			testPauseResume: true,
 		},

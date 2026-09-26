@@ -89,18 +89,32 @@ func (m Manual) MarshalJSON() ([]byte, error) {
 
 // ManualDetails contains manual-specific monitor configuration.
 type ManualDetails struct {
-	// ManualStatus is the status every heartbeat reports: 0 (down), 1 (up)
-	// or 2 (pending). While nil the monitor reports pending with the message
-	// "Manual monitoring - No status set".
+	// ManualStatus is the status the monitor's check reports. While nil the
+	// check reports pending with the message "Manual monitoring - No status
+	// set". Like for any other monitor, UpsideDown, retries and maintenance
+	// still apply on top of it. The server does not validate the value, only
+	// the ManualStatus constants are meaningful.
 	//
 	// The field is write-only: the server stores it but never includes it
 	// in the monitor list, so it always reads back as nil. An edit that does
 	// not set it therefore resets the status to pending.
-	// Note: the upstream API uses snake_case for this field, unlike most other Uptime Kuma fields.
-	ManualStatus *int64 `json:"manual_status"`
+	//
+	// Note: the upstream API uses snake_case for this field, unlike most
+	// other Uptime Kuma fields.
+	ManualStatus *ManualStatus `json:"manual_status"`
 }
 
 // Type returns the monitor type.
 func (ManualDetails) Type() string {
 	return "manual"
 }
+
+// ManualStatus represents the status a manual monitor reports.
+type ManualStatus int64
+
+// Manual monitor statuses.
+const (
+	ManualStatusDown    ManualStatus = 0
+	ManualStatusUp      ManualStatus = 1
+	ManualStatusPending ManualStatus = 2
+)
