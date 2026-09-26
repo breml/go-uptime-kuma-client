@@ -24,7 +24,8 @@ type AmootSMS struct {
 //     /rest/SendWithPatternOWN, PatternCodeID and LineNumber are required.
 //
 // The server checks these requirements only when a notification is sent, an
-// inconsistent configuration is accepted on create and update.
+// inconsistent configuration is accepted on create and update. A zero
+// PatternCodeID or an empty LineNumber counts as missing.
 type AmootSMSDetails struct {
 	// APIToken authenticates against the gateway. It is a secret, the Uptime
 	// Kuma form masks it.

@@ -109,6 +109,44 @@ func TestNotificationAmootSMS_Unmarshal(t *testing.T) {
 			wantJSON: `{"active":true,"amootApiToken":"test-token","amootMobiles":"9123456789","applyExisting":false,"id":4,"isDefault":false,"name":"Simple Amoot SMS","type":"amootsms","userId":1}`,
 		},
 		{
+			name: "empty required fields are kept",
+			data: []byte(
+				`{"id":5,"name":"Amoot SMS Empty","active":false,"userId":1,"isDefault":false,"config":"{\"amootApiToken\":\"\",\"amootMobiles\":\"\",\"type\":\"amootsms\"}"}`,
+			),
+
+			want: notification.AmootSMS{
+				Base: notification.Base{
+					ID:     5,
+					Name:   "Amoot SMS Empty",
+					UserID: 1,
+				},
+			},
+			wantJSON: `{"active":false,"amootApiToken":"","amootMobiles":"","applyExisting":false,"id":5,"isDefault":false,"name":"Amoot SMS Empty","type":"amootsms","userId":1}`,
+		},
+		{
+			name: "explicit false and empty values are preserved",
+			data: []byte(
+				`{"id":6,"name":"Amoot SMS Unticked","active":true,"userId":1,"isDefault":false,"config":"{\"amootApiToken\":\"test-token\",\"amootLineNumber\":\"\",\"amootMobiles\":\"9123456789\",\"amootUseOwnLine\":false,\"amootUsePattern\":false,\"type\":\"amootsms\"}"}`,
+			),
+
+			want: notification.AmootSMS{
+				Base: notification.Base{
+					ID:       6,
+					Name:     "Amoot SMS Unticked",
+					IsActive: true,
+					UserID:   1,
+				},
+				AmootSMSDetails: notification.AmootSMSDetails{
+					APIToken:   "test-token",
+					Mobiles:    "9123456789",
+					UsePattern: new(false),
+					UseOwnLine: new(false),
+					LineNumber: new(""),
+				},
+			},
+			wantJSON: `{"active":true,"amootApiToken":"test-token","amootLineNumber":"","amootMobiles":"9123456789","amootUseOwnLine":false,"amootUsePattern":false,"applyExisting":false,"id":6,"isDefault":false,"name":"Amoot SMS Unticked","type":"amootsms","userId":1}`,
+		},
+		{
 			name:    "missing config field",
 			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false}`),
 			wantErr: true,
@@ -116,6 +154,13 @@ func TestNotificationAmootSMS_Unmarshal(t *testing.T) {
 		{
 			name:    "invalid config json",
 			data:    []byte(`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"not-json"}`),
+			wantErr: true,
+		},
+		{
+			name: "invalid config detail type",
+			data: []byte(
+				`{"id":1,"name":"x","active":true,"userId":1,"isDefault":false,"config":"{\"amootMobiles\":123,\"type\":\"amootsms\"}"}`,
+			),
 			wantErr: true,
 		},
 	}
