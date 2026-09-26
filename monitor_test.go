@@ -2184,3 +2184,49 @@ func TestMonitorCRUD(t *testing.T) {
 		})
 	}
 }
+
+func TestMonitorPingTimeoutBelowPerRequestDefault(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	ping := &monitor.Ping{
+		Base: monitor.Base{
+			Name:          "Test Ping Timeout",
+			Interval:      60,
+			RetryInterval: 60,
+			MaxRetries:    0,
+			IsActive:      false,
+		},
+		PingDetails: monitor.PingDetails{
+			Hostname:   "127.0.0.1",
+			PacketSize: 56,
+			Timeout:    new(float64(1)),
+		},
+	}
+
+	monitorID, err := client.CreateMonitor(ctx, ping)
+	require.NoError(t, err)
+
+	defer func() {
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	}()
+
+	var created monitor.Ping
+	err = client.GetMonitorAs(ctx, monitorID, &created)
+	require.NoError(t, err)
+	require.Equal(t, new(float64(1)), created.Timeout)
+
+	created.Name = "Updated Ping Timeout"
+	err = client.UpdateMonitor(ctx, &created)
+	require.NoError(t, err)
+
+	var updated monitor.Ping
+	err = client.GetMonitorAs(ctx, monitorID, &updated)
+	require.NoError(t, err)
+	require.Equal(t, new(float64(1)), updated.Timeout)
+}

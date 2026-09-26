@@ -338,3 +338,65 @@ func TestClient_StatusPageThemes(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestClient_StatusPageAnalyticsType(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	slug := "test-analytics-type"
+	err := client.AddStatusPage(ctx, "Test Analytics Type", slug)
+	require.NoError(t, err)
+
+	defer func() {
+		err := client.DeleteStatusPage(t.Context(), slug)
+		require.NoError(t, err)
+	}()
+
+	testCases := []struct {
+		name          string
+		analyticsType *string
+	}{
+		{name: "google", analyticsType: new(statuspage.AnalyticsTypeGoogle())},
+		{name: "umami", analyticsType: new(statuspage.AnalyticsTypeUmami())},
+		{name: "plausible", analyticsType: new(statuspage.AnalyticsTypePlausible())},
+		{name: "matomo", analyticsType: new(statuspage.AnalyticsTypeMatomo())},
+		{name: "rybbit", analyticsType: new(statuspage.AnalyticsTypeRybbit())},
+		{name: "nil"},
+		{name: "empty", analyticsType: new("")},
+		{name: "unknown", analyticsType: new("unknown")},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sp, err := client.GetStatusPage(ctx, slug)
+			require.NoError(t, err)
+
+			sp.AnalyticsType = new(statuspage.AnalyticsTypeRybbit())
+			sp.AnalyticsID = "previous-id"
+			_, err = client.SaveStatusPage(ctx, sp)
+			require.NoError(t, err)
+
+			sp.AnalyticsType = tc.analyticsType
+			sp.AnalyticsID = "analytics-id"
+			_, err = client.SaveStatusPage(ctx, sp)
+
+			updated, getErr := client.GetStatusPage(ctx, slug)
+			require.NoError(t, getErr)
+
+			if !statuspage.ValidAnalyticsType(tc.analyticsType) {
+				require.ErrorContains(t, err, "Invalid analytics type")
+				require.Equal(t, new(statuspage.AnalyticsTypeRybbit()), updated.AnalyticsType)
+				require.Equal(t, "previous-id", updated.AnalyticsID)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.analyticsType, updated.AnalyticsType)
+			require.Equal(t, "analytics-id", updated.AnalyticsID)
+		})
+	}
+}

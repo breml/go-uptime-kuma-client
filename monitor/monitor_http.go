@@ -111,32 +111,37 @@ type HTTPDetails struct {
 	// column is NOT NULL and has no unset representation: a zero value is
 	// stored verbatim and the check falls back to 80 percent of the interval
 	// per heartbeat, so the fallback never round-trips.
-	Timeout                  float64    `json:"timeout"`
-	ExpiryNotification       bool       `json:"expiryNotification"`
-	DomainExpiryNotification bool       `json:"domainExpiryNotification"`
-	IgnoreTLS                bool       `json:"ignoreTls"`
-	MaxRedirects             int        `json:"maxredirects"`
-	AcceptedStatusCodes      []string   `json:"accepted_statuscodes"`
-	Method                   string     `json:"method"`
-	HTTPBodyEncoding         string     `json:"httpBodyEncoding"`
-	Body                     string     `json:"body"`
-	Headers                  string     `json:"headers"`
-	AuthMethod               AuthMethod `json:"authMethod"`
-	BearerToken              string     `json:"bearer_token"             secret:"true"`
-	BasicAuthUser            string     `json:"basic_auth_user"`
-	BasicAuthPass            string     `json:"basic_auth_pass"          secret:"true"`
-	AuthDomain               string     `json:"authDomain"`
-	AuthWorkstation          string     `json:"authWorkstation"`
-	TLSCert                  string     `json:"tlsCert"`
-	TLSKey                   string     `json:"tlsKey"`
-	TLSCa                    string     `json:"tlsCa"`
-	OAuthAuthMethod          string     `json:"oauth_auth_method"`
-	OAuthTokenURL            string     `json:"oauth_token_url"`
-	OAuthClientID            string     `json:"oauth_client_id"`
-	OAuthClientSecret        string     `json:"oauth_client_secret"      secret:"true"`
-	OAuthScopes              string     `json:"oauth_scopes"`
-	OAuthAudience            string     `json:"oauth_audience"`
-	CacheBust                bool       `json:"cacheBust"`
+	Timeout                  float64 `json:"timeout"`
+	ExpiryNotification       bool    `json:"expiryNotification"`
+	DomainExpiryNotification bool    `json:"domainExpiryNotification"`
+	IgnoreTLS                bool    `json:"ignoreTls"`
+	MaxRedirects             int     `json:"maxredirects"`
+	// AcceptedStatusCodes lists the status codes counted as up, either single
+	// codes such as "200" or inclusive ranges such as "200-299". The client
+	// does not validate the entries: the server rejects a nil list, skips
+	// malformed entries silently and marks every response as down when the
+	// list is empty.
+	AcceptedStatusCodes []string   `json:"accepted_statuscodes"`
+	Method              string     `json:"method"`
+	HTTPBodyEncoding    string     `json:"httpBodyEncoding"`
+	Body                string     `json:"body"`
+	Headers             string     `json:"headers"`
+	AuthMethod          AuthMethod `json:"authMethod"`
+	BearerToken         string     `json:"bearer_token"         secret:"true"`
+	BasicAuthUser       string     `json:"basic_auth_user"`
+	BasicAuthPass       string     `json:"basic_auth_pass"      secret:"true"`
+	AuthDomain          string     `json:"authDomain"`
+	AuthWorkstation     string     `json:"authWorkstation"`
+	TLSCert             string     `json:"tlsCert"`
+	TLSKey              string     `json:"tlsKey"`
+	TLSCa               string     `json:"tlsCa"`
+	OAuthAuthMethod     string     `json:"oauth_auth_method"`
+	OAuthTokenURL       string     `json:"oauth_token_url"`
+	OAuthClientID       string     `json:"oauth_client_id"`
+	OAuthClientSecret   string     `json:"oauth_client_secret"  secret:"true"`
+	OAuthScopes         string     `json:"oauth_scopes"`
+	OAuthAudience       string     `json:"oauth_audience"`
+	CacheBust           bool       `json:"cacheBust"`
 }
 
 // Type returns the monitor type.
