@@ -356,37 +356,47 @@ func TestClient_StatusPageAnalyticsType(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	analyticsTypes := []string{
-		statuspage.AnalyticsTypeGoogle(),
-		statuspage.AnalyticsTypeUmami(),
-		statuspage.AnalyticsTypePlausible(),
-		statuspage.AnalyticsTypeMatomo(),
-		statuspage.AnalyticsTypeRybbit(),
+	testCases := []struct {
+		name          string
+		analyticsType *string
+	}{
+		{name: "google", analyticsType: new(statuspage.AnalyticsTypeGoogle())},
+		{name: "umami", analyticsType: new(statuspage.AnalyticsTypeUmami())},
+		{name: "plausible", analyticsType: new(statuspage.AnalyticsTypePlausible())},
+		{name: "matomo", analyticsType: new(statuspage.AnalyticsTypeMatomo())},
+		{name: "rybbit", analyticsType: new(statuspage.AnalyticsTypeRybbit())},
+		{name: "nil"},
+		{name: "empty", analyticsType: new("")},
+		{name: "unknown", analyticsType: new("unknown")},
 	}
 
-	for _, analyticsType := range analyticsTypes {
-		t.Run(analyticsType, func(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			sp, err := client.GetStatusPage(ctx, slug)
 			require.NoError(t, err)
 
-			sp.AnalyticsType = new(analyticsType)
-			sp.AnalyticsID = "analytics-id"
+			sp.AnalyticsType = new(statuspage.AnalyticsTypeRybbit())
+			sp.AnalyticsID = "previous-id"
 			_, err = client.SaveStatusPage(ctx, sp)
 			require.NoError(t, err)
 
-			updated, err := client.GetStatusPage(ctx, slug)
+			sp.AnalyticsType = tc.analyticsType
+			sp.AnalyticsID = "analytics-id"
+			_, err = client.SaveStatusPage(ctx, sp)
+
+			updated, getErr := client.GetStatusPage(ctx, slug)
+			require.NoError(t, getErr)
+
+			if !statuspage.ValidAnalyticsType(tc.analyticsType) {
+				require.ErrorContains(t, err, "Invalid analytics type")
+				require.Equal(t, new(statuspage.AnalyticsTypeRybbit()), updated.AnalyticsType)
+				require.Equal(t, "previous-id", updated.AnalyticsID)
+				return
+			}
+
 			require.NoError(t, err)
-			require.NotNil(t, updated.AnalyticsType)
-			require.Equal(t, analyticsType, *updated.AnalyticsType)
+			require.Equal(t, tc.analyticsType, updated.AnalyticsType)
+			require.Equal(t, "analytics-id", updated.AnalyticsID)
 		})
 	}
-
-	t.Run("unknown", func(t *testing.T) {
-		sp, err := client.GetStatusPage(ctx, slug)
-		require.NoError(t, err)
-
-		sp.AnalyticsType = new("unknown")
-		_, err = client.SaveStatusPage(ctx, sp)
-		require.ErrorContains(t, err, "Invalid analytics type")
-	})
 }

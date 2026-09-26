@@ -8,8 +8,9 @@ import (
 
 // Radius represents a Radius monitor for testing Radius server authentication.
 // The check is up when the server answers with Access-Accept or, since Uptime
-// Kuma 2.5.1, with Access-Challenge, which a server sends when it asks for a
-// second factor. Access-Reject marks the monitor as down.
+// Kuma 2.5.1, with Access-Challenge, which a server sends when it asks for
+// further authentication such as a second factor. Access-Reject marks the
+// monitor as down.
 type Radius struct {
 	Base
 	RadiusDetails

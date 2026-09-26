@@ -103,9 +103,9 @@ type RealBrowserDetails struct {
 	Timeout      float64 `json:"timeout"`
 	IgnoreTLS    bool    `json:"ignoreTls"`
 	MaxRedirects int     `json:"maxredirects"`
-	// AcceptedStatusCodes lists the status codes counted as up, either single
-	// codes such as "200" or ranges such as "200-299". The list is sent to the
-	// server verbatim.
+	// AcceptedStatusCodes is stored and returned by the server, but the
+	// realbrowser check never reads it: it counts any status from 200 to 399
+	// as up.
 	AcceptedStatusCodes []string `json:"accepted_statuscodes"`
 	RemoteBrowser       *int64   `json:"remote_browser,omitempty"`
 	// ScreenshotDelay is the delay in milliseconds the browser waits before

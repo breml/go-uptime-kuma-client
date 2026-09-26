@@ -117,8 +117,10 @@ type HTTPDetails struct {
 	IgnoreTLS                bool    `json:"ignoreTls"`
 	MaxRedirects             int     `json:"maxredirects"`
 	// AcceptedStatusCodes lists the status codes counted as up, either single
-	// codes such as "200" or ranges such as "200-299". The list is sent to the
-	// server verbatim.
+	// codes such as "200" or inclusive ranges such as "200-299". The client
+	// does not validate the entries: the server rejects a nil list, skips
+	// malformed entries silently and marks every response as down when the
+	// list is empty.
 	AcceptedStatusCodes []string   `json:"accepted_statuscodes"`
 	Method              string     `json:"method"`
 	HTTPBodyEncoding    string     `json:"httpBodyEncoding"`

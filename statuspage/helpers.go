@@ -91,9 +91,9 @@ func AnalyticsTypeRybbit() string {
 // A nil value is considered valid, as Uptime Kuma accepts null for this field.
 // The check is an allowlist of the analytics types supported by Uptime Kuma.
 // While the status_page.analytics_type column is a free-form string since
-// Uptime Kuma v2.5.0, and v2.5.1 dropped the enum check that survived on
-// SQLite, the save handler still rejects any other value (verified against
-// v2.5.5), so the allowlist is kept in sync with the server side validation.
+// Uptime Kuma v2.5.0, the save handler still rejects any other value
+// (verified against v2.5.5), so the allowlist mirrors the server side
+// validation.
 func ValidAnalyticsType(analyticsType *string) bool {
 	if analyticsType == nil {
 		return true
