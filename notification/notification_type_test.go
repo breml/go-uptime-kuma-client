@@ -45,6 +45,7 @@ func TestTypeMatchesUpstreamProviderName(t *testing.T) {
 		"alerta",
 		"AlertNow",
 		"AliyunSMS",
+		"amootsms",
 		"apprise",
 		"bale",
 		"Bark",
