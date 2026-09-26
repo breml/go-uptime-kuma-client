@@ -1918,6 +1918,61 @@ func TestMonitorCRUD(t *testing.T) {
 			testPauseResume: true,
 		},
 		{
+			name: "Manual",
+			create: &monitor.Manual{
+				Base: monitor.Base{
+					Name:           "Test Manual Monitor",
+					Interval:       60,
+					RetryInterval:  60,
+					ResendInterval: 0,
+					MaxRetries:     0,
+					UpsideDown:     false,
+					IsActive:       true,
+				},
+				ManualDetails: monitor.ManualDetails{
+					ManualStatus: new(monitor.ManualStatusUp),
+				},
+			},
+			updateFunc: func(m monitor.Monitor) {
+				manual, ok := m.(*monitor.Manual)
+				if !ok {
+					panic("failed to assert Manual monitor")
+				}
+
+				manual.Name = "Updated Manual Monitor"
+				manual.ManualStatus = new(monitor.ManualStatusDown)
+			},
+			// ManualStatus is write-only: the server never emits manual_status,
+			// so it always reads back as nil.
+			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
+				t.Helper()
+				var manual monitor.Manual
+				err := actual.As(&manual)
+				require.NoError(t, err)
+				require.Equal(t, "manual", manual.Type())
+				require.Equal(t, id, manual.ID)
+				require.Equal(t, "Test Manual Monitor", manual.Name)
+				require.Nil(t, manual.ManualStatus)
+			},
+			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
+				t.Helper()
+				var manual monitor.Manual
+				err := base.As(&manual)
+				require.NoError(t, err)
+				return &manual
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual monitor.Monitor) {
+				t.Helper()
+				var manual monitor.Manual
+				err := actual.As(&manual)
+				require.NoError(t, err)
+				require.Equal(t, "manual", manual.Type())
+				require.Equal(t, "Updated Manual Monitor", manual.Name)
+				require.Nil(t, manual.ManualStatus)
+			},
+			testPauseResume: true,
+		},
+		{
 			name: "NTP",
 			create: &monitor.NTP{
 				Base: monitor.Base{
