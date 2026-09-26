@@ -1865,6 +1865,67 @@ func TestNotificationCRUD(t *testing.T) {
 			},
 		},
 		{
+			name:         "AmootSMS",
+			expectedType: "amootsms",
+			create: notification.AmootSMS{
+				Base: notification.Base{
+					ApplyExisting: false,
+					IsDefault:     false,
+					IsActive:      true,
+					Name:          "Test AmootSMS Created",
+				},
+				AmootSMSDetails: notification.AmootSMSDetails{
+					APIToken:      "test-token",
+					Mobiles:       "9123456789,09987654321",
+					UsePattern:    new(true),
+					PatternCodeID: new(int64(1234)),
+					UseOwnLine:    new(true),
+					LineNumber:    new("50001234"),
+				},
+			},
+			updateFunc: func(n notification.Notification) {
+				amootSMS, ok := n.(*notification.AmootSMS)
+				if !ok {
+					panic("failed to assert AmootSMS notification")
+				}
+
+				amootSMS.Name = "Test AmootSMS Updated"
+				amootSMS.APIToken = "updated-token"
+				amootSMS.Mobiles = "9123456789"
+				amootSMS.UsePattern = nil
+				amootSMS.PatternCodeID = nil
+				amootSMS.UseOwnLine = nil
+				amootSMS.LineNumber = new("public")
+			},
+			verifyCreatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification, id int64) {
+				t.Helper()
+				exp, ok := expected.(notification.AmootSMS)
+				require.True(t, ok)
+				var amootSMS notification.AmootSMS
+				err := actual.As(&amootSMS)
+				require.NoError(t, err)
+				exp.ID = id
+				exp.UserID = amootSMS.UserID
+				require.EqualExportedValues(t, exp, amootSMS)
+			},
+			createTypedFunc: func(t *testing.T, base notification.Notification) notification.Notification {
+				t.Helper()
+				var amootSMS notification.AmootSMS
+				err := base.As(&amootSMS)
+				require.NoError(t, err)
+				return &amootSMS
+			},
+			verifyUpdatedFunc: func(t *testing.T, actual notification.Notification, expected notification.Notification) {
+				t.Helper()
+				exp, ok := expected.(*notification.AmootSMS)
+				require.True(t, ok)
+				var amootSMS notification.AmootSMS
+				err := actual.As(&amootSMS)
+				require.NoError(t, err)
+				require.EqualExportedValues(t, *exp, amootSMS)
+			},
+		},
+		{
 			name:         "Apprise",
 			expectedType: "apprise",
 			create: notification.Apprise{
