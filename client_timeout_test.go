@@ -53,6 +53,12 @@ type fakeSocketIOServer struct {
 	// went unacknowledged. It is what tells a command that reached the wire
 	// from one that gave up before it was sent.
 	swallowedCommands atomic.Int64
+	// onCommand, when set, answers every EVENT after the first, which is the
+	// login, in place of the default. It gets the command's name and ack ID and
+	// enqueues whatever frames it likes on messages. It runs on the POST that
+	// carried the command, so it must not block: delayed frames belong on a
+	// goroutine of its own. swallowACKsAfterLogin takes precedence over it.
+	onCommand func(command string, ackID string)
 }
 
 func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -157,6 +163,21 @@ func (s *fakeSocketIOServer) handleClientMessage(body []byte) {
 		}
 
 		ackID := string(socketIOData[1:i])
+
+		if s.onCommand != nil && s.loggedIn.Swap(true) {
+			var frame []json.RawMessage
+
+			var command string
+
+			if json.Unmarshal(socketIOData[i:], &frame) == nil && len(frame) > 0 {
+				_ = json.Unmarshal(frame[0], &command)
+			}
+
+			s.onCommand(command, ackID)
+
+			return
+		}
+
 		// Enqueue login ACK: engine.io "4" + socket.io "3" (Ack) + ack ID + JSON payload.
 		ack := fmt.Sprintf(`43%s[{"ok":true,"msg":"Logged in successfully.","token":"fake-session-token"}]`, ackID)
 		s.messages <- []byte(ack)
@@ -928,7 +949,7 @@ func TestOperationTimeoutDefault(t *testing.T) {
 }
 
 // TestOperationTimeoutNotSpentQueueing pins the reason the budget is derived
-// after the list-write lock and not before it. Writes that broadcast the same
+// after the list lock and not before it. Writes that broadcast the same
 // whole list are serialized, see the wholeListUpdateEvents comment in client.go,
 // so the second one here waits out the first one's full budget before it may
 // emit at all.

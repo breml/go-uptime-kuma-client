@@ -6,6 +6,7 @@ require (
 	github.com/maldikhan/go.socket.io v0.1.1
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/pquerna/otp v1.5.0
+	golang.org/x/sync v0.22.0
 )
 
 require (
@@ -352,7 +353,6 @@ require (
 	golang.org/x/exp/typeparams v0.0.0-20260811152304-ee035b5b010f // indirect
 	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
 	golang.org/x/text v0.41.0 // indirect

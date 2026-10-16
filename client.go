@@ -18,6 +18,7 @@ import (
 	"github.com/maldikhan/go.socket.io/socket.io/v5/client/emit"
 	"github.com/maldikhan/go.socket.io/utils"
 	"github.com/maniartech/signals"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/breml/go-uptime-kuma-client/dockerhost"
 	"github.com/breml/go-uptime-kuma-client/maintenance"
@@ -292,11 +293,12 @@ type Client struct {
 
 	mu *sync.Mutex
 
-	// listWrites serializes the writes to each list-replacing update event,
-	// see wholeListUpdateEvents. One semaphore per event name, created in New.
-	listWrites map[string]chan struct{}
-	updates    signals.Signal[string]
-	state      state
+	// listLocks orders the commands on each list-replacing update event, see
+	// wholeListUpdateEvents and lockList. One semaphore per event name,
+	// created in New.
+	listLocks map[string]*semaphore.Weighted
+	updates   signals.Signal[string]
+	state     state
 
 	// sessionToken is the JWT the server handed out at login. It is what
 	// Resync logs in with, see there.
@@ -383,7 +385,7 @@ func WithConnectTimeout(timeout time.Duration) Option {
 // per RPC and Terraform sets none - would block forever.
 //
 // The bound is on the round trip, not on the call: a write that has to queue
-// behind the other writes to the list it broadcasts, see wholeListUpdateEvents,
+// behind the other commands on the list it broadcasts, see lockList,
 // spends no budget while it waits its turn, and is bounded there by the
 // caller's context alone. A caller that wants a bound on the whole call sets
 // its own deadline, which the queue honours.
@@ -612,9 +614,9 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		readyGracePeriod: defaultReadyGracePeriod,
 		operationTimeout: defaultOperationTimeout,
 
-		mu:         &sync.Mutex{},
-		updates:    signals.New[string](),
-		listWrites: newListWriteLocks(),
+		mu:        &sync.Mutex{},
+		updates:   signals.New[string](),
+		listLocks: newListLocks(),
 	}
 
 	for _, opt := range opts {
@@ -1551,68 +1553,6 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 	return response, nil
 }
 
-// wholeListUpdateEvents names the update events whose payload is a complete
-// list that replaces the cached one.
-//
-// Such a broadcast is only as fresh as the moment the server read the list, and
-// Uptime Kuma reads it after the write it belongs to and emits it afterwards,
-// over a connection that preserves that order. Two writes in flight at once
-// therefore interleave into a read-without, emit-after order, and the older
-// snapshot lands last and drops the newer write from the cache again. Writes to
-// these lists are serialized so that no two of them can interleave that way.
-//
-// updateMonitorIntoList and deleteMonitorFromList are absent on purpose: they
-// carry a single monitor and are merged into the cache rather than replacing
-// it, so they cannot go stale this way and stay concurrent.
-func wholeListUpdateEvents() []string {
-	return []string{
-		"notificationList",
-		"proxyList",
-		"dockerHostList",
-		"maintenanceList",
-		"monitorList",
-		"statusPageList",
-	}
-}
-
-// newListWriteLocks builds the write semaphore per list-replacing update
-// event. A buffered channel with room for one token rather than a mutex,
-// because a caller waiting its turn has to be able to give up, see
-// lockListWrite.
-func newListWriteLocks() map[string]chan struct{} {
-	locks := make(map[string]chan struct{}, len(wholeListUpdateEvents()))
-	for _, event := range wholeListUpdateEvents() {
-		locks[event] = make(chan struct{}, 1)
-	}
-
-	return locks
-}
-
-// lockListWrite takes the write lock of updateEvent and returns the release. It
-// returns a nil release for an event that carries no whole list and needs no
-// serializing, and an error for a caller whose context was done before its turn
-// came.
-//
-// The wait is on ctx and not on the operation budget: the budget bounds a
-// command's own round trip and is taken once the lock is won, see
-// syncEmitWithConfirmedUpdateEvent, so what bounds the queue is whatever bounds
-// the caller. Giving up here is the only way out of a queue behind writes that
-// are each waiting out a server that stopped answering.
-func (c *Client) lockListWrite(ctx context.Context, updateEvent string) (func(), error) {
-	lock, ok := c.listWrites[updateEvent]
-	if !ok {
-		return nil, nil //nolint:nilnil // no lock to take is not a failure.
-	}
-
-	select {
-	case lock <- struct{}{}:
-		return func() { <-lock }, nil
-
-	case <-ctx.Done():
-		return nil, fmt.Errorf("waiting for the other writes to %s: %w", updateEvent, contextErr(ctx))
-	}
-}
-
 // cachedByID reports whether list holds an entry with the given ID. It is what
 // the create and delete confirmations are built from: a create is settled once
 // the ID the server assigned is in the cache, a delete once it is gone.
@@ -1683,7 +1623,7 @@ func (c *Client) syncEmitWithConfirmedUpdateEvent(
 ) (ackResponse, error) {
 	// Held for the whole command, so that the server never has two reads of
 	// this list in flight and cannot emit them out of order.
-	unlock, err := c.lockListWrite(ctx, updateEvent)
+	unlock, err := c.lockList(ctx, updateEvent)
 	if err != nil {
 		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
@@ -1693,7 +1633,7 @@ func (c *Client) syncEmitWithConfirmedUpdateEvent(
 	}
 
 	// Derived after the lock, not before it: the timeout bounds this command's
-	// own round trip, and queueing behind the other writes to this list is not
+	// own round trip, and queueing behind the other commands on this list is not
 	// part of it. Taking it earlier would let a busy list spend the budget
 	// before the command is even sent.
 	ctx, cancel := c.operationContext(ctx, command)
