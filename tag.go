@@ -107,6 +107,10 @@ func (c *Client) DeleteTag(ctx context.Context, tagID int64) error {
 // refreshMonitorInCache fetches a monitor and updates it in the cache.
 // This is used by tag operations since the server doesn't emit update events for them.
 // If the monitor is not found in the cache, it will be added.
+//
+// The tag operations hold the shared side of the monitorList lock around the
+// command and this refresh, see sharedListUpdateEvents, so that a GetMonitors
+// in flight cannot replace the cache with a list read before the change.
 func (c *Client) refreshMonitorInCache(ctx context.Context, monitorID int64) error {
 	mon, err := c.GetMonitor(ctx, monitorID)
 	if err != nil {
@@ -137,6 +141,12 @@ func (c *Client) AddMonitorTag(
 	monitorID int64,
 	value string,
 ) (*tag.MonitorTag, error) {
+	unlock, err := c.lockList(ctx, "updateMonitorIntoList")
+	if err != nil {
+		return nil, fmt.Errorf("add monitor tag (tag %d, monitor %d): %w", tagID, monitorID, err)
+	}
+	defer unlock()
+
 	response, err := c.syncEmit(ctx, "addMonitorTag", tagID, monitorID, value)
 	if err != nil {
 		return nil, fmt.Errorf("add monitor tag (tag %d, monitor %d): %w", tagID, monitorID, err)
@@ -182,6 +192,12 @@ func (c *Client) AddMonitorTag(
 
 // UpdateMonitorTag updates the value of a monitor-tag association.
 func (c *Client) UpdateMonitorTag(ctx context.Context, tagID int64, monitorID int64, value string) error {
+	unlock, err := c.lockList(ctx, "updateMonitorIntoList")
+	if err != nil {
+		return fmt.Errorf("update monitor tag (tag %d, monitor %d): %w", tagID, monitorID, err)
+	}
+	defer unlock()
+
 	response, err := c.syncEmit(ctx, "editMonitorTag", tagID, monitorID, value)
 	if err != nil {
 		return fmt.Errorf("update monitor tag (tag %d, monitor %d): %w", tagID, monitorID, err)
@@ -202,6 +218,18 @@ func (c *Client) UpdateMonitorTag(ctx context.Context, tagID int64, monitorID in
 
 // DeleteMonitorTagWithValue removes a specific tag association from a monitor by value.
 func (c *Client) DeleteMonitorTagWithValue(ctx context.Context, tagID int64, monitorID int64, value string) error {
+	unlock, err := c.lockList(ctx, "updateMonitorIntoList")
+	if err != nil {
+		return fmt.Errorf(
+			"delete monitor tag with value (tag %d, monitor %d, value %q): %w",
+			tagID,
+			monitorID,
+			value,
+			err,
+		)
+	}
+	defer unlock()
+
 	response, err := c.syncEmit(ctx, "deleteMonitorTag", tagID, monitorID, value)
 	if err != nil {
 		return fmt.Errorf(

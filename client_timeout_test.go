@@ -53,11 +53,11 @@ type fakeSocketIOServer struct {
 	// went unacknowledged. It is what tells a command that reached the wire
 	// from one that gave up before it was sent.
 	swallowedCommands atomic.Int64
-	// onCommand, when set, answers every command after the login in place of
-	// the default. It gets the command's name and ack ID and enqueues whatever
-	// frames it likes on messages, in whatever order and with whatever delay
-	// the test needs. It runs on the request goroutine of the POST that
-	// carried the command.
+	// onCommand, when set, answers every EVENT after the first, which is the
+	// login, in place of the default. It gets the command's name and ack ID and
+	// enqueues whatever frames it likes on messages. It runs on the POST that
+	// carried the command, so it must not block: delayed frames belong on a
+	// goroutine of its own. swallowACKsAfterLogin takes precedence over it.
 	onCommand func(command string, ackID string)
 }
 
@@ -949,7 +949,7 @@ func TestOperationTimeoutDefault(t *testing.T) {
 }
 
 // TestOperationTimeoutNotSpentQueueing pins the reason the budget is derived
-// after the list-write lock and not before it. Writes that broadcast the same
+// after the list lock and not before it. Writes that broadcast the same
 // whole list are serialized, see the wholeListUpdateEvents comment in client.go,
 // so the second one here waits out the first one's full budget before it may
 // emit at all.

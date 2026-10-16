@@ -49,7 +49,7 @@ real-time communication.
 - Ensures state consistency before returning from operations
 
 The update events are broadcasts matched by name, so a waiting write cannot tell
-which write caused the one it sees. Two rules keep the cache correct when several
+which write caused the one it sees. Three rules keep the cache correct when several
 writes are in flight on one connection (a Terraform apply runs its resource
 operations concurrently over a single client):
 
@@ -62,10 +62,13 @@ operations concurrently over a single client):
   `wholeListUpdateEvents()`. Uptime Kuma reads the list after the write and emits
   it afterwards, so two interleaved writes can put the older snapshot last and
   drop the newer write from the cache.
-- `GetMonitors()` reads the cache its `getMonitorList` request refreshes, so it
-  goes through `syncEmitWithUpdateEvent()` too: it takes the `monitorList` lock
-  and returns only once the broadcast it asked for has been applied. The ack
-  alone says nothing about the cache.
+- Single-entry merges (`updateMonitorIntoList`, `deleteMonitorFromList`, and the
+  monitor-tag commands) take the shared side of their list's lock, see
+  `sharedListUpdateEvents()`: concurrent with each other, but excluded from a
+  whole-list command in flight, whose older snapshot would otherwise drop them.
+  `GetMonitors()` is such a whole-list command: it waits for the `monitorList`
+  broadcast it asked for under the exclusive side. The ack alone says nothing
+  about the cache.
 
 `Resync()` remains the way out of a cache that missed a broadcast anyway.
 

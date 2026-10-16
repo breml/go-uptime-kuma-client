@@ -12,19 +12,17 @@ import (
 // GetMonitors retrieves all monitors for the authenticated user.
 //
 // The server answers getMonitorList with a monitorList broadcast that replaces
-// the cached list, and acks only afterwards. The ack carries no monitors, so
-// GetMonitors returns only once that broadcast has been applied, and holds the
-// monitorList lock while it waits: two requests in flight at once would come
-// back in completion order rather than request order, and a snapshot read
-// before a monitor was created could land last and drop it from the cache.
+// the cached list. The client can see the ack before it has applied that
+// broadcast, so GetMonitors waits for the broadcast itself. It holds the
+// exclusive side of the monitorList lock meanwhile, so that no other
+// GetMonitors and no single-monitor write of this client interleaves with it,
+// see sharedListUpdateEvents.
 //
-// An error wrapping ErrUpdateEventTimeout means the server acknowledged the
-// request but its list never arrived. No monitors are returned with it, because
-// the cache may be the stale list GetMonitors was asked to refresh.
+// An error wrapping ErrUpdateEventTimeout means the list never arrived; no
+// monitors are returned with it, the cache being the stale list.
 //
-// A monitorList broadcast GetMonitors did not ask for, from Resync or from
-// another session of the same user, is not serialized and can still overtake
-// the one it waits for.
+// monitorList broadcasts it did not ask for, from Resync, from another session
+// of the same user or from addProxy with applyExisting, are not ordered with it.
 func (c *Client) GetMonitors(ctx context.Context) ([]monitor.Base, error) {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "getMonitorList", "monitorList")
 	if err != nil {
