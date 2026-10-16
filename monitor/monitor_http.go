@@ -9,6 +9,7 @@ import (
 type HTTP struct {
 	Base
 	HTTPDetails
+	IPFamilyDetails
 }
 
 // Type returns the monitor type.
@@ -18,7 +19,12 @@ func (h HTTP) Type() string {
 
 // String returns a string representation of the monitor.
 func (h HTTP) String() string {
-	return fmt.Sprintf("%s, %s", formatMonitor(h.Base, false), formatMonitor(h.HTTPDetails, true))
+	return fmt.Sprintf(
+		"%s, %s, %s",
+		formatMonitor(h.Base, false),
+		formatMonitor(h.HTTPDetails, true),
+		formatMonitor(h.IPFamilyDetails, false),
+	)
 }
 
 // UnmarshalJSON unmarshals a JSON byte slice into a monitor.
@@ -35,9 +41,16 @@ func (h *HTTP) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("unmarshal: %w", err)
 	}
 
+	ipFamilyDetails := IPFamilyDetails{}
+	err = json.Unmarshal(data, &ipFamilyDetails)
+	if err != nil {
+		return fmt.Errorf("unmarshal: %w", err)
+	}
+
 	*h = HTTP{
-		Base:        base,
-		HTTPDetails: details,
+		Base:            base,
+		HTTPDetails:     details,
+		IPFamilyDetails: ipFamilyDetails,
 	}
 
 	return nil
@@ -91,6 +104,8 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw["oauth_scopes"] = h.OAuthScopes
 	raw["oauth_audience"] = h.OAuthAudience
 	raw["cacheBust"] = h.CacheBust
+
+	raw["ipFamily"] = h.IPFamily.wireValue()
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}

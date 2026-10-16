@@ -10,6 +10,7 @@ type HTTPKeyword struct {
 	Base
 	HTTPDetails
 	HTTPKeywordDetails
+	IPFamilyDetails
 }
 
 // Type returns the monitor type.
@@ -20,10 +21,11 @@ func (h HTTPKeyword) Type() string {
 // String returns a string representation of the monitor.
 func (h HTTPKeyword) String() string {
 	return fmt.Sprintf(
-		"%s, %s, %s",
+		"%s, %s, %s, %s",
 		formatMonitor(h.Base, false),
 		formatMonitor(h.HTTPDetails, true),
 		formatMonitor(h.HTTPKeywordDetails, true),
+		formatMonitor(h.IPFamilyDetails, false),
 	)
 }
 
@@ -47,10 +49,17 @@ func (h *HTTPKeyword) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("unmarshal: %w", err)
 	}
 
+	ipFamilyDetails := IPFamilyDetails{}
+	err = json.Unmarshal(data, &ipFamilyDetails)
+	if err != nil {
+		return fmt.Errorf("unmarshal: %w", err)
+	}
+
 	*h = HTTPKeyword{
 		Base:               base,
 		HTTPDetails:        httpDetails,
 		HTTPKeywordDetails: keywordDetails,
+		IPFamilyDetails:    ipFamilyDetails,
 	}
 
 	return nil
@@ -108,6 +117,8 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	// Always override with current keyword-specific field values.
 	raw["keyword"] = h.Keyword
 	raw["invertKeyword"] = h.InvertKeyword
+
+	raw["ipFamily"] = h.IPFamily.wireValue()
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}

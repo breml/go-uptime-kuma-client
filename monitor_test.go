@@ -50,6 +50,9 @@ func TestMonitorCRUD(t *testing.T) {
 					AcceptedStatusCodes: []string{"200-299"},
 					AuthMethod:          monitor.AuthMethodNone,
 				},
+				IPFamilyDetails: monitor.IPFamilyDetails{
+					IPFamily: monitor.IPFamilyIPv4,
+				},
 			},
 			updateFunc: func(m monitor.Monitor) {
 				http, ok := m.(*monitor.HTTP)
@@ -60,6 +63,7 @@ func TestMonitorCRUD(t *testing.T) {
 				http.Name = "Updated HTTP Monitor"
 				http.URL = "https://httpbin.org/status/201"
 				http.DomainExpiryNotification = true
+				http.IPFamily = monitor.IPFamilyIPv6
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -68,6 +72,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, id, http.ID)
 				require.Equal(t, "Test HTTP Monitor", http.Name)
+				require.Equal(t, monitor.IPFamilyIPv4, http.IPFamily)
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()
@@ -84,6 +89,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated HTTP Monitor", http.Name)
 				require.Equal(t, "https://httpbin.org/status/201", http.URL)
 				require.True(t, http.DomainExpiryNotification)
+				require.Equal(t, monitor.IPFamilyIPv6, http.IPFamily)
 			},
 			testPauseResume: true,
 		},
@@ -326,6 +332,9 @@ func TestMonitorCRUD(t *testing.T) {
 					Keyword:       "Herman Melville",
 					InvertKeyword: false,
 				},
+				IPFamilyDetails: monitor.IPFamilyDetails{
+					IPFamily: monitor.IPFamilyIPv6,
+				},
 			},
 			updateFunc: func(m monitor.Monitor) {
 				http, ok := m.(*monitor.HTTPKeyword)
@@ -337,6 +346,7 @@ func TestMonitorCRUD(t *testing.T) {
 				http.Keyword = "Moby Dick"
 				http.InvertKeyword = true
 				http.DomainExpiryNotification = true
+				http.IPFamily = monitor.IPFamilyAuto
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -345,6 +355,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, id, http.ID)
 				require.Equal(t, "Test HTTP Keyword Monitor", http.Name)
+				require.Equal(t, monitor.IPFamilyIPv6, http.IPFamily)
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()
@@ -362,6 +373,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Moby Dick", http.Keyword)
 				require.True(t, http.InvertKeyword)
 				require.True(t, http.DomainExpiryNotification)
+				require.Equal(t, monitor.IPFamilyAuto, http.IPFamily)
 			},
 			testPauseResume: true,
 		},
@@ -465,6 +477,7 @@ func TestMonitorCRUD(t *testing.T) {
 				json.ExpectedValue = "Yours Truly"
 				json.RetryOnlyOnStatusCodeFailure = true
 				json.DomainExpiryNotification = true
+				json.IPFamily = monitor.IPFamilyIPv4
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
 				t.Helper()
@@ -474,6 +487,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, id, json.ID)
 				require.Equal(t, "Test JSON Query Monitor", json.Name)
 				require.False(t, json.RetryOnlyOnStatusCodeFailure)
+				require.Equal(t, monitor.IPFamilyAuto, json.IPFamily)
 			},
 			createTypedFunc: func(t *testing.T, base monitor.Monitor) monitor.Monitor {
 				t.Helper()
@@ -492,6 +506,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Yours Truly", json.ExpectedValue)
 				require.True(t, json.RetryOnlyOnStatusCodeFailure)
 				require.True(t, json.DomainExpiryNotification)
+				require.Equal(t, monitor.IPFamilyIPv4, json.IPFamily)
 			},
 			testPauseResume: true,
 		},
@@ -1702,7 +1717,7 @@ func TestMonitorCRUD(t *testing.T) {
 				GlobalpingDetails: monitor.GlobalpingDetails{
 					Subtype:   monitor.GlobalpingSubtypePing,
 					Location:  "world",
-					IPFamily:  monitor.GlobalpingIPFamilyAuto,
+					IPFamily:  monitor.IPFamilyAuto,
 					Protocol:  "ICMP",
 					PingCount: 3,
 					Hostname:  "example.com",
@@ -1717,7 +1732,7 @@ func TestMonitorCRUD(t *testing.T) {
 				g.Name = "Updated Globalping Monitor"
 				g.Hostname = "google.com"
 				g.Location = "europe"
-				g.IPFamily = monitor.GlobalpingIPFamilyIPv4
+				g.IPFamily = monitor.IPFamilyIPv4
 				g.PingCount = 5
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
@@ -1748,7 +1763,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated Globalping Monitor", g.Name)
 				require.Equal(t, "google.com", g.Hostname)
 				require.Equal(t, "europe", g.Location)
-				require.Equal(t, monitor.GlobalpingIPFamilyIPv4, g.IPFamily)
+				require.Equal(t, monitor.IPFamilyIPv4, g.IPFamily)
 				require.Equal(t, 5, g.PingCount)
 			},
 			testPauseResume: true,

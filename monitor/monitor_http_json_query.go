@@ -3,6 +3,7 @@ package monitor
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 )
 
 // HTTPJSONQuery represents a httpjsonquery monitor.
@@ -10,6 +11,7 @@ type HTTPJSONQuery struct {
 	Base
 	HTTPDetails
 	HTTPJSONQueryDetails
+	IPFamilyDetails
 }
 
 // Type returns the monitor type.
@@ -20,10 +22,11 @@ func (h HTTPJSONQuery) Type() string {
 // String returns a string representation of the monitor.
 func (h HTTPJSONQuery) String() string {
 	return fmt.Sprintf(
-		"%s, %s, %s",
+		"%s, %s, %s, %s",
 		formatMonitor(h.Base, false),
 		formatMonitor(h.HTTPDetails, true),
 		formatMonitor(h.HTTPJSONQueryDetails, true),
+		formatMonitor(h.IPFamilyDetails, false),
 	)
 }
 
@@ -47,10 +50,17 @@ func (h *HTTPJSONQuery) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("unmarshal: %w", err)
 	}
 
+	ipFamilyDetails := IPFamilyDetails{}
+	err = json.Unmarshal(data, &ipFamilyDetails)
+	if err != nil {
+		return fmt.Errorf("unmarshal: %w", err)
+	}
+
 	*h = HTTPJSONQuery{
 		Base:                 base,
 		HTTPDetails:          httpDetails,
 		HTTPJSONQueryDetails: jsonQueryDetails,
+		IPFamilyDetails:      ipFamilyDetails,
 	}
 
 	return nil
@@ -106,10 +116,9 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	raw["cacheBust"] = h.CacheBust
 
 	// Always override with current JSON Query-specific field values.
-	raw["jsonPath"] = h.JSONPath
-	raw["expectedValue"] = h.ExpectedValue
-	raw["jsonPathOperator"] = h.JSONPathOperator
-	raw["retryOnlyOnStatusCodeFailure"] = h.RetryOnlyOnStatusCodeFailure
+	maps.Copy(raw, h.toMap())
+
+	raw["ipFamily"] = h.IPFamily.wireValue()
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}
@@ -133,4 +142,15 @@ type HTTPJSONQueryDetails struct {
 // Type returns the monitor type.
 func (HTTPJSONQueryDetails) Type() string {
 	return "json-query"
+}
+
+// toMap returns the JSON Query-specific fields as a map suitable for merging
+// into the JSON payload.
+func (d HTTPJSONQueryDetails) toMap() map[string]any {
+	return map[string]any{
+		"jsonPath":                     d.JSONPath,
+		"expectedValue":                d.ExpectedValue,
+		"jsonPathOperator":             d.JSONPathOperator,
+		"retryOnlyOnStatusCodeFailure": d.RetryOnlyOnStatusCodeFailure,
+	}
 }
