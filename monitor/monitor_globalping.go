@@ -180,16 +180,11 @@ func (s GlobalpingSubtype) String() string {
 }
 
 // GlobalpingIPFamily represents the IP family for a Globalping monitor.
-type GlobalpingIPFamily string
+type GlobalpingIPFamily = IPFamily
 
 // Globalping IP families. The empty value selects the IP family automatically.
 const (
-	GlobalpingIPFamilyAuto GlobalpingIPFamily = ""
-	GlobalpingIPFamilyIPv4 GlobalpingIPFamily = "ipv4"
-	GlobalpingIPFamilyIPv6 GlobalpingIPFamily = "ipv6"
+	GlobalpingIPFamilyAuto = IPFamilyAuto
+	GlobalpingIPFamilyIPv4 = IPFamilyIPv4
+	GlobalpingIPFamilyIPv6 = IPFamilyIPv6
 )
-
-// String returns the string representation of the Globalping IP family.
-func (f GlobalpingIPFamily) String() string {
-	return string(f)
-}
