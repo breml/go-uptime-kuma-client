@@ -1561,6 +1561,10 @@ func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ack
 // snapshot lands last and drops the newer write from the cache again. Writes to
 // these lists are serialized so that no two of them can interleave that way.
 //
+// The lock is not reserved for writes. GetMonitors takes the monitorList one
+// for its getMonitorList request, whose answer is the same whole-list
+// broadcast and goes stale the same way, see GetMonitors.
+//
 // updateMonitorIntoList and deleteMonitorFromList are absent on purpose: they
 // carry a single monitor and are merged into the cache rather than replacing
 // it, so they cannot go stale this way and stay concurrent.

@@ -53,6 +53,12 @@ type fakeSocketIOServer struct {
 	// went unacknowledged. It is what tells a command that reached the wire
 	// from one that gave up before it was sent.
 	swallowedCommands atomic.Int64
+	// onCommand, when set, answers every command after the login in place of
+	// the default. It gets the command's name and ack ID and enqueues whatever
+	// frames it likes on messages, in whatever order and with whatever delay
+	// the test needs. It runs on the request goroutine of the POST that
+	// carried the command.
+	onCommand func(command string, ackID string)
 }
 
 func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -157,6 +163,21 @@ func (s *fakeSocketIOServer) handleClientMessage(body []byte) {
 		}
 
 		ackID := string(socketIOData[1:i])
+
+		if s.onCommand != nil && s.loggedIn.Swap(true) {
+			var frame []json.RawMessage
+
+			var command string
+
+			if json.Unmarshal(socketIOData[i:], &frame) == nil && len(frame) > 0 {
+				_ = json.Unmarshal(frame[0], &command)
+			}
+
+			s.onCommand(command, ackID)
+
+			return
+		}
+
 		// Enqueue login ACK: engine.io "4" + socket.io "3" (Ack) + ack ID + JSON payload.
 		ack := fmt.Sprintf(`43%s[{"ok":true,"msg":"Logged in successfully.","token":"fake-session-token"}]`, ackID)
 		s.messages <- []byte(ack)

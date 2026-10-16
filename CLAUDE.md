@@ -62,6 +62,10 @@ operations concurrently over a single client):
   `wholeListUpdateEvents()`. Uptime Kuma reads the list after the write and emits
   it afterwards, so two interleaved writes can put the older snapshot last and
   drop the newer write from the cache.
+- `GetMonitors()` reads the cache its `getMonitorList` request refreshes, so it
+  goes through `syncEmitWithUpdateEvent()` too: it takes the `monitorList` lock
+  and returns only once the broadcast it asked for has been applied. The ack
+  alone says nothing about the cache.
 
 `Resync()` remains the way out of a cache that missed a broadcast anyway.
 
