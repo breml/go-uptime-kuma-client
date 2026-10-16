@@ -118,7 +118,7 @@ func (h HTTPKeyword) MarshalJSON() ([]byte, error) {
 	raw["keyword"] = h.Keyword
 	raw["invertKeyword"] = h.InvertKeyword
 
-	raw["ipFamily"] = h.ipFamilyValue()
+	raw["ipFamily"] = h.IPFamily.wireValue()
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}

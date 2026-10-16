@@ -1717,7 +1717,7 @@ func TestMonitorCRUD(t *testing.T) {
 				GlobalpingDetails: monitor.GlobalpingDetails{
 					Subtype:   monitor.GlobalpingSubtypePing,
 					Location:  "world",
-					IPFamily:  monitor.GlobalpingIPFamilyAuto,
+					IPFamily:  monitor.IPFamilyAuto,
 					Protocol:  "ICMP",
 					PingCount: 3,
 					Hostname:  "example.com",
@@ -1732,7 +1732,7 @@ func TestMonitorCRUD(t *testing.T) {
 				g.Name = "Updated Globalping Monitor"
 				g.Hostname = "google.com"
 				g.Location = "europe"
-				g.IPFamily = monitor.GlobalpingIPFamilyIPv4
+				g.IPFamily = monitor.IPFamilyIPv4
 				g.PingCount = 5
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
@@ -1763,7 +1763,7 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated Globalping Monitor", g.Name)
 				require.Equal(t, "google.com", g.Hostname)
 				require.Equal(t, "europe", g.Location)
-				require.Equal(t, monitor.GlobalpingIPFamilyIPv4, g.IPFamily)
+				require.Equal(t, monitor.IPFamilyIPv4, g.IPFamily)
 				require.Equal(t, 5, g.PingCount)
 			},
 			testPauseResume: true,

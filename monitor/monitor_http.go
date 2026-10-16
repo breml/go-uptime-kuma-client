@@ -105,7 +105,7 @@ func (h HTTP) MarshalJSON() ([]byte, error) {
 	raw["oauth_audience"] = h.OAuthAudience
 	raw["cacheBust"] = h.CacheBust
 
-	raw["ipFamily"] = h.ipFamilyValue()
+	raw["ipFamily"] = h.IPFamily.wireValue()
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}

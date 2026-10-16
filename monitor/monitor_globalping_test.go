@@ -55,7 +55,7 @@ func TestMonitorGlobalping_Unmarshal(t *testing.T) {
 				GlobalpingDetails: monitor.GlobalpingDetails{
 					Subtype:          monitor.GlobalpingSubtypePing,
 					Location:         "world",
-					IPFamily:         monitor.GlobalpingIPFamilyAuto,
+					IPFamily:         monitor.IPFamilyAuto,
 					Protocol:         "ICMP",
 					PingCount:        3,
 					Hostname:         "example.com",
@@ -63,7 +63,7 @@ func TestMonitorGlobalping_Unmarshal(t *testing.T) {
 					DNSResolveServer: "1.1.1.1",
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"","authWorkstation":"","basic_auth_pass":"","basic_auth_user":"","bearer_token":"","body":"","cacheBust":false,"conditions":[],"description":"Globalping ping","dns_resolve_server":"1.1.1.1","dns_resolve_type":"A","expectedValue":"","expiryNotification":false,"headers":"","hostname":"example.com","httpBodyEncoding":"json","id":10,"ignoreTls":false,"interval":60,"invertKeyword":false,"ipFamily":"","jsonPath":"","jsonPathOperator":"","keyword":"","location":"world","maxredirects":10,"maxretries":2,"method":"GET","name":"globalping-ping","notificationIDList":{"1":true},"oauth_audience":"","oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":1,"ping_count":3,"port":0,"protocol":"ICMP","proxyId":null,"resendInterval":0,"retryInterval":60,"subtype":"ping","timeout":48,"tlsCa":"","tlsCert":"","tlsKey":"","type":"globalping","upsideDown":false,"url":""}`,
+			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"","authWorkstation":"","basic_auth_pass":"","basic_auth_user":"","bearer_token":"","body":"","cacheBust":false,"conditions":[],"description":"Globalping ping","dns_resolve_server":"1.1.1.1","dns_resolve_type":"A","expectedValue":"","expiryNotification":false,"headers":"","hostname":"example.com","httpBodyEncoding":"json","id":10,"ignoreTls":false,"interval":60,"invertKeyword":false,"ipFamily":null,"jsonPath":"","jsonPathOperator":"","keyword":"","location":"world","maxredirects":10,"maxretries":2,"method":"GET","name":"globalping-ping","notificationIDList":{"1":true},"oauth_audience":"","oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":1,"ping_count":3,"port":0,"protocol":"ICMP","proxyId":null,"resendInterval":0,"retryInterval":60,"subtype":"ping","timeout":48,"tlsCa":"","tlsCert":"","tlsKey":"","type":"globalping","upsideDown":false,"url":""}`,
 		},
 		{
 			name: "ping_tcp_with_port",
@@ -98,7 +98,7 @@ func TestMonitorGlobalping_Unmarshal(t *testing.T) {
 				GlobalpingDetails: monitor.GlobalpingDetails{
 					Subtype:          monitor.GlobalpingSubtypePing,
 					Location:         "europe",
-					IPFamily:         monitor.GlobalpingIPFamilyIPv4,
+					IPFamily:         monitor.IPFamilyIPv4,
 					Protocol:         "TCP",
 					PingCount:        5,
 					Hostname:         "example.com",
@@ -146,7 +146,7 @@ func TestMonitorGlobalping_Unmarshal(t *testing.T) {
 				GlobalpingDetails: monitor.GlobalpingDetails{
 					Subtype:          monitor.GlobalpingSubtypeHTTP,
 					Location:         "world",
-					IPFamily:         monitor.GlobalpingIPFamilyIPv6,
+					IPFamily:         monitor.IPFamilyIPv6,
 					Protocol:         "HTTP2",
 					Keyword:          "success",
 					DNSResolveType:   monitor.DNSResolveTypeA,
@@ -192,7 +192,7 @@ func TestMonitorGlobalping_Unmarshal(t *testing.T) {
 				GlobalpingDetails: monitor.GlobalpingDetails{
 					Subtype:          monitor.GlobalpingSubtypeHTTP,
 					Location:         "world",
-					IPFamily:         monitor.GlobalpingIPFamilyIPv6,
+					IPFamily:         monitor.IPFamilyIPv6,
 					Protocol:         "HTTP2",
 					Keyword:          "success",
 					DNSResolveType:   monitor.DNSResolveTypeA,
@@ -234,7 +234,7 @@ func TestMonitorGlobalping_Unmarshal(t *testing.T) {
 				GlobalpingDetails: monitor.GlobalpingDetails{
 					Subtype:          monitor.GlobalpingSubtypeDNS,
 					Location:         "asia",
-					IPFamily:         monitor.GlobalpingIPFamilyIPv4,
+					IPFamily:         monitor.IPFamilyIPv4,
 					Protocol:         "UDP",
 					Hostname:         "example.com",
 					Port:             53,
@@ -278,14 +278,14 @@ func TestMonitorGlobalping_Unmarshal(t *testing.T) {
 				GlobalpingDetails: monitor.GlobalpingDetails{
 					Subtype:          monitor.GlobalpingSubtypeTraceroute,
 					Location:         "north-america",
-					IPFamily:         monitor.GlobalpingIPFamilyAuto,
+					IPFamily:         monitor.IPFamilyAuto,
 					Protocol:         "ICMP",
 					Hostname:         "example.com",
 					DNSResolveType:   monitor.DNSResolveTypeA,
 					DNSResolveServer: "1.1.1.1",
 				},
 			},
-			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"","authWorkstation":"","basic_auth_pass":"","basic_auth_user":"","bearer_token":"","body":"","cacheBust":false,"conditions":[],"description":null,"dns_resolve_server":"1.1.1.1","dns_resolve_type":"A","expectedValue":"","expiryNotification":false,"headers":"","hostname":"example.com","httpBodyEncoding":"json","id":14,"ignoreTls":false,"interval":60,"invertKeyword":false,"ipFamily":"","jsonPath":"","jsonPathOperator":"","keyword":"","location":"north-america","maxredirects":10,"maxretries":2,"method":"GET","name":"globalping-traceroute","notificationIDList":{},"oauth_audience":"","oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":null,"ping_count":0,"port":0,"protocol":"ICMP","proxyId":null,"resendInterval":0,"retryInterval":60,"subtype":"traceroute","timeout":48,"tlsCa":"","tlsCert":"","tlsKey":"","type":"globalping","upsideDown":false,"url":""}`,
+			wantJSON: `{"accepted_statuscodes":["200-299"],"active":true,"authDomain":"","authMethod":"","authWorkstation":"","basic_auth_pass":"","basic_auth_user":"","bearer_token":"","body":"","cacheBust":false,"conditions":[],"description":null,"dns_resolve_server":"1.1.1.1","dns_resolve_type":"A","expectedValue":"","expiryNotification":false,"headers":"","hostname":"example.com","httpBodyEncoding":"json","id":14,"ignoreTls":false,"interval":60,"invertKeyword":false,"ipFamily":null,"jsonPath":"","jsonPathOperator":"","keyword":"","location":"north-america","maxredirects":10,"maxretries":2,"method":"GET","name":"globalping-traceroute","notificationIDList":{},"oauth_audience":"","oauth_auth_method":"client_secret_basic","oauth_client_id":"","oauth_client_secret":"","oauth_scopes":"","oauth_token_url":"","parent":null,"ping_count":0,"port":0,"protocol":"ICMP","proxyId":null,"resendInterval":0,"retryInterval":60,"subtype":"traceroute","timeout":48,"tlsCa":"","tlsCert":"","tlsKey":"","type":"globalping","upsideDown":false,"url":""}`,
 		},
 	}
 
@@ -320,23 +320,6 @@ func TestGlobalpingSubtype_String(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.want, func(t *testing.T) {
 			require.Equal(t, tc.want, tc.subtype.String())
-		})
-	}
-}
-
-func TestGlobalpingIPFamily_String(t *testing.T) {
-	tests := []struct {
-		family monitor.GlobalpingIPFamily
-		want   string
-	}{
-		{monitor.GlobalpingIPFamilyAuto, ""},
-		{monitor.GlobalpingIPFamilyIPv4, "ipv4"},
-		{monitor.GlobalpingIPFamilyIPv6, "ipv6"},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.want, func(t *testing.T) {
-			require.Equal(t, tc.want, tc.family.String())
 		})
 	}
 }

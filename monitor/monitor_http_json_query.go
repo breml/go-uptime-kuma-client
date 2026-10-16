@@ -118,7 +118,7 @@ func (h HTTPJSONQuery) MarshalJSON() ([]byte, error) {
 	// Always override with current JSON Query-specific field values.
 	maps.Copy(raw, h.toMap())
 
-	raw["ipFamily"] = h.ipFamilyValue()
+	raw["ipFamily"] = h.IPFamily.wireValue()
 
 	// Uptime Kuma v2 requires conditions field (empty array by default)
 	raw["conditions"] = []any{}

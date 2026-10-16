@@ -121,20 +121,20 @@ func (g Globalping) MarshalJSON() ([]byte, error) {
 
 // GlobalpingDetails contains globalping-specific monitor configuration.
 type GlobalpingDetails struct {
-	Subtype          GlobalpingSubtype  `json:"subtype"`
-	Location         string             `json:"location"`
-	IPFamily         GlobalpingIPFamily `json:"ipFamily"`
-	Protocol         string             `json:"protocol"`
-	PingCount        int                `json:"ping_count"`
-	Hostname         string             `json:"hostname"`
-	Port             int                `json:"port"`
-	DNSResolveType   DNSResolveType     `json:"dns_resolve_type"`
-	DNSResolveServer string             `json:"dns_resolve_server"`
-	Keyword          string             `json:"keyword"`
-	InvertKeyword    bool               `json:"invertKeyword"`
-	ExpectedValue    string             `json:"expectedValue"`
-	JSONPath         string             `json:"jsonPath"`
-	JSONPathOperator string             `json:"jsonPathOperator"`
+	Subtype          GlobalpingSubtype `json:"subtype"`
+	Location         string            `json:"location"`
+	IPFamily         IPFamily          `json:"ipFamily"`
+	Protocol         string            `json:"protocol"`
+	PingCount        int               `json:"ping_count"`
+	Hostname         string            `json:"hostname"`
+	Port             int               `json:"port"`
+	DNSResolveType   DNSResolveType    `json:"dns_resolve_type"`
+	DNSResolveServer string            `json:"dns_resolve_server"`
+	Keyword          string            `json:"keyword"`
+	InvertKeyword    bool              `json:"invertKeyword"`
+	ExpectedValue    string            `json:"expectedValue"`
+	JSONPath         string            `json:"jsonPath"`
+	JSONPathOperator string            `json:"jsonPathOperator"`
 }
 
 // Type returns the monitor type.
@@ -148,7 +148,7 @@ func (d GlobalpingDetails) toMap() map[string]any {
 	return map[string]any{
 		"subtype":            d.Subtype,
 		"location":           d.Location,
-		"ipFamily":           d.IPFamily,
+		"ipFamily":           d.IPFamily.wireValue(),
 		"protocol":           d.Protocol,
 		"ping_count":         d.PingCount,
 		"hostname":           d.Hostname,
@@ -180,11 +180,16 @@ func (s GlobalpingSubtype) String() string {
 }
 
 // GlobalpingIPFamily represents the IP family for a Globalping monitor.
+//
+// Deprecated: Use IPFamily.
 type GlobalpingIPFamily = IPFamily
 
 // Globalping IP families. The empty value selects the IP family automatically.
 const (
-	GlobalpingIPFamilyAuto = IPFamilyAuto
-	GlobalpingIPFamilyIPv4 = IPFamilyIPv4
-	GlobalpingIPFamilyIPv6 = IPFamilyIPv6
+	// Deprecated: Use IPFamilyAuto.
+	GlobalpingIPFamilyAuto GlobalpingIPFamily = IPFamilyAuto
+	// Deprecated: Use IPFamilyIPv4.
+	GlobalpingIPFamilyIPv4 GlobalpingIPFamily = IPFamilyIPv4
+	// Deprecated: Use IPFamilyIPv6.
+	GlobalpingIPFamilyIPv6 GlobalpingIPFamily = IPFamilyIPv6
 )
