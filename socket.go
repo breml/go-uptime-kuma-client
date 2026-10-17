@@ -17,6 +17,22 @@ import (
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
 
+// handledEvents names the events registerHandlers applies to the state cache
+// or the auth barrier itself, and which the catch-all handler therefore leaves
+// alone.
+func handledEvents() []string {
+	return []string{
+		"notificationList",
+		"monitorList",
+		"updateMonitorIntoList",
+		"deleteMonitorFromList",
+		"statusPageList",
+		"maintenanceList",
+		"proxyList",
+		"dockerHostList",
+	}
+}
+
 // socketConn is one socket.io connection of a Client, with everything that
 // belongs to that connection rather than to the client: the socket itself,
 // the cancel of the context its lifetime is bound to, and the events the
@@ -185,12 +201,13 @@ func (c *Client) registerConnectionHandlers(conn *socketConn) {
 		conn.closeAutoLogin()
 	})
 
-	// Every event is announced on the update signal, for the commands that
-	// wait for one by name, except the whole-list events, which announce
-	// themselves once the state holds them.
+	// Every event that has no handler of its own is still announced on the
+	// update signal, for the commands that wait for one by name. The events
+	// handled above announce themselves once the state holds them, so they
+	// are excluded here: a second announcement racing the handler would wake
+	// a waiter before the cache is current.
 	socket.OnAny(func(event string, _ []any) {
-		if event == "notificationList" || event == "monitorList" || event == "statusPageList" ||
-			event == "maintenanceList" || event == "proxyList" || event == "dockerHostList" {
+		if slices.Contains(handledEvents(), event) {
 			return
 		}
 
