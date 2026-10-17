@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/breml/go-uptime-kuma-client/ids"
 )
 
 // Notification is the interface that all notification types must implement.
@@ -18,12 +20,12 @@ type Notification interface {
 
 // Base contains the common fields for all notification types.
 type Base struct {
-	ID            int64  `json:"id,omitzero"`
-	Name          string `json:"name"`
-	IsActive      bool   `json:"active"`
-	IsDefault     bool   `json:"isDefault"`
-	ApplyExisting bool   `json:"applyExisting"`
-	UserID        int64  `json:"userId"`
+	ID            int64      `json:"id,omitzero"`
+	Name          string     `json:"name"`
+	IsActive      bool       `json:"active"`
+	IsDefault     bool       `json:"isDefault"`
+	ApplyExisting bool       `json:"applyExisting"`
+	UserID        ids.UserID `json:"userId"`
 
 	typeFromConfigStr string
 	configStr         string
@@ -37,12 +39,12 @@ func (b Base) String() string {
 // UnmarshalJSON unmarshals a notification from JSON data.
 func (b *Base) UnmarshalJSON(data []byte) error {
 	raw := struct {
-		ID        int64  `json:"id"`
-		Name      string `json:"name"`
-		IsActive  bool   `json:"active"`
-		UserID    int64  `json:"userId"`
-		IsDefault bool   `json:"isDefault"`
-		ConfigStr string `json:"config"`
+		ID        int64      `json:"id"`
+		Name      string     `json:"name"`
+		IsActive  bool       `json:"active"`
+		UserID    ids.UserID `json:"userId"`
+		IsDefault bool       `json:"isDefault"`
+		ConfigStr string     `json:"config"`
 	}{}
 
 	err := json.Unmarshal(data, &raw)

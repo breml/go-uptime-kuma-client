@@ -4,22 +4,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/breml/go-uptime-kuma-client/ids"
 )
 
 // Proxy represents a proxy server configuration in Uptime Kuma.
 // Proxies can be used by monitors to route requests through HTTP/HTTPS/SOCKS proxy servers.
 type Proxy struct {
-	ID          int64     `json:"id"`
-	UserID      int64     `json:"userId"`
-	Protocol    string    `json:"protocol"`
-	Host        string    `json:"host"`
-	Port        int       `json:"port"`
-	Auth        bool      `json:"auth"`
-	Username    string    `json:"username"`
-	Password    string    `json:"password"`
-	Active      bool      `json:"active"`
-	Default     bool      `json:"default"`
-	CreatedDate time.Time `json:"-"`
+	ID          int64      `json:"id"`
+	UserID      ids.UserID `json:"userId"`
+	Protocol    string     `json:"protocol"`
+	Host        string     `json:"host"`
+	Port        int        `json:"port"`
+	Auth        bool       `json:"auth"`
+	Username    string     `json:"username"`
+	Password    string     `json:"password"`
+	Active      bool       `json:"active"`
+	Default     bool       `json:"default"`
+	CreatedDate time.Time  `json:"-"`
 }
 
 // GetID returns the proxy's unique identifier.
@@ -34,17 +36,17 @@ func (p Proxy) String() string {
 // UnmarshalJSON unmarshals a proxy from JSON data.
 func (p *Proxy) UnmarshalJSON(data []byte) error {
 	aux := &struct {
-		ID          int64  `json:"id"`
-		UserID      int64  `json:"userId"`
-		Protocol    string `json:"protocol"`
-		Host        string `json:"host"`
-		Port        int    `json:"port"`
-		Auth        int    `json:"auth"`
-		Username    string `json:"username"`
-		Password    string `json:"password"`
-		Active      int    `json:"active"`
-		Default     int    `json:"default"`
-		CreatedDate string `json:"createdDate"`
+		ID          int64      `json:"id"`
+		UserID      ids.UserID `json:"userId"`
+		Protocol    string     `json:"protocol"`
+		Host        string     `json:"host"`
+		Port        int        `json:"port"`
+		Auth        int        `json:"auth"`
+		Username    string     `json:"username"`
+		Password    string     `json:"password"`
+		Active      int        `json:"active"`
+		Default     int        `json:"default"`
+		CreatedDate string     `json:"createdDate"`
 	}{}
 
 	err := json.Unmarshal(data, &aux)
@@ -111,17 +113,17 @@ func (p Proxy) MarshalJSON() ([]byte, error) {
 	}
 
 	data, err := json.Marshal(&struct {
-		ID          int64  `json:"id"`
-		UserID      int64  `json:"userId"`
-		Protocol    string `json:"protocol"`
-		Host        string `json:"host"`
-		Port        int    `json:"port"`
-		Auth        int    `json:"auth"`
-		Username    string `json:"username"`
-		Password    string `json:"password"`
-		Active      int    `json:"active"`
-		Default     int    `json:"default"`
-		CreatedDate string `json:"createdDate"`
+		ID          int64      `json:"id"`
+		UserID      ids.UserID `json:"userId"`
+		Protocol    string     `json:"protocol"`
+		Host        string     `json:"host"`
+		Port        int        `json:"port"`
+		Auth        int        `json:"auth"`
+		Username    string     `json:"username"`
+		Password    string     `json:"password"`
+		Active      int        `json:"active"`
+		Default     int        `json:"default"`
+		CreatedDate string     `json:"createdDate"`
 	}{
 		ID:          p.ID,
 		UserID:      p.UserID,

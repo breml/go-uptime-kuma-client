@@ -29,7 +29,7 @@ func TestNotificationWebpush_Unmarshal(t *testing.T) {
 					ID:            1,
 					Name:          "My Webpush Alert",
 					IsActive:      true,
-					UserID:        1,
+					UserID:        "1",
 					IsDefault:     true,
 					ApplyExisting: true,
 				},
@@ -56,7 +56,7 @@ func TestNotificationWebpush_Unmarshal(t *testing.T) {
 					ID:            2,
 					Name:          "Simple Webpush",
 					IsActive:      true,
-					UserID:        1,
+					UserID:        "1",
 					IsDefault:     false,
 					ApplyExisting: false,
 				},
@@ -121,7 +121,7 @@ func TestNotificationWebpush_String(t *testing.T) {
 			ID:       1,
 			Name:     "Test Webpush",
 			IsActive: true,
-			UserID:   1,
+			UserID:   "1",
 		},
 		WebpushDetails: notification.WebpushDetails{
 			Subscription: notification.WebpushSubscription{

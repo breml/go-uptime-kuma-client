@@ -29,7 +29,7 @@ func TestNotificationSignalgrid_Unmarshal(t *testing.T) {
 					ID:            1,
 					Name:          "My Signalgrid Alert",
 					IsActive:      true,
-					UserID:        1,
+					UserID:        "1",
 					IsDefault:     true,
 					ApplyExisting: true,
 				},
@@ -51,7 +51,7 @@ func TestNotificationSignalgrid_Unmarshal(t *testing.T) {
 					ID:       2,
 					Name:     "Simple Signalgrid",
 					IsActive: false,
-					UserID:   1,
+					UserID:   "1",
 				},
 				SignalgridDetails: notification.SignalgridDetails{
 					ClientKey: "key-abc",
@@ -73,7 +73,7 @@ func TestNotificationSignalgrid_Unmarshal(t *testing.T) {
 				Base: notification.Base{
 					ID:     3,
 					Name:   "Signalgrid Empty",
-					UserID: 1,
+					UserID: "1",
 				},
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"id":3,"isDefault":false,"name":"Signalgrid Empty","signalgridChannel":"","signalgridClientKey":"","type":"signalgrid","userId":1}`,

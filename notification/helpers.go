@@ -8,7 +8,24 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+
+	"github.com/breml/go-uptime-kuma-client/ids"
 )
+
+// userIDType is the reflect type of ids.UserID, for the formatter.
+//
+//nolint:gochecknoglobals // a type lookup, computed once.
+var userIDType = reflect.TypeFor[ids.UserID]()
+
+// userIDValue returns the user ID the way it goes on the wire and into a
+// String: the number a 2.x server sends, the string a 3.x server sends.
+func userIDValue(id ids.UserID) any {
+	if id == "" || id.IsNumeric() {
+		return id.Int64()
+	}
+
+	return string(id)
+}
 
 // formatNotification formats a notification instance as a string representation.
 // If includeType is true, it includes the notification type in the output.
@@ -57,6 +74,9 @@ func formatNotification(s any, includeType bool) string {
 			} else {
 				valueStr = fmt.Sprintf("%v", elem.Interface())
 			}
+
+		case value.Type() == userIDType:
+			valueStr = fmt.Sprintf("%v", userIDValue(ids.UserID(value.String())))
 
 		case value.Kind() == reflect.String:
 			valueStr = fmt.Sprintf("%q", value.String())
@@ -109,7 +129,7 @@ func marshalJSON(base Base, details interface{ Type() string }) ([]byte, error) 
 	rawMap["active"] = base.IsActive
 	rawMap["isDefault"] = base.IsDefault
 	rawMap["applyExisting"] = base.ApplyExisting
-	rawMap["userId"] = base.UserID
+	rawMap["userId"] = userIDValue(base.UserID)
 	rawMap["type"] = base.typeFromConfigStr
 
 	err = json.Unmarshal(detailData, &rawMap)

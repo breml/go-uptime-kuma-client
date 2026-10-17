@@ -31,7 +31,7 @@ func TestNotificationGeneric_String(t *testing.T) {
 					ID:            1,
 					Name:          "My Ntfy Alert",
 					IsActive:      true,
-					UserID:        1,
+					UserID:        "1",
 					IsDefault:     true,
 					ApplyExisting: true,
 				},
