@@ -280,18 +280,33 @@ type state struct {
 // A Client must be created by New. The zero value is not usable and its methods
 // panic.
 type Client struct {
-	socketioClient               *socketio.Client
 	socketioClientConnectTimeout time.Duration
 	socketioLogger               socketio.Logger
 	autosetup                    bool
 	readyEvents                  []string
 	readyGracePeriod             time.Duration
 
+	// baseURL is the server New was given, and baseCtx the context: the
+	// socket.io client keeps reading from a connection until that context is
+	// done, so every connection made for this client - the first one in New,
+	// the next ones by a resync on a 3.x server - is bound to it.
+	baseURL string
+	baseCtx context.Context //nolint:containedctx // the lifetime of every connection, see above.
+
 	// operationTimeout is set once in New, before any goroutine exists, and so
 	// is read without the lock. See WithOperationTimeout.
 	operationTimeout time.Duration
 
 	mu *sync.Mutex
+
+	// conn is the connection the commands go out on. It is replaced by a
+	// resync on a 3.x server, see reconnectLocked, and read by every command
+	// under the shared side of connLock. Guarded by mu.
+	conn *socketConn
+
+	// closed records that Disconnect ran, after which no connection is
+	// installed any more. Guarded by mu.
+	closed bool
 
 	// listLocks orders the commands on each list-replacing update event, see
 	// wholeListUpdateEvents and lockList. One semaphore per event name,
@@ -614,6 +629,9 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		readyGracePeriod: defaultReadyGracePeriod,
 		operationTimeout: defaultOperationTimeout,
 
+		baseURL: baseURL,
+		baseCtx: ctx,
+
 		mu:        &sync.Mutex{},
 		updates:   signals.New[string](),
 		listLocks: newListLocks(),
@@ -666,226 +684,24 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		}
 	}
 
-	client, err := socketio.NewClient(
-		socketio.WithRawURL(baseURL),
-		socketio.WithLogger(c.socketioLogger),
-	)
+	conn, err := c.newSocket()
 	if err != nil {
-		return nil, fmt.Errorf("create socketio client: %w", err)
+		return nil, err
 	}
 
-	c.socketioClient = client
+	c.installConn(conn)
 
 	gate := newReadyGate(c.splitReadyEvents())
 
+	listenerID := uuid.New().String()
 	c.updates.AddListener(func(_ context.Context, event string) {
 		gate.observe(event)
-	}, "connect-ready")
-	defer c.updates.RemoveListener("connect-ready")
+	}, listenerID)
+	defer c.updates.RemoveListener(listenerID)
 
-	client.On("notificationList", func(notificationList []notification.Base) {
-		c.mu.Lock()
-		c.state.notifications = notificationList
-		defer c.mu.Unlock()
-
-		c.updates.Emit(context.Background(), "notificationList")
-	})
-
-	client.On("monitorList", func(monitorMap map[string]monitor.Base) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		// Convert map to slice
-		monitors := make([]monitor.Base, 0, len(monitorMap))
-		for _, monitor := range monitorMap {
-			monitors = append(monitors, monitor)
-		}
-
-		c.state.monitors = monitors
-
-		c.updates.Emit(context.Background(), "monitorList")
-	})
-
-	// Uptime Kuma v2 sends updateMonitorIntoList for individual monitor updates (add/edit/pause/resume)
-	client.On("updateMonitorIntoList", func(monitorMap map[string]monitor.Base) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		// Update or add the monitors in the map to our state
-		for _, updatedMonitor := range monitorMap {
-			found := false
-			for i, existingMonitor := range c.state.monitors {
-				if existingMonitor.ID == updatedMonitor.ID {
-					c.state.monitors[i] = updatedMonitor
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				c.state.monitors = append(c.state.monitors, updatedMonitor)
-			}
-		}
-
-		c.updates.Emit(context.Background(), "updateMonitorIntoList")
-	})
-
-	// Uptime Kuma v2 sends deleteMonitorFromList when a monitor is deleted
-	client.On("deleteMonitorFromList", func(monitorID int64) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		// Remove the monitor from our state
-		for i, existingMonitor := range c.state.monitors {
-			if existingMonitor.ID == monitorID {
-				c.state.monitors = append(c.state.monitors[:i], c.state.monitors[i+1:]...)
-				break
-			}
-		}
-
-		c.updates.Emit(context.Background(), "deleteMonitorFromList")
-	})
-
-	client.On("statusPageList", func(statusPageMap map[int64]statuspage.StatusPage) {
-		c.mu.Lock()
-		c.state.statusPages = statusPageMap
-		defer c.mu.Unlock()
-
-		c.updates.Emit(context.Background(), "statusPageList")
-	})
-
-	client.On("maintenanceList", func(maintenanceMap map[string]maintenance.Maintenance) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		// Convert map to slice
-		maintenances := make([]maintenance.Maintenance, 0, len(maintenanceMap))
-		for _, m := range maintenanceMap {
-			maintenances = append(maintenances, m)
-		}
-
-		c.state.maintenances = maintenances
-
-		c.updates.Emit(context.Background(), "maintenanceList")
-	})
-
-	client.On("proxyList", func(proxyList []proxy.Proxy) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		c.state.proxies = proxyList
-
-		c.updates.Emit(context.Background(), "proxyList")
-	})
-
-	client.On("dockerHostList", func(dockerHostList []dockerhost.DockerHost) {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		c.state.dockerHosts = dockerHostList
-
-		c.updates.Emit(context.Background(), "dockerHostList")
-	})
-
-	connect := make(chan struct{})
-	closeConnect := sync.OnceFunc(func() {
-		close(connect)
-	})
-	defer closeConnect()
-
-	client.On("connect", func() {
-		closeConnect()
-	})
-
-	setupRequired := make(chan struct{})
-	closeSetupRequired := sync.OnceFunc(func() {
-		close(setupRequired)
-	})
-	defer closeSetupRequired()
-
-	client.On("setup", func() {
-		closeSetupRequired()
-	})
-
-	// The server states how it wants the connection to be authenticated as the
-	// last thing it does for it, so these are registered before the connect and
-	// unconditionally, see authBarrier.
-	loginRequired := make(chan struct{})
-	closeLoginRequired := sync.OnceFunc(func() {
-		close(loginRequired)
-	})
-	defer closeLoginRequired()
-
-	client.On("loginRequired", func() {
-		closeLoginRequired()
-	})
-
-	autoLogin := make(chan struct{})
-	closeAutoLogin := sync.OnceFunc(func() {
-		close(autoLogin)
-	})
-	defer closeAutoLogin()
-
-	client.On("autoLogin", func() {
-		closeAutoLogin()
-	})
-
-	barrier := authBarrier{
-		loginRequired: loginRequired,
-		autoLogin:     autoLogin,
-		setupRequired: setupRequired,
-	}
-
-	client.OnAny(func(s string, _ []any) {
-		if s != "notificationList" && s != "monitorList" && s != "statusPageList" && s != "maintenanceList" &&
-			s != "proxyList" &&
-			s != "dockerHostList" {
-			c.updates.Emit(context.Background(), s)
-		}
-	})
-
-	// client.Connect returns as soon as the transport is running and the
-	// handshake has been requested; a non-nil error is the real transport
-	// failure, which is surfaced instead of waiting out the timeout. It gets
-	// ctx and not ctxWithConnectTimeout, because the socket.io client keeps
-	// reading from the connection until that context is done and
-	// ctxWithConnectTimeout is canceled as soon as New returns.
-	connectErr := make(chan error, 1)
-	go func() {
-		connectErr <- client.Connect(ctx)
-	}()
-
-connectLoop:
-	for {
-		select {
-		case <-connect:
-			break connectLoop
-
-		case err := <-connectErr:
-			if err != nil {
-				return nil, fmt.Errorf("connect to server: %w", err)
-			}
-
-			// The dial returned; keep waiting for the connect event. Setting
-			// connectErr to nil makes this case block forever, and marks the
-			// channel as spent by a transport that is up.
-			connectErr = nil
-
-		case <-ctx.Done():
-			return nil, fmt.Errorf("connect to server: %w", ctx.Err())
-
-		case <-ctxWithConnectTimeout.Done():
-			if connectErr == nil {
-				c.disconnectOrphan()
-			} else {
-				dialErr := c.abandonDial(connectErr)
-				if dialErr != nil {
-					return nil, fmt.Errorf("connect to server: %w", dialErr)
-				}
-			}
-
-			return nil, fmt.Errorf("connect to server: %w", ctxWithConnectTimeout.Err())
-		}
+	err = c.dial(ctxWithConnectTimeout, conn)
+	if err != nil {
+		return nil, err
 	}
 
 	// The socket.io client is now connected. On any subsequent error path
@@ -905,7 +721,9 @@ connectLoop:
 		}
 	}()
 
-	err = c.authenticate(ctxWithConnectTimeout, creds, barrier)
+	var setupRequired <-chan struct{} = conn.setupRequired
+
+	err = c.authenticate(ctxWithConnectTimeout, creds, conn.barrier())
 	if err != nil {
 		// A server that is not set up yet rejects the credentials it does not
 		// have a user for; running the setup is what makes them work, so that
@@ -987,14 +805,19 @@ connectLoop:
 	}
 }
 
-// Disconnect closes the connection to the Uptime Kuma server.
+// Disconnect closes the connection to the Uptime Kuma server. Commands in
+// flight fail, and no command or resync works on the client afterwards.
 func (c *Client) Disconnect() error {
-	err := c.socketioClient.Close()
-	if err != nil {
-		return fmt.Errorf("close socket.io client: %w", err)
+	c.mu.Lock()
+	c.closed = true
+	conn := c.conn
+	c.mu.Unlock()
+
+	if conn == nil {
+		return nil
 	}
 
-	return nil
+	return c.teardown(conn)
 }
 
 // Resync rebuilds the local state cache from the server and returns once the
@@ -1142,53 +965,6 @@ func (c *Client) MissingReadyEvents() []string {
 	defer c.mu.Unlock()
 
 	return slices.Clone(c.readyEventsMissing)
-}
-
-// abandonDial cleans up the dial New walks away from when the connect timeout
-// fires, and returns the transport error if the dial already failed with one.
-// New returns no *Client on this path, so a connection that was, or still gets,
-// established has no owner: it is disconnected instead of left running until
-// ctx is done.
-func (c *Client) abandonDial(connectErr <-chan error) error {
-	select {
-	case err := <-connectErr:
-		if err != nil {
-			return err
-		}
-
-		c.disconnectOrphan()
-
-	default:
-		// The dial is still in flight (it uses ctx, so this timeout does not
-		// abort it). Drain connectErr in the background so a late failure is
-		// not silently discarded and a late success is not leaked.
-		go func() {
-			err := <-connectErr
-			if err != nil {
-				c.socketioLogger.Warnf("New: dial failed after connect timeout: %s", err)
-
-				return
-			}
-
-			c.disconnectOrphan()
-		}()
-	}
-
-	return nil
-}
-
-// disconnectOrphan closes a connection no caller holds a handle to. The close
-// is best-effort and asynchronous, because Disconnect waits for the transport
-// and the message loop to wind down, which a server that leaves a long poll
-// hanging can stall for as long as it likes — and the caller it would block is
-// on its way out.
-func (c *Client) disconnectOrphan() {
-	go func() {
-		err := c.Disconnect()
-		if err != nil {
-			c.socketioLogger.Warnf("disconnect orphaned connection: %s", err)
-		}
-	}()
 }
 
 // runSetup sets the server up and logs in again afterwards, which is what a
@@ -1526,7 +1302,7 @@ func (c *Client) emitAck(ctx context.Context, command string, args ...any) (ackR
 
 	args = append(args, ackOptions(ctx, res)...)
 
-	err := c.socketioClient.Emit(command, args...)
+	err := c.currentConn().socket.Emit(command, args...)
 	if err != nil {
 		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
@@ -1668,7 +1444,7 @@ func (c *Client) syncEmitWithConfirmedUpdateEvent(
 
 	args = append(args, ackOptions(ctx, res)...)
 
-	err = c.socketioClient.Emit(command, args...)
+	err = c.currentConn().socket.Emit(command, args...)
 	if err != nil {
 		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
