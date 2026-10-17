@@ -11,6 +11,12 @@ repository.
 - **Run Linter**: `task lint`
 - **Compile code**: `task build`
 
+## Upstream Project
+
+- Never file issues on the upstream project `louislam/uptime-kuma`. Describe an
+  upstream defect in the report to the user instead; whether and how to report
+  it upstream is the user's call.
+
 ## Architecture & Structure
 
 ### Core Architecture
