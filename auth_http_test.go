@@ -391,3 +391,23 @@ func TestNewHTTPAutoLogin(t *testing.T) {
 	require.Equal(t, 0, fake.loginFrameCount())
 	require.Empty(t, client.SessionToken())
 }
+
+// TestServerVersion covers the version the server states to an authenticated
+// connection, which the info event after the login carries.
+func TestServerVersion(t *testing.T) {
+	fake, url := newAuthFake(t)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	fake.send([]byte(`42["info",{"version":"2.5.6","latestVersion":"2.5.6"}]`))
+
+	require.Eventually(t, func() bool {
+		return client.ServerVersion() == "2.5.6"
+	}, 5*time.Second, 10*time.Millisecond)
+}

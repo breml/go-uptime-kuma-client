@@ -323,6 +323,10 @@ type Client struct {
 	// installed any more. Guarded by mu.
 	closed bool
 
+	// serverVersion is the version the server reported after the login, see
+	// ServerVersion. Guarded by mu.
+	serverVersion string
+
 	// listLocks orders the commands on each list-replacing update event, see
 	// wholeListUpdateEvents and lockList. One semaphore per event name,
 	// created in New.
@@ -1020,6 +1024,16 @@ func (c *Client) SessionTokenRejected() bool {
 // server and AuthSchemeSocket for a 2.x server, see those for what differs.
 func (c *Client) AuthScheme() AuthScheme {
 	return c.scheme
+}
+
+// ServerVersion returns the version the server reported once the client was
+// logged in, such as "2.5.6", or the empty string for a server that reported
+// none. The server states it only to an authenticated connection.
+func (c *Client) ServerVersion() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.serverVersion
 }
 
 // MissingReadyEvents returns the best-effort ready events the server did not

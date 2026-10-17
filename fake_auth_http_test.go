@@ -40,6 +40,17 @@ const fakeSessionCookie = "better-auth.session_token"
 // fakeRetryAfter is the wait the rate limiter states, in seconds.
 const fakeRetryAfter = 7
 
+// send queues a frame for the current session, which is the one the latest
+// handshake started. It is for frames a test injects; frames the fake answers
+// a command with go to the session the command came in on, see sendTo.
+func (s *fakeAckServer) send(msg []byte) {
+	s.mu.Lock()
+	messages := s.messages
+	s.mu.Unlock()
+
+	messages <- msg
+}
+
 // sendTo queues a frame for one session.
 func (*fakeAckServer) sendTo(session *fakeSession, msg []byte) {
 	session.messages <- msg

@@ -77,7 +77,7 @@ const fakePresetToken = "preset-session-token"
 type fakeAckServer struct {
 	// messages is the channel the current engine.io session is served from.
 	// A test creates the fake with a buffered one, which the first session
-	// adopts; every later handshake replaces it, see newSession.
+	// adopts; every later handshake replaces it, see send and newSession.
 	messages chan []byte
 
 	mu       sync.Mutex

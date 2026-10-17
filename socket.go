@@ -184,6 +184,22 @@ func (c *Client) registerStateHandlers(conn *socketConn) {
 func (c *Client) registerConnectionHandlers(conn *socketConn) {
 	socket := conn.socket
 
+	// The server sends its version with the info it emits after a login; the
+	// one it emits on connect, before any login, leaves it out.
+	socket.On("info", func(info map[string]any) {
+		version, ok := info["version"].(string)
+		if !ok || version == "" {
+			return
+		}
+
+		c.mu.Lock()
+		if !conn.closed {
+			c.serverVersion = version
+		}
+
+		c.mu.Unlock()
+	})
+
 	socket.On("connect", func() {
 		conn.closeConnect()
 	})
