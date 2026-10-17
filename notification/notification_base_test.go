@@ -27,7 +27,7 @@ func TestBase_Unmarshal(t *testing.T) {
 				ID:            1,
 				Name:          "Created",
 				IsActive:      true,
-				UserID:        1,
+				UserID:        "1",
 				IsDefault:     true,
 				ApplyExisting: true,
 			},

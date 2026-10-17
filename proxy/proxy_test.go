@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/breml/go-uptime-kuma-client/ids"
 	"github.com/breml/go-uptime-kuma-client/proxy"
 )
 
@@ -30,7 +31,7 @@ func TestProxy_UnmarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, int64(1), p.ID)
-	require.Equal(t, int64(100), p.UserID)
+	require.Equal(t, ids.UserID("100"), p.UserID)
 	require.Equal(t, "http", p.Protocol)
 	require.Equal(t, "proxy.example.com", p.Host)
 	require.Equal(t, 8080, p.Port)
@@ -44,7 +45,7 @@ func TestProxy_UnmarshalJSON(t *testing.T) {
 func TestProxy_MarshalJSON(t *testing.T) {
 	p := proxy.Proxy{
 		ID:          1,
-		UserID:      100,
+		UserID:      "100",
 		Protocol:    "socks5",
 		Host:        "socks.example.com",
 		Port:        1080,

@@ -29,7 +29,7 @@ func TestNotificationAmootSMS_Unmarshal(t *testing.T) {
 					ID:            1,
 					Name:          "My Amoot SMS Alert",
 					IsActive:      true,
-					UserID:        1,
+					UserID:        "1",
 					IsDefault:     true,
 					ApplyExisting: true,
 				},
@@ -52,7 +52,7 @@ func TestNotificationAmootSMS_Unmarshal(t *testing.T) {
 					ID:       2,
 					Name:     "Amoot SMS Pattern",
 					IsActive: true,
-					UserID:   1,
+					UserID:   "1",
 				},
 				AmootSMSDetails: notification.AmootSMSDetails{
 					APIToken:      "test-token",
@@ -75,7 +75,7 @@ func TestNotificationAmootSMS_Unmarshal(t *testing.T) {
 					ID:       3,
 					Name:     "Amoot SMS Own Line",
 					IsActive: true,
-					UserID:   1,
+					UserID:   "1",
 				},
 				AmootSMSDetails: notification.AmootSMSDetails{
 					APIToken:      "test-token",
@@ -99,7 +99,7 @@ func TestNotificationAmootSMS_Unmarshal(t *testing.T) {
 					ID:       4,
 					Name:     "Simple Amoot SMS",
 					IsActive: true,
-					UserID:   1,
+					UserID:   "1",
 				},
 				AmootSMSDetails: notification.AmootSMSDetails{
 					APIToken: "test-token",
@@ -118,7 +118,7 @@ func TestNotificationAmootSMS_Unmarshal(t *testing.T) {
 				Base: notification.Base{
 					ID:     5,
 					Name:   "Amoot SMS Empty",
-					UserID: 1,
+					UserID: "1",
 				},
 			},
 			wantJSON: `{"active":false,"amootApiToken":"","amootMobiles":"","applyExisting":false,"id":5,"isDefault":false,"name":"Amoot SMS Empty","type":"amootsms","userId":1}`,
@@ -134,7 +134,7 @@ func TestNotificationAmootSMS_Unmarshal(t *testing.T) {
 					ID:       6,
 					Name:     "Amoot SMS Unticked",
 					IsActive: true,
-					UserID:   1,
+					UserID:   "1",
 				},
 				AmootSMSDetails: notification.AmootSMSDetails{
 					APIToken:   "test-token",

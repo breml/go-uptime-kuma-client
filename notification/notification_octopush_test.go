@@ -28,7 +28,7 @@ func TestNotificationOctopush_Unmarshal(t *testing.T) {
 					ID:        1,
 					Name:      "Test Octopush V2",
 					IsActive:  true,
-					UserID:    42,
+					UserID:    "42",
 					IsDefault: false,
 				},
 				OctopushDetails: notification.OctopushDetails{
@@ -53,7 +53,7 @@ func TestNotificationOctopush_Unmarshal(t *testing.T) {
 					ID:        2,
 					Name:      "Test Octopush V1",
 					IsActive:  true,
-					UserID:    42,
+					UserID:    "42",
 					IsDefault: false,
 				},
 				OctopushDetails: notification.OctopushDetails{
@@ -78,7 +78,7 @@ func TestNotificationOctopush_Unmarshal(t *testing.T) {
 					ID:            3,
 					Name:          "Test Octopush Minimal",
 					IsActive:      false,
-					UserID:        10,
+					UserID:        "10",
 					IsDefault:     false,
 					ApplyExisting: false,
 				},

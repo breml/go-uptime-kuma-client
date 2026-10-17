@@ -29,7 +29,7 @@ func TestNotificationOpenWa_Unmarshal(t *testing.T) {
 					ID:        1,
 					Name:      "My OpenWA Alert",
 					IsActive:  true,
-					UserID:    1,
+					UserID:    "1",
 					IsDefault: false,
 				},
 				OpenWaDetails: notification.OpenWaDetails{
@@ -52,7 +52,7 @@ func TestNotificationOpenWa_Unmarshal(t *testing.T) {
 					ID:            2,
 					Name:          "OpenWA Template",
 					IsActive:      true,
-					UserID:        1,
+					UserID:        "1",
 					IsDefault:     true,
 					ApplyExisting: true,
 				},
@@ -78,7 +78,7 @@ func TestNotificationOpenWa_Unmarshal(t *testing.T) {
 					ID:        3,
 					Name:      "OpenWA Explicit False",
 					IsActive:  true,
-					UserID:    1,
+					UserID:    "1",
 					IsDefault: false,
 				},
 				OpenWaDetails: notification.OpenWaDetails{
@@ -106,7 +106,7 @@ func TestNotificationOpenWa_Unmarshal(t *testing.T) {
 					ID:       4,
 					Name:     "OpenWA Trailing Slash",
 					IsActive: true,
-					UserID:   1,
+					UserID:   "1",
 				},
 				OpenWaDetails: notification.OpenWaDetails{
 					APIURL:  "http://localhost:2785/",
@@ -130,7 +130,7 @@ func TestNotificationOpenWa_Unmarshal(t *testing.T) {
 				Base: notification.Base{
 					ID:     5,
 					Name:   "OpenWA Empty",
-					UserID: 1,
+					UserID: "1",
 				},
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"id":5,"isDefault":false,"name":"OpenWA Empty","openwaApiKey":"","openwaApiUrl":"","openwaChatId":"","openwaSession":"","type":"openwa","userId":1}`,

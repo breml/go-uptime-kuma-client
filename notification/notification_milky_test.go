@@ -29,7 +29,7 @@ func TestNotificationMilky_Unmarshal(t *testing.T) {
 					ID:        1,
 					Name:      "Test Milky Group",
 					IsActive:  true,
-					UserID:    42,
+					UserID:    "42",
 					IsDefault: false,
 				},
 				MilkyDetails: notification.MilkyDetails{
@@ -52,7 +52,7 @@ func TestNotificationMilky_Unmarshal(t *testing.T) {
 					ID:        2,
 					Name:      "Test Milky Private",
 					IsActive:  true,
-					UserID:    42,
+					UserID:    "42",
 					IsDefault: true,
 				},
 				MilkyDetails: notification.MilkyDetails{
@@ -80,7 +80,7 @@ func TestNotificationMilky_Unmarshal(t *testing.T) {
 					ID:        3,
 					Name:      "Test Milky Trailing Slash",
 					IsActive:  true,
-					UserID:    42,
+					UserID:    "42",
 					IsDefault: false,
 				},
 				MilkyDetails: notification.MilkyDetails{
@@ -107,7 +107,7 @@ func TestNotificationMilky_Unmarshal(t *testing.T) {
 					ID:        4,
 					Name:      "Test Milky Empty Message Type",
 					IsActive:  true,
-					UserID:    42,
+					UserID:    "42",
 					IsDefault: false,
 				},
 				MilkyDetails: notification.MilkyDetails{
@@ -134,7 +134,7 @@ func TestNotificationMilky_Unmarshal(t *testing.T) {
 					ID:        5,
 					Name:      "Test Milky Empty Fields",
 					IsActive:  false,
-					UserID:    10,
+					UserID:    "10",
 					IsDefault: false,
 				},
 				MilkyDetails: notification.MilkyDetails{

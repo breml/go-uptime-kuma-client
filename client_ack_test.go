@@ -75,10 +75,41 @@ const fakePresetToken = "preset-session-token"
 // syncEmitWithUpdateEvent keeps waiting after its ack arrived — the state in
 // which the deadline and the ack collide.
 type fakeAckServer struct {
+	// messages is the channel the current engine.io session is served from.
+	// A test creates the fake with a buffered one, which the first session
+	// adopts; every later handshake replaces it, see send and newSession.
 	messages chan []byte
 
 	mu       sync.Mutex
 	ackDelay time.Duration
+	// httpAuth switches the fake to the authentication of an Uptime Kuma 3.x
+	// server, see kuma.AuthSchemeHTTP and fake_auth_http_test.go.
+	httpAuth bool
+	// sessions are the engine.io sessions by sid, current the one the
+	// messages channel belongs to, and handshakes the record of every
+	// handshake made, in order.
+	sessions   map[string]*fakeSession
+	current    *fakeSession
+	sidCounter int
+	handshakes []fakeHandshake
+	// issuedSessions are the session cookies logins handed out, which the
+	// fake accepts afterwards. twoFactorCookies are the pending logins a
+	// sign-in answered with a request for a code.
+	issuedSessions   map[string]struct{}
+	twoFactorCookies map[string]struct{}
+	// probeRateLimited answers the auth scheme probe the way the rate limiter
+	// of a 3.x server does, with a 429 that is still JSON. signInRateLimited
+	// does the same for the sign-in, with the wait the server states.
+	probeRateLimited  bool
+	signInRateLimited bool
+	// stripCookie ignores the cookie on the handshake, the way a proxy in
+	// between that drops it makes a server behave.
+	stripCookie bool
+	// unexpectedCommands are the socket commands a 3.x server has no handler
+	// for and the fake therefore never acknowledges.
+	unexpectedCommands []string
+	// probes counts the requests to the auth scheme probe.
+	probes int
 	// omitLoginToken drops the token from the login ack, as a server that
 	// hands out none would.
 	omitLoginToken bool
@@ -198,7 +229,12 @@ func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// setup event asks for.
 		_, _ = w.Write([]byte(`{"type":"entryPage","entryPage":null}`))
 
+	case strings.HasPrefix(r.URL.Path, "/api/auth/") || r.URL.Path == "/api/setup":
+		s.serveAuthHTTP(w, r)
+
 	case r.Method == http.MethodGet && sid == "":
+		session := s.newSession(r)
+
 		type engineIOHandshake struct {
 			Sid          string   `json:"sid"`
 			Upgrades     []string `json:"upgrades"`
@@ -207,7 +243,7 @@ func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			MaxPayload   int      `json:"maxPayload"`
 		}
 		data, err := json.Marshal(engineIOHandshake{
-			Sid:          "ack-test-sid",
+			Sid:          session.sid,
 			Upgrades:     []string{}, // no WebSocket upgrade keeps the client on polling
 			PingInterval: 50,
 			PingTimeout:  5000,
@@ -221,18 +257,32 @@ func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(append([]byte("0"), data...))
 
 	case r.Method == http.MethodPost && sid != "":
+		session := s.session(sid)
+		if session == nil {
+			unknownSession(w)
+
+			return
+		}
+
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "read body", http.StatusInternalServerError)
 			return
 		}
 
-		s.handleClientMessage(body)
+		s.handleClientMessage(session, body)
 		w.WriteHeader(http.StatusOK)
 
 	case r.Method == http.MethodGet && sid != "":
+		session := s.session(sid)
+		if session == nil {
+			unknownSession(w)
+
+			return
+		}
+
 		select {
-		case msg := <-s.messages:
+		case msg := <-session.messages:
 			_, _ = w.Write(msg)
 
 		case <-r.Context().Done():
@@ -301,11 +351,11 @@ func (s *fakeAckServer) setRejectTokenWith(msg string) {
 	s.rejectTokenMsg = msg
 }
 
-func (s *fakeAckServer) setAutoLogin(auto bool) {
+func (s *fakeAckServer) setAutoLogin() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.autoLogin = auto
+	s.autoLogin = true
 }
 
 func (s *fakeAckServer) setLoginRequiredDelay(d time.Duration) {
@@ -354,11 +404,11 @@ func (s *fakeAckServer) setRejectCodedLogin(reject bool) {
 	s.rejectCodedLogin = reject
 }
 
-func (s *fakeAckServer) setSetupRequired(required bool) {
+func (s *fakeAckServer) setSetupRequired() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.setupRequired = required
+	s.setupRequired = true
 }
 
 // setLateSetup makes the server state that it wants a login first and send the
@@ -561,7 +611,13 @@ func (s *fakeAckServer) loginAck(code string) string {
 
 // sendAuthMode states how the connection is to be authenticated, which a real
 // server does as the last thing it does for a new connection.
-func (s *fakeAckServer) sendAuthMode() {
+func (s *fakeAckServer) sendAuthMode(session *fakeSession) {
+	if s.isHTTPAuth() {
+		s.sendAuthModeHTTP(session)
+
+		return
+	}
+
 	s.mu.Lock()
 	auto := s.autoLogin
 	omit := s.omitLoginRequired
@@ -577,7 +633,7 @@ func (s *fakeAckServer) sendAuthMode() {
 		go func() {
 			time.Sleep(setupDelay)
 
-			s.messages <- []byte(`42["setup"]`)
+			s.sendTo(session, []byte(`42["setup"]`))
 		}()
 
 		needsSetup = false
@@ -589,18 +645,18 @@ func (s *fakeAckServer) sendAuthMode() {
 		// its connection handler and the event below at the bottom, so a
 		// single long poll picks up both.
 		if !auto && !omit {
-			s.messages <- []byte("42[\"setup\"]\x1e42[\"loginRequired\"]")
+			s.sendTo(session, []byte("42[\"setup\"]\x1e42[\"loginRequired\"]"))
 
 			return
 		}
 
-		s.messages <- []byte(`42["setup"]`)
+		s.sendTo(session, []byte(`42["setup"]`))
 	}
 
 	switch {
 	case auto:
-		s.messages <- []byte(`42["autoLogin"]`)
-		s.sendReadyEvents()
+		s.sendTo(session, []byte(`42["autoLogin"]`))
+		s.sendReadyEvents(session)
 
 	case omit:
 
@@ -614,12 +670,12 @@ func (s *fakeAckServer) sendAuthMode() {
 			s.loginRequiredAt = time.Now()
 			s.mu.Unlock()
 
-			s.messages <- []byte(`42["loginRequired"]`)
+			s.sendTo(session, []byte(`42["loginRequired"]`))
 		}()
 	}
 }
 
-func (s *fakeAckServer) sendReadyEvents() {
+func (s *fakeAckServer) sendReadyEvents(session *fakeSession) {
 	s.mu.Lock()
 	optionalSuppressed := s.suppressOptionalLists
 	s.mu.Unlock()
@@ -630,11 +686,11 @@ func (s *fakeAckServer) sendReadyEvents() {
 	}
 
 	for _, event := range events {
-		s.messages <- []byte(event)
+		s.sendTo(session, []byte(event))
 	}
 }
 
-func (s *fakeAckServer) handleClientMessage(body []byte) {
+func (s *fakeAckServer) handleClientMessage(session *fakeSession, body []byte) {
 	if len(body) < 2 {
 		return
 	}
@@ -643,8 +699,8 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 
 	switch socketIOData[0] {
 	case '0': // socket.io CONNECT
-		s.messages <- []byte("40")
-		s.sendAuthMode()
+		s.sendTo(session, []byte("40"))
+		s.sendAuthMode(session)
 
 	case '2': // socket.io EVENT
 		i := 1
@@ -655,26 +711,39 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 		ackID := string(socketIOData[1:i])
 		payload := string(socketIOData[i:])
 
+		// A 3.x server has no handler for the login and setup commands: a
+		// client that sends one anyway gets no answer, see
+		// receivedUnexpectedCommands.
+		if s.isHTTPAuth() {
+			for _, command := range []string{"loginByToken", "login", "setup"} {
+				if strings.Contains(payload, `"`+command+`"`) {
+					s.recordUnexpected(command)
+
+					return
+				}
+			}
+		}
+
 		// A resync logs in again, which is what makes the server resend the
 		// lists. Checked before "login", which is a prefix of it.
 		if strings.Contains(payload, `"loginByToken"`) {
 			s.recordToken(tokenFromFrame(payload))
 
 			if msg := s.tokenRejection(); msg != "" {
-				s.messages <- fmt.Appendf(
+				s.sendTo(session, fmt.Appendf(
 					nil,
 					`43%s[{"ok":false,"msg":%q,"msgi18n":true}]`,
 					ackID,
 					msg,
-				)
+				))
 
 				return
 			}
 
-			s.messages <- fmt.Appendf(nil, `43%s[{"ok":true}]`, ackID)
+			s.sendTo(session, fmt.Appendf(nil, `43%s[{"ok":true}]`, ackID))
 
 			if s.recordResync(payload) {
-				s.sendReadyEvents()
+				s.sendReadyEvents(session)
 			}
 
 			return
@@ -682,7 +751,7 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 
 		if strings.Contains(payload, `"setup"`) {
 			s.runSetup()
-			s.messages <- fmt.Appendf(nil, `43%s[{"ok":true,"msg":"ok"}]`, ackID)
+			s.sendTo(session, fmt.Appendf(nil, `43%s[{"ok":true,"msg":"ok"}]`, ackID))
 
 			return
 		}
@@ -692,10 +761,10 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 			s.recordLogin(code)
 
 			ack := s.loginAck(code)
-			s.messages <- fmt.Appendf(nil, `43%s[%s]`, ackID, ack)
+			s.sendTo(session, fmt.Appendf(nil, `43%s[%s]`, ackID, ack))
 
 			if strings.Contains(ack, `"ok":true`) {
-				s.sendReadyEvents()
+				s.sendReadyEvents(session)
 			}
 
 			return
@@ -713,7 +782,7 @@ func (s *fakeAckServer) handleClientMessage(body []byte) {
 		delay := s.currentAckDelay()
 		go func() {
 			time.Sleep(delay)
-			s.messages <- fmt.Appendf(nil, `43%s[%s]`, ackID, ack)
+			s.sendTo(session, fmt.Appendf(nil, `43%s[%s]`, ackID, ack))
 		}()
 
 	default:

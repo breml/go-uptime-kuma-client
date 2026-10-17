@@ -3,16 +3,18 @@ package dockerhost
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/breml/go-uptime-kuma-client/ids"
 )
 
 // DockerHost represents a Docker host configuration in Uptime Kuma.
 // Docker hosts can be used to connect to Docker daemons for container monitoring.
 type DockerHost struct {
-	ID           int64  `json:"id"`
-	UserID       int64  `json:"userId"`
-	DockerDaemon string `json:"dockerDaemon"` // Connection string (e.g., "unix:///var/run/docker.sock", "tcp://host:2375")
-	DockerType   string `json:"dockerType"`   // "socket" or "tcp"
-	Name         string `json:"name"`         // Human-readable name
+	ID           int64      `json:"id"`
+	UserID       ids.UserID `json:"userId"`
+	DockerDaemon string     `json:"dockerDaemon"` // Connection string (e.g., "unix:///var/run/docker.sock", "tcp://host:2375")
+	DockerType   string     `json:"dockerType"`   // "socket" or "tcp"
+	Name         string     `json:"name"`         // Human-readable name
 }
 
 // GetID returns the Docker host's unique identifier.

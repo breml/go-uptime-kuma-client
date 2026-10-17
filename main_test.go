@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +20,42 @@ import (
 
 //nolint:gochecknoglobals // client is used across multiple tests.
 var client *kuma.Client
+
+// The account the tests log in as. The password satisfies the rules an Uptime
+// Kuma 3.x server applies to the first user (at least eight characters) and
+// the leak check is turned off on the container, see kumaContainerEnv.
+const (
+	testUsername = "admin"
+	testPassword = "Kuma-Test-8f4Q2xR9p"
+)
+
+// defaultKumaImage is the Uptime Kuma the tests run against unless
+// UPTIME_KUMA_IMAGE names another one, such as louislam/uptime-kuma:nightly3
+// for the 3.x line.
+const defaultKumaImage = "louislam/uptime-kuma:2.5.6"
+
+// kumaImage returns the repository and tag of the Uptime Kuma image to test
+// against.
+func kumaImage() (repository string, tag string) {
+	image := os.Getenv("UPTIME_KUMA_IMAGE")
+	if image == "" {
+		image = defaultKumaImage
+	}
+
+	repository, tag, ok := strings.Cut(image, ":")
+	if !ok {
+		return image, "latest"
+	}
+
+	return repository, tag
+}
+
+// kumaContainerEnv is the environment every test container gets: a 3.x server
+// checks the first user's password against the Have I Been Pwned database,
+// which the test password has no business with.
+func kumaContainerEnv() []string {
+	return []string{"UPTIME_KUMA_DISABLE_LEAK_PWD_CHECK=1"}
+}
 
 func TestMain(m *testing.M) {
 	code, err := testMainSetup(m)
@@ -54,11 +91,14 @@ func testMainSetup(m *testing.M) (int, error) {
 		return 1, fmt.Errorf("could not connect to Docker: %w", err)
 	}
 
+	repository, tag := kumaImage()
+
 	// pulls an image, creates a container based on it and runs it
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:       fmt.Sprintf("uptime-kuma-%s", randomString(8)),
-		Repository: "louislam/uptime-kuma",
-		Tag:        "2.5.5",
+		Repository: repository,
+		Tag:        tag,
+		Env:        kumaContainerEnv(),
 		ExtraHosts: []string{"host.docker.internal:host-gateway"},
 	}, func(config *docker.HostConfig) {
 		// set AutoRemove to true so that stopped container goes away by itself
@@ -95,7 +135,7 @@ func testMainSetup(m *testing.M) (int, error) {
 		client, err = kuma.New(
 			ctx,
 			fmt.Sprintf("http://localhost:%s", resource.GetPort("3001/tcp")),
-			"admin", "admin1",
+			testUsername, testPassword,
 			kuma.WithAutosetup(),
 			kuma.WithLogLevel(kuma.LogLevel(os.Getenv("SOCKETIO_LOG_LEVEL"))),
 			kuma.WithConnectTimeout(10*time.Second),

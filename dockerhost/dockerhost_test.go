@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/breml/go-uptime-kuma-client/dockerhost"
+	"github.com/breml/go-uptime-kuma-client/ids"
 )
 
 func TestDockerHost_GetID(t *testing.T) {
@@ -20,7 +21,7 @@ func TestDockerHost_GetID(t *testing.T) {
 func TestDockerHost_String(t *testing.T) {
 	d := dockerhost.DockerHost{
 		ID:           1,
-		UserID:       100,
+		UserID:       "100",
 		DockerDaemon: "unix:///var/run/docker.sock",
 		DockerType:   "socket",
 		Name:         "Local Docker",
@@ -35,7 +36,7 @@ func TestDockerHost_String(t *testing.T) {
 func TestDockerHost_MarshalJSON(t *testing.T) {
 	d := dockerhost.DockerHost{
 		ID:           1,
-		UserID:       100,
+		UserID:       "100",
 		DockerDaemon: "unix:///var/run/docker.sock",
 		DockerType:   "socket",
 		Name:         "Local Docker",
@@ -66,7 +67,7 @@ func TestDockerHost_UnmarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, int64(1), d.ID)
-	require.Equal(t, int64(100), d.UserID)
+	require.Equal(t, ids.UserID("100"), d.UserID)
 	require.Equal(t, "unix:///var/run/docker.sock", d.DockerDaemon)
 	require.Equal(t, "socket", d.DockerType)
 	require.Equal(t, "Local Docker", d.Name)

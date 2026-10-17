@@ -11,6 +11,12 @@ repository.
 - **Run Linter**: `task lint`
 - **Compile code**: `task build`
 
+## Upstream Project
+
+- Never file issues on the upstream project `louislam/uptime-kuma`. Describe an
+  upstream defect in the report to the user instead; whether and how to report
+  it upstream is the user's call.
+
 ## Architecture & Structure
 
 ### Core Architecture
@@ -70,7 +76,25 @@ operations concurrently over a single client):
   broadcast it asked for under the exclusive side. The ack alone says nothing
   about the cache.
 
+- Every command holds the shared side of the connection lock from its emit to
+  its ack (and update event), see `lockConn()`. A `Resync()` against an Uptime
+  Kuma 3.x server replaces the socket.io connection, see `reconnectLocked()`,
+  under the exclusive side, so no command is emitted on a connection about to
+  be closed. Lock order: list lock, then connection lock, never nested.
+
 `Resync()` remains the way out of a cache that missed a broadcast anyway.
+
+**Authentication (`auth.go`, `auth_http.go`, `socket.go`, `transport.go`)**:
+
+- Uptime Kuma 2.x logs in with a socket command (`AuthSchemeSocket`), 3.x over
+  HTTP with better-auth and a session cookie the socket.io handshake carries
+  (`AuthSchemeHTTP`). `New` detects the scheme with `GET /api/auth/ok` (JSON
+  means 3.x) before connecting.
+- The socket.io client is built with cookie-aware transports in `transport.go`;
+  the fork needs no change for that.
+- The socket.io client is single-use, so a reconnect is a new `socketConn` with
+  every handler registered again (`newSocket()`); handlers drop events of a
+  torn-down connection (`applyEvent()`).
 
 **NotificationIDList Handling**:
 
@@ -80,12 +104,18 @@ operations concurrently over a single client):
 
 ### Integration Tests
 
-- Integration tests launch real Uptime Kuma instance via Docker (main_test.go:21-92)
+- Integration tests launch real Uptime Kuma instance via Docker (main_test.go)
 - **IMPORTANT**: Assume Uptime Kuma is running when executing integration tests
 - Uses dockertest library with automatic container cleanup
 - Global `client` variable shared across test suite
 - Container expires after 300 seconds (600 with `E2E_TEST` set)
-- Test credentials: username="admin", password="admin1"
+- Image: `UPTIME_KUMA_IMAGE`, default `louislam/uptime-kuma:2.5.6`; use
+  `louislam/uptime-kuma:nightly3` for the 3.x line (CI runs both, nightly3 is
+  allowed to fail until a 3.0 tag exists)
+- Test credentials: `testUsername` / `testPassword` in main_test.go (the password
+  satisfies the 3.x rules; the container gets `UPTIME_KUMA_DISABLE_LEAK_PWD_CHECK=1`)
+- A 3.x server allows three sign-ins per ten seconds per address: tests reuse
+  the shared client or a session token rather than signing in repeatedly
 
 ### Directory Structure
 

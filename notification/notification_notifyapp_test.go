@@ -29,7 +29,7 @@ func TestNotificationNotifyApp_Unmarshal(t *testing.T) {
 					ID:            1,
 					Name:          "My Notify Alert",
 					IsActive:      true,
-					UserID:        1,
+					UserID:        "1",
 					IsDefault:     true,
 					ApplyExisting: true,
 				},
@@ -52,7 +52,7 @@ func TestNotificationNotifyApp_Unmarshal(t *testing.T) {
 					ID:       2,
 					Name:     "Simple Notify",
 					IsActive: false,
-					UserID:   1,
+					UserID:   "1",
 				},
 				NotifyAppDetails: notification.NotifyAppDetails{
 					DeviceID: "XYZ98765",
@@ -72,7 +72,7 @@ func TestNotificationNotifyApp_Unmarshal(t *testing.T) {
 					ID:       4,
 					Name:     "Notify Empty Icon",
 					IsActive: true,
-					UserID:   1,
+					UserID:   "1",
 				},
 				NotifyAppDetails: notification.NotifyAppDetails{
 					DeviceID: "XYZ98765",
@@ -95,7 +95,7 @@ func TestNotificationNotifyApp_Unmarshal(t *testing.T) {
 				Base: notification.Base{
 					ID:     3,
 					Name:   "Notify Empty",
-					UserID: 1,
+					UserID: "1",
 				},
 			},
 			wantJSON: `{"active":false,"applyExisting":false,"id":3,"isDefault":false,"name":"Notify Empty","notifyAppDeviceId":"","notifyAppToken":"","type":"notifyapp","userId":1}`,

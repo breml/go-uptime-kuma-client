@@ -87,7 +87,7 @@ func TestNewAuthRequiredWithoutCredentials(t *testing.T) {
 // send a login at all.
 func TestNewAutoLogin(t *testing.T) {
 	fake, url := newAuthFake(t)
-	fake.setAutoLogin(true)
+	fake.setAutoLogin()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -163,7 +163,7 @@ func TestNewLoginWaitsForLoginRequired(t *testing.T) {
 // TestNewSetupFallbackAfterLateSetupEvent.
 func TestNewSetupFallbackAfterRejectedCredentials(t *testing.T) {
 	fake, url := newAuthFake(t)
-	fake.setSetupRequired(true)
+	fake.setSetupRequired()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -308,7 +308,7 @@ func TestNewInvalidCredentialsUntranslated(t *testing.T) {
 // has to send one to keep Resync working.
 func TestNewAutoLoginWithCredentials(t *testing.T) {
 	fake, url := newAuthFake(t)
-	fake.setAutoLogin(true)
+	fake.setAutoLogin()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -336,7 +336,7 @@ func TestNewAutoLoginWithCredentials(t *testing.T) {
 // TestAuthBarrierSetupWins.
 func TestNewSetupWithoutCredentials(t *testing.T) {
 	fake, url := newAuthFake(t)
-	fake.setSetupRequired(true)
+	fake.setSetupRequired()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -968,7 +968,7 @@ func TestNewSessionTokenUnknownRejection(t *testing.T) {
 // disabled, which logs the client in without handing out a token.
 func TestSessionTokenAfterAutoLogin(t *testing.T) {
 	fake, url := newAuthFake(t)
-	fake.setAutoLogin(true)
+	fake.setAutoLogin()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
