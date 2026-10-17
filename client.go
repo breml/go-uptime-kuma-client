@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"slices"
 	"strings"
 	"sync"
@@ -293,6 +294,11 @@ type Client struct {
 	baseURL string
 	baseCtx context.Context //nolint:containedctx // the lifetime of every connection, see above.
 
+	// httpClient and jar are what the socket.io transports send their cookies
+	// from, see newSocketIOClient.
+	httpClient *http.Client
+	jar        *cookiejar.Jar
+
 	// operationTimeout is set once in New, before any goroutine exists, and so
 	// is read without the lock. See WithOperationTimeout.
 	operationTimeout time.Duration
@@ -454,7 +460,7 @@ func WithReadyGracePeriod(d time.Duration) Option {
 // The function will wait for the server to restart after database configuration.
 //
 //nolint:revive // Complexity is necessary for complete database setup logic
-func setupDatabase(ctx context.Context, baseURL string) error {
+func setupDatabase(ctx context.Context, httpClient *http.Client, baseURL string) error {
 	// Convert socket.io URL to HTTP URL
 	httpURL := strings.Replace(baseURL, "ws://", "http://", 1)
 	httpURL = strings.Replace(httpURL, "wss://", "https://", 1)
@@ -482,7 +488,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 		return fmt.Errorf("create entry-page request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		// Return connection errors as-is so caller can retry
 		return fmt.Errorf("entry-page request failed: %w", err)
@@ -531,7 +537,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("setup database: %w", err)
 	}
@@ -580,7 +586,7 @@ func setupDatabase(ctx context.Context, baseURL string) error {
 				continue
 			}
 
-			pollResp, err := http.DefaultClient.Do(pollReq)
+			pollResp, err := httpClient.Do(pollReq)
 			if err != nil {
 				pollCancel()
 				continue
@@ -661,6 +667,14 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		return nil, c.totpErr
 	}
 
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, fmt.Errorf("create cookie jar: %w", err)
+	}
+
+	c.jar = jar
+	c.httpClient = &http.Client{Jar: jar}
+
 	ctxWithConnectTimeout := ctx
 
 	// connectTimeoutDone is non-nil only when WithConnectTimeout is
@@ -678,7 +692,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	// Handle database setup for Uptime Kuma v2 if autosetup is enabled
 	if c.autosetup {
-		err := setupDatabase(ctxWithConnectTimeout, baseURL)
+		err := setupDatabase(ctxWithConnectTimeout, c.httpClient, baseURL)
 		if err != nil {
 			return nil, fmt.Errorf("database setup: %w", err)
 		}
