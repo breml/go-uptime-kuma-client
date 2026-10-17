@@ -30,8 +30,19 @@ jobs:
         run: task build
 
   test:
-    name: Test
+    name: Test (${{ matrix.image }})
     runs-on: ubuntu-latest
+    # The 3.x line has no tagged release yet; its nightly image may break
+    # for reasons of its own, so it must not block a merge until a tag exists.
+    continue-on-error: ${{ matrix.image == 'louislam/uptime-kuma:nightly3' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - louislam/uptime-kuma:2.5.6
+          - louislam/uptime-kuma:nightly3
+    env:
+      UPTIME_KUMA_IMAGE: ${{ matrix.image }}
     steps:
       - name: Check out code
         uses: actions/checkout@v7

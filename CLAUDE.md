@@ -91,9 +91,13 @@ operations concurrently over a single client):
 - Uses dockertest library with automatic container cleanup
 - Global `client` variable shared across test suite
 - Container expires after 300 seconds (600 with `E2E_TEST` set)
-- Image: `UPTIME_KUMA_IMAGE`, default `louislam/uptime-kuma:2.5.6`
+- Image: `UPTIME_KUMA_IMAGE`, default `louislam/uptime-kuma:2.5.6`; use
+  `louislam/uptime-kuma:nightly3` for the 3.x line (CI runs both, nightly3 is
+  allowed to fail until a 3.0 tag exists)
 - Test credentials: `testUsername` / `testPassword` in main_test.go (the password
   satisfies the 3.x rules; the container gets `UPTIME_KUMA_DISABLE_LEAK_PWD_CHECK=1`)
+- A 3.x server allows three sign-ins per ten seconds per address: tests reuse
+  the shared client or a session token rather than signing in repeatedly
 
 ### Directory Structure
 
