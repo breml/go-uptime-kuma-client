@@ -80,12 +80,14 @@ operations concurrently over a single client):
 
 ### Integration Tests
 
-- Integration tests launch real Uptime Kuma instance via Docker (main_test.go:21-92)
+- Integration tests launch real Uptime Kuma instance via Docker (main_test.go)
 - **IMPORTANT**: Assume Uptime Kuma is running when executing integration tests
 - Uses dockertest library with automatic container cleanup
 - Global `client` variable shared across test suite
 - Container expires after 300 seconds (600 with `E2E_TEST` set)
-- Test credentials: username="admin", password="admin1"
+- Image: `UPTIME_KUMA_IMAGE`, default `louislam/uptime-kuma:2.5.6`
+- Test credentials: `testUsername` / `testPassword` in main_test.go (the password
+  satisfies the 3.x rules; the container gets `UPTIME_KUMA_DISABLE_LEAK_PWD_CHECK=1`)
 
 ### Directory Structure
 

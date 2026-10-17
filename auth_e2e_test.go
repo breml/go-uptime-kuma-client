@@ -28,10 +28,13 @@ func newKumaContainer(t *testing.T) string {
 	require.NoError(t, err)
 	require.NoError(t, pool.Client.Ping())
 
+	repository, tag := kumaImage()
+
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:       fmt.Sprintf("uptime-kuma-auth-%s", randomString(8)),
-		Repository: "louislam/uptime-kuma",
-		Tag:        "2.5.5",
+		Repository: repository,
+		Tag:        tag,
+		Env:        kumaContainerEnv(),
 		ExtraHosts: []string{"host.docker.internal:host-gateway"},
 	}, func(config *docker.HostConfig) {
 		config.AutoRemove = true
@@ -56,7 +59,7 @@ func newKumaContainer(t *testing.T) string {
 		setupClient, setupErr := kuma.New(
 			t.Context(),
 			baseURL,
-			"admin", "admin1",
+			testUsername, testPassword,
 			kuma.WithAutosetup(),
 			kuma.WithLogLevel(kuma.LogLevel(os.Getenv("SOCKETIO_LOG_LEVEL"))),
 			kuma.WithConnectTimeout(10*time.Second),
@@ -98,25 +101,25 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
 	defer cancel()
 
-	admin, err := kuma.New(ctx, baseURL, "admin", "admin1", kuma.WithConnectTimeout(10*time.Second))
+	admin, err := kuma.New(ctx, baseURL, testUsername, testPassword, kuma.WithConnectTimeout(10*time.Second))
 	require.NoError(t, err)
 
 	defer func() { _ = admin.Disconnect() }()
 
 	// The server checks the current password again for these commands, even
 	// though the connection is already authenticated.
-	secret, err := kuma.Prepare2FA(admin, ctx, "admin1")
+	secret, err := kuma.Prepare2FA(admin, ctx, testPassword)
 	require.NoError(t, err)
 	require.NotEmpty(t, secret)
 
 	normalized, err := kuma.NormalizeTOTPSecret(secret)
 	require.NoError(t, err)
 
-	require.NoError(t, kuma.Save2FA(admin, ctx, "admin1"))
+	require.NoError(t, kuma.Save2FA(admin, ctx, testPassword))
 
 	// Deferred rather than registered as cleanup: the test context is already
 	// cancelled by the time cleanups run.
-	defer func() { _ = kuma.Disable2FA(admin, ctx, "admin1") }()
+	defer func() { _ = kuma.Disable2FA(admin, ctx, testPassword) }()
 
 	enabled, err := kuma.TwoFAStatus(admin, ctx)
 	require.NoError(t, err)
@@ -128,8 +131,8 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 		client, newErr := kuma.New(
 			ctx,
 			baseURL,
-			"admin",
-			"admin1",
+			testUsername,
+			testPassword,
 			kuma.WithConnectTimeout(10*time.Second),
 		)
 
@@ -141,8 +144,8 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 		client, newErr := kuma.New(
 			ctx,
 			baseURL,
-			"admin",
-			"admin1",
+			testUsername,
+			testPassword,
 			kuma.WithTOTPSecret(normalized),
 			kuma.WithConnectTimeout(10*time.Second),
 		)
@@ -186,8 +189,8 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 		first, newErr := kuma.New(
 			ctx,
 			baseURL,
-			"admin",
-			"admin1",
+			testUsername,
+			testPassword,
 			kuma.WithTOTPSecret(normalized),
 			kuma.WithConnectTimeout(10*time.Second),
 		)
@@ -200,8 +203,8 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 		second, newErr := kuma.New(
 			ctx,
 			baseURL,
-			"admin",
-			"admin1",
+			testUsername,
+			testPassword,
 			kuma.WithTOTPSecret(normalized),
 			kuma.WithConnectTimeout(5*time.Second),
 		)
