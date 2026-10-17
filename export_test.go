@@ -10,8 +10,8 @@ import "time"
 //
 //nolint:gochecknoglobals // the standard way to reach internals from an external test package.
 var (
-	Prepare2FA  = (*Client).prepare2FA
-	Save2FA     = (*Client).save2FA
+	Enable2FA   = (*Client).enable2FA
+	Confirm2FA  = (*Client).confirm2FA
 	Disable2FA  = (*Client).disable2FA
 	TwoFAStatus = (*Client).twoFAStatus
 

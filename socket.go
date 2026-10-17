@@ -53,11 +53,13 @@ type socketConn struct {
 	setupRequired chan struct{}
 	loginRequired chan struct{}
 	autoLogin     chan struct{}
+	session       chan struct{}
 
 	closeConnect       func()
 	closeSetupRequired func()
 	closeLoginRequired func()
 	closeAutoLogin     func()
+	closeSession       func()
 
 	// closed records that the connection was torn down or never came up.
 	// Guarded by Client.mu, and read by every handler so that a late event of
@@ -70,6 +72,7 @@ func (conn *socketConn) barrier() authBarrier {
 	return authBarrier{
 		loginRequired: conn.loginRequired,
 		autoLogin:     conn.autoLogin,
+		session:       conn.session,
 		setupRequired: conn.setupRequired,
 	}
 }
@@ -88,12 +91,14 @@ func (c *Client) newSocket() (*socketConn, error) {
 		setupRequired: make(chan struct{}),
 		loginRequired: make(chan struct{}),
 		autoLogin:     make(chan struct{}),
+		session:       make(chan struct{}),
 	}
 
 	conn.closeConnect = sync.OnceFunc(func() { close(conn.connect) })
 	conn.closeSetupRequired = sync.OnceFunc(func() { close(conn.setupRequired) })
 	conn.closeLoginRequired = sync.OnceFunc(func() { close(conn.loginRequired) })
 	conn.closeAutoLogin = sync.OnceFunc(func() { close(conn.autoLogin) })
+	conn.closeSession = sync.OnceFunc(func() { close(conn.session) })
 
 	c.registerHandlers(conn)
 
@@ -196,6 +201,12 @@ func (c *Client) registerConnectionHandlers(conn *socketConn) {
 
 	socket.On("autoLogin", func() {
 		conn.closeAutoLogin()
+	})
+
+	// Registered without a parameter, so the username the server sends with
+	// it, in whatever shape, cannot keep the handler from running.
+	socket.On("session", func() {
+		conn.closeSession()
 	})
 
 	// Every event that has no handler of its own is still announced on the

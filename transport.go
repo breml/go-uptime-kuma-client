@@ -24,6 +24,34 @@ var errWebSocketNotConnected = errors.New("socket connection is not initialized"
 // the server's handshake states its own.
 const defaultPollingInterval = 10 * time.Second
 
+// httpBaseURL returns baseURL with a ws or wss scheme rewritten to the http
+// scheme the server's HTTP endpoints are reached on, parsed.
+func httpBaseURL(baseURL string) (*url.URL, error) {
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse base url: %w", err)
+	}
+
+	switch parsed.Scheme {
+	case "ws":
+		parsed.Scheme = "http"
+
+	case "wss":
+		parsed.Scheme = "https"
+
+	case "http", "https":
+
+	default:
+		return nil, fmt.Errorf("base url %q: unsupported scheme %q", baseURL, parsed.Scheme)
+	}
+
+	parsed.Path = strings.TrimSuffix(parsed.Path, "/")
+	parsed.RawQuery = ""
+	parsed.Fragment = ""
+
+	return parsed, nil
+}
+
 // newSocketIOClient builds the socket.io client for baseURL with transports
 // that carry the cookies in jar: the long-polling requests through httpClient,
 // which holds the same jar, and the WebSocket handshake through

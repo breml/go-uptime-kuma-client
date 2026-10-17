@@ -65,6 +65,10 @@ func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sid := r.URL.Query().Get("sid")
 
 	switch {
+	case r.URL.Path == "/api/auth/ok":
+		// A 2.x server has no such route; see fakeAckServer.serveAuthHTTP.
+		http.NotFound(w, r)
+
 	case r.Method == http.MethodGet && sid == "":
 		// Initial engine.io handshake: respond with PacketOpen ("0") + JSON.
 		type engineIOHandshake struct {

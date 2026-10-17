@@ -82,11 +82,34 @@ type fakeAckServer struct {
 
 	mu       sync.Mutex
 	ackDelay time.Duration
-	// sessions are the engine.io sessions by sid, and current the one the
-	// messages channel belongs to.
+	// httpAuth switches the fake to the authentication of an Uptime Kuma 3.x
+	// server, see kuma.AuthSchemeHTTP and fake_auth_http_test.go.
+	httpAuth bool
+	// sessions are the engine.io sessions by sid, current the one the
+	// messages channel belongs to, and handshakes the record of every
+	// handshake made, in order.
 	sessions   map[string]*fakeSession
 	current    *fakeSession
 	sidCounter int
+	handshakes []fakeHandshake
+	// issuedSessions are the session cookies logins handed out, which the
+	// fake accepts afterwards. twoFactorCookies are the pending logins a
+	// sign-in answered with a request for a code.
+	issuedSessions   map[string]struct{}
+	twoFactorCookies map[string]struct{}
+	// probeRateLimited answers the auth scheme probe the way the rate limiter
+	// of a 3.x server does, with a 429 that is still JSON. signInRateLimited
+	// does the same for the sign-in, with the wait the server states.
+	probeRateLimited  bool
+	signInRateLimited bool
+	// stripCookie ignores the cookie on the handshake, the way a proxy in
+	// between that drops it makes a server behave.
+	stripCookie bool
+	// unexpectedCommands are the socket commands a 3.x server has no handler
+	// for and the fake therefore never acknowledges.
+	unexpectedCommands []string
+	// probes counts the requests to the auth scheme probe.
+	probes int
 	// omitLoginToken drops the token from the login ack, as a server that
 	// hands out none would.
 	omitLoginToken bool
@@ -206,8 +229,11 @@ func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// setup event asks for.
 		_, _ = w.Write([]byte(`{"type":"entryPage","entryPage":null}`))
 
+	case strings.HasPrefix(r.URL.Path, "/api/auth/") || r.URL.Path == "/api/setup":
+		s.serveAuthHTTP(w, r)
+
 	case r.Method == http.MethodGet && sid == "":
-		session := s.newSession()
+		session := s.newSession(r)
 
 		type engineIOHandshake struct {
 			Sid          string   `json:"sid"`
@@ -586,6 +612,12 @@ func (s *fakeAckServer) loginAck(code string) string {
 // sendAuthMode states how the connection is to be authenticated, which a real
 // server does as the last thing it does for a new connection.
 func (s *fakeAckServer) sendAuthMode(session *fakeSession) {
+	if s.isHTTPAuth() {
+		s.sendAuthModeHTTP(session)
+
+		return
+	}
+
 	s.mu.Lock()
 	auto := s.autoLogin
 	omit := s.omitLoginRequired
@@ -678,6 +710,19 @@ func (s *fakeAckServer) handleClientMessage(session *fakeSession, body []byte) {
 
 		ackID := string(socketIOData[1:i])
 		payload := string(socketIOData[i:])
+
+		// A 3.x server has no handler for the login and setup commands: a
+		// client that sends one anyway gets no answer, see
+		// receivedUnexpectedCommands.
+		if s.isHTTPAuth() {
+			for _, command := range []string{"loginByToken", "login", "setup"} {
+				if strings.Contains(payload, `"`+command+`"`) {
+					s.recordUnexpected(command)
+
+					return
+				}
+			}
+		}
 
 		// A resync logs in again, which is what makes the server resend the
 		// lists. Checked before "login", which is a prefix of it.

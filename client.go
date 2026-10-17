@@ -294,10 +294,19 @@ type Client struct {
 	baseURL string
 	baseCtx context.Context //nolint:containedctx // the lifetime of every connection, see above.
 
-	// httpClient and jar are what the socket.io transports send their cookies
-	// from, see newSocketIOClient.
+	// httpClient and jar are what the HTTP side of the login uses and what
+	// the socket.io transports send their cookies from, see newSocketIOClient;
+	// auth speaks to the authentication endpoints of a 3.x server over them.
 	httpClient *http.Client
 	jar        *cookiejar.Jar
+	auth       *betterAuthClient
+
+	// authScheme is what WithAuthScheme configured, and scheme what New
+	// settled on: the configured one, or the detected one for AuthSchemeAuto.
+	// Set once in New, before any goroutine exists, and so read without the
+	// lock.
+	authScheme AuthScheme
+	scheme     AuthScheme
 
 	// operationTimeout is set once in New, before any goroutine exists, and so
 	// is read without the lock. See WithOperationTimeout.
@@ -667,6 +676,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		return nil, c.totpErr
 	}
 
+	httpBase, err := httpBaseURL(baseURL)
+	if err != nil {
+		return nil, err
+	}
+
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, fmt.Errorf("create cookie jar: %w", err)
@@ -674,6 +688,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	c.jar = jar
 	c.httpClient = &http.Client{Jar: jar}
+	c.auth = &betterAuthClient{base: httpBase, http: c.httpClient, jar: jar}
 
 	ctxWithConnectTimeout := ctx
 
@@ -695,6 +710,28 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		err := setupDatabase(ctxWithConnectTimeout, c.httpClient, baseURL)
 		if err != nil {
 			return nil, fmt.Errorf("database setup: %w", err)
+		}
+	}
+
+	c.scheme = c.authScheme
+	if c.scheme == AuthSchemeAuto {
+		c.scheme, err = c.auth.detectAuthScheme(ctxWithConnectTimeout)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// A 3.x server is logged in to before the connection is made, because it
+	// authenticates the connection from the cookie on its handshake, see
+	// AuthSchemeHTTP. A server that is not set up yet rejects the credentials
+	// it has no user for, and only the connection tells that apart from a
+	// wrong password: that one rejection is carried on to confirmSession.
+	var httpLoginErr error
+
+	if c.scheme == AuthSchemeHTTP {
+		httpLoginErr = c.authenticateHTTP(ctxWithConnectTimeout, creds)
+		if httpLoginErr != nil && !errors.Is(httpLoginErr, ErrInvalidCredentials) {
+			return nil, httpLoginErr
 		}
 	}
 
@@ -737,15 +774,27 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	var setupRequired <-chan struct{} = conn.setupRequired
 
-	err = c.authenticate(ctxWithConnectTimeout, creds, conn.barrier())
-	if err != nil {
-		// A server that is not set up yet rejects the credentials it does not
-		// have a user for; running the setup is what makes them work, so that
-		// is not a failure when the server asked for one.
-		if !errors.Is(err, ErrInvalidCredentials) ||
-			!setupPending(ctxWithConnectTimeout, setupRequired) {
+	switch c.scheme {
+	case AuthSchemeHTTP:
+		err = c.confirmSession(ctxWithConnectTimeout, creds, conn.barrier(), httpLoginErr)
+		if err != nil {
 			return nil, err
 		}
+
+	case AuthSchemeSocket, AuthSchemeAuto:
+		err = c.authenticate(ctxWithConnectTimeout, creds, conn.barrier())
+		if err != nil {
+			// A server that is not set up yet rejects the credentials it does
+			// not have a user for; running the setup is what makes them work,
+			// so that is not a failure when the server asked for one.
+			if !errors.Is(err, ErrInvalidCredentials) ||
+				!setupPending(ctxWithConnectTimeout, setupRequired) {
+				return nil, err
+			}
+		}
+
+	default:
+		return nil, fmt.Errorf("auth scheme: unknown: %d", c.scheme)
 	}
 
 	// Both success paths hand the client over through returnReady, so neither
@@ -966,6 +1015,13 @@ func (c *Client) SessionTokenRejected() bool {
 	return c.sessionTokenRejected
 }
 
+// AuthScheme reports how the client authenticated: the scheme WithAuthScheme
+// pinned, or the one New detected. It is AuthSchemeHTTP for an Uptime Kuma 3.x
+// server and AuthSchemeSocket for a 2.x server, see those for what differs.
+func (c *Client) AuthScheme() AuthScheme {
+	return c.scheme
+}
+
 // MissingReadyEvents returns the best-effort ready events the server did not
 // emit while New was connecting, sorted.
 //
@@ -986,6 +1042,10 @@ func (c *Client) MissingReadyEvents() []string {
 func (c *Client) runSetup(ctx context.Context, username string, password string) error {
 	if username == "" || password == "" {
 		return errors.New("setup: the server requires setup, which needs a username and password")
+	}
+
+	if c.scheme == AuthSchemeHTTP {
+		return errors.New("setup: autosetup against a 3.x server is not supported yet")
 	}
 
 	_, err := c.syncEmit(ctx, "setup", username, password)

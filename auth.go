@@ -225,6 +225,12 @@ const (
 
 	// authModeSetup means the server is not set up yet and wants that first.
 	authModeSetup
+
+	// authModeSession means the server authenticated the connection itself:
+	// from the session cookie on its handshake, or because it has
+	// authentication disabled. It is what an Uptime Kuma 3.x server states in
+	// place of a login ack, see AuthSchemeHTTP.
+	authModeSession
 )
 
 // authBarrier reports how the server wants the connection to be authenticated.
@@ -239,6 +245,7 @@ const (
 type authBarrier struct {
 	loginRequired <-chan struct{}
 	autoLogin     <-chan struct{}
+	session       <-chan struct{}
 	setupRequired <-chan struct{}
 }
 
@@ -338,6 +345,9 @@ func (b authBarrier) await(ctx context.Context) authMode {
 	case <-b.autoLogin:
 		mode = authModeAutoLogin
 
+	case <-b.session:
+		mode = authModeSession
+
 	case <-b.loginRequired:
 		mode = authModeLoginRequired
 
@@ -419,7 +429,7 @@ func (c *Client) authenticate(ctx context.Context, creds credentials, barrier au
 	}
 
 	switch mode {
-	case authModeAutoLogin:
+	case authModeAutoLogin, authModeSession:
 		c.setAutoLoggedIn()
 
 		if !creds.hasAny() {
@@ -500,6 +510,188 @@ func recoverableWithPassword(err error, creds credentials) bool {
 		creds.hasPassword()
 }
 
+// authenticateHTTP logs in over HTTP, see AuthSchemeHTTP, before the socket.io
+// connection is made: the session cookie it leaves in the jar is what
+// authenticates that connection on its handshake. It records the session token
+// the client ends up with, see Client.SessionToken.
+//
+// It returns nil without logging in when there is nothing to log in with; the
+// server then states on the connection whether it wants a login at all, see
+// confirmSession. A server that is not set up yet rejects the credentials it
+// has no user for, and New reads that together with the setup event, so the
+// rejection is returned as it is.
+func (c *Client) authenticateHTTP(ctx context.Context, creds credentials) error {
+	if creds.token != "" {
+		tokenErr := c.loginWithCookie(ctx, creds.token)
+		if tokenErr == nil {
+			return nil
+		}
+
+		if !recoverableWithPassword(tokenErr, creds) {
+			return tokenErr
+		}
+
+		// A token the server no longer accepts is what a password change,
+		// or on this server simply its expiry, leaves behind, and the
+		// password is what recovers from it.
+		c.socketioLogger.Warnf(
+			"session token rejected (%v), falling back to the password login for %q",
+			tokenErr,
+			creds.username,
+		)
+
+		c.auth.clearSessionCookie()
+
+		err := c.signInHTTP(ctx, creds.username, creds.password)
+		if err != nil {
+			return fmt.Errorf("%w, and the password login that followed: %w", tokenErr, err)
+		}
+
+		c.setSessionTokenRejected()
+
+		if c.sessionTokenRejectedCallback != nil {
+			c.sessionTokenRejectedCallback(tokenErr)
+		}
+
+		return nil
+	}
+
+	if !creds.hasPassword() {
+		return nil
+	}
+
+	return c.signInHTTP(ctx, creds.username, creds.password)
+}
+
+// loginWithCookie presents a session token from an earlier login to a 3.x
+// server, see WithSessionToken, by asking the server whether it still names a
+// session. The token is a signed cookie the server hands out, and it expires,
+// so the answer is checked here rather than read off the connection: a
+// connection the server refuses to authenticate looks the same for an expired
+// token and for a proxy that strips the cookie, and only the first is one a
+// password recovers from.
+func (c *Client) loginWithCookie(ctx context.Context, token string) error {
+	c.auth.presetSessionCookie(token)
+
+	ok, _, err := c.auth.getSession(ctx)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return ErrInvalidSessionToken
+	}
+
+	c.setSessionToken(token)
+
+	return nil
+}
+
+// signInHTTP logs in with a username and password over HTTP, answers the
+// server's request for a one-time code if it makes one, and records the
+// session cookie the server handed out.
+func (c *Client) signInHTTP(ctx context.Context, username string, password string) error {
+	twoFactor, err := c.auth.signIn(ctx, username, password)
+	if err != nil {
+		return err
+	}
+
+	if twoFactor {
+		err = c.loginWithTOTP(ctx, func(ctx context.Context, code string) error {
+			return c.auth.verifyTOTP(ctx, code)
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.keepSessionCookie()
+}
+
+// keepSessionCookie records the session cookie an accepted login left in the
+// jar, see keepSessionToken.
+func (c *Client) keepSessionCookie() error {
+	token := c.auth.sessionCookie()
+	if token == "" {
+		return errors.New("login: the server accepted the login but set no session cookie")
+	}
+
+	c.setSessionToken(token)
+
+	return nil
+}
+
+// confirmSession reads how the server authenticated a connection made after
+// authenticateHTTP, see AuthSchemeHTTP. loginErr is what authenticateHTTP
+// reported, which New carried on past only for a rejection that a setup
+// event explains.
+//
+// A server that authenticated the connection without being handed a session
+// cookie has authentication disabled and is treated like the autoLogin of a
+// 2.x server. One that asks for a login although a login over HTTP succeeded
+// did not see the cookie on the handshake, which is what a proxy in between
+// that drops it looks like; that is reported for what it is, because neither
+// the password nor the token is at fault.
+func (c *Client) confirmSession(
+	ctx context.Context,
+	creds credentials,
+	barrier authBarrier,
+	loginErr error,
+) error {
+	mode := barrier.await(ctx)
+
+	err := ctx.Err()
+	if err != nil {
+		return fmt.Errorf("waiting for the server's auth mode: %w", err)
+	}
+
+	switch mode {
+	case authModeSetup:
+		// The caller runs the setup and logs in afterwards.
+		return nil
+
+	case authModeSession:
+		if c.SessionToken() == "" {
+			c.setAutoLoggedIn()
+		}
+
+		return nil
+
+	case authModeLoginRequired:
+		if loginErr != nil {
+			return loginErr
+		}
+
+		if c.SessionToken() != "" {
+			return errors.New(
+				"the server accepted the login over HTTP but did not see the session cookie " +
+					"on the socket.io connection, check that a proxy in between forwards cookies",
+			)
+		}
+
+		if !creds.hasAny() {
+			return ErrAuthRequired
+		}
+
+		return errors.New("the server asks for a login although none of the credentials given were used")
+
+	case authModeAutoLogin, authModeUnknown:
+		if loginErr != nil {
+			return loginErr
+		}
+
+		if !creds.hasAny() {
+			// A server that never said it wants a login is not asked for one.
+			return nil
+		}
+
+		return errors.New("the server stated neither a session nor that it wants a login")
+
+	default:
+		return fmt.Errorf("auth mode: unknown: %d", mode)
+	}
+}
+
 // loginWithToken presents a session token from an earlier login, see
 // WithSessionToken.
 func (c *Client) loginWithToken(ctx context.Context, token string) error {
@@ -534,27 +726,58 @@ func (c *Client) loginWithPassword(ctx context.Context, username string, passwor
 	// An ack asking for a one-time code carries neither an ok nor a message,
 	// so it has to be recognized before the message is looked at.
 	if response.TokenRequired {
-		return c.loginWithTOTP(ctx, username, password)
+		return c.loginWithTOTP(ctx, func(ctx context.Context, code string) error {
+			return c.loginWithCode(ctx, username, password, code)
+		})
 	}
 
 	return loginError("login", response)
 }
 
+// loginWithCode makes one socket login with a one-time code and interprets
+// the ack the way loginWithTOTP's attempts are interpreted.
+func (c *Client) loginWithCode(ctx context.Context, username string, password string, code string) error {
+	response, err := c.login(ctx, username, password, code)
+	if err != nil {
+		return err
+	}
+
+	if response.OK {
+		return c.keepSessionToken(response)
+	}
+
+	if response.TokenRequired {
+		return fmt.Errorf(
+			"%w: the server asked for a code again instead of answering the one it was given",
+			ErrTwoFactorRequired,
+		)
+	}
+
+	return loginError("login", response)
+}
+
+// totpAttempt presents one one-time code to the server: on the socket for a
+// 2.x server, over HTTP for a 3.x one. A code the server rejects comes back
+// wrapping ErrInvalidTOTPCode, which is the only outcome another attempt could
+// change.
+type totpAttempt func(ctx context.Context, code string) error
+
 // loginWithTOTP answers the server's request for a one-time code.
 //
 // A code the server rejects is retried once in the step after the one it was
-// generated in, because the server refuses a code it has accepted before and a
-// later step is what produces a different one. Every other reason for the
+// generated in, because a 2.x server refuses a code it has accepted before and
+// a later step is what produces a different one. Every other reason for the
 // rejection - a wrong secret, a clock too far off - produces the same answer
 // again, so a single retry is enough. The wait is skipped when the round trip
 // already crossed into the next step, and the retry is given up on when the
-// caller's deadline cannot cover the wait.
+// caller's deadline cannot cover the wait. A 3.x server has no such replay
+// guard, so against it the retry only ever confirms a wrong secret.
 //
 // The ways this fails are kept apart in the error, because they call for
 // different fixes: no code source, a source that produced nothing usable, a
 // deadline too short to outlast the replay guard, and a code rejected in two
 // consecutive steps, which is what rules the replay guard out.
-func (c *Client) loginWithTOTP(ctx context.Context, username string, password string) error {
+func (c *Client) loginWithTOTP(ctx context.Context, attempt totpAttempt) error {
 	if c.totpCode == nil {
 		return ErrTwoFactorRequired
 	}
@@ -569,7 +792,7 @@ func (c *Client) loginWithTOTP(ctx context.Context, username string, password st
 			}
 		}
 
-		step, err := c.loginOnceWithTOTP(ctx, username, password)
+		step, err := c.loginOnceWithTOTP(ctx, attempt)
 		if !errors.Is(err, ErrInvalidTOTPCode) {
 			return err
 		}
@@ -584,20 +807,14 @@ func (c *Client) loginWithTOTP(ctx context.Context, username string, password st
 	)
 }
 
-// loginOnceWithTOTP makes one attempt at a login with a one-time code. A code
-// the server rejects comes back wrapping ErrInvalidTOTPCode, which is the only
-// outcome another attempt could change.
+// loginOnceWithTOTP makes one attempt at a login with a one-time code.
 //
 // It also reports the time step the code it sent belongs to, which is what
 // tells a retry whether there is still a step to wait out. The step is read
 // after the code was produced, so a code generated just before a step boundary
 // counts as belonging to the later one - the reading that at worst waits when
 // it did not have to, rather than sending the same code twice.
-func (c *Client) loginOnceWithTOTP(
-	ctx context.Context,
-	username string,
-	password string,
-) (time.Time, error) {
+func (c *Client) loginOnceWithTOTP(ctx context.Context, attempt totpAttempt) (time.Time, error) {
 	code, err := c.totpCode(ctx)
 
 	codeStep := totpStepStart(time.Now())
@@ -616,23 +833,7 @@ func (c *Client) loginOnceWithTOTP(
 		)
 	}
 
-	response, err := c.login(ctx, username, password, code)
-	if err != nil {
-		return codeStep, err
-	}
-
-	if response.OK {
-		return codeStep, c.keepSessionToken(response)
-	}
-
-	if response.TokenRequired {
-		return codeStep, fmt.Errorf(
-			"%w: the server asked for a code again instead of answering the one it was given",
-			ErrTwoFactorRequired,
-		)
-	}
-
-	return codeStep, loginError("login", response)
+	return codeStep, attempt(ctx, code)
 }
 
 // keepSessionToken records the token an accepted login handed out.
@@ -747,13 +948,17 @@ func setupPending(ctx context.Context, setupRequired <-chan struct{}) bool {
 	}
 }
 
-// prepare2FA asks the server for a new two-factor secret and returns it.
+// enable2FA asks the server for a new two-factor secret and returns it.
 //
 // The server stores the secret right away, before it has been confirmed, and
-// only starts requiring a code once save2FA ran. currentPassword is the
+// only starts requiring a code once confirm2FA ran. currentPassword is the
 // password of the logged in account, which the server checks again for this
 // command even though the connection is already authenticated.
-func (c *Client) prepare2FA(ctx context.Context, currentPassword string) (string, error) {
+func (c *Client) enable2FA(ctx context.Context, currentPassword string) (string, error) {
+	if c.scheme == AuthSchemeHTTP {
+		return c.auth.enableTwoFactor(ctx, currentPassword)
+	}
+
 	response, err := c.syncEmit(ctx, "prepare2FA", currentPassword)
 	if err != nil {
 		return "", err
@@ -772,9 +977,14 @@ func (c *Client) prepare2FA(ctx context.Context, currentPassword string) (string
 	return secret, nil
 }
 
-// save2FA turns two-factor authentication on for the logged in account, using
-// the secret prepare2FA handed out.
-func (c *Client) save2FA(ctx context.Context, currentPassword string) error {
+// confirm2FA turns two-factor authentication on for the logged in account,
+// using the secret enable2FA handed out. A 3.x server wants a code generated
+// from that secret as proof, a 2.x server the password again.
+func (c *Client) confirm2FA(ctx context.Context, currentPassword string, code string) error {
+	if c.scheme == AuthSchemeHTTP {
+		return c.auth.verifyTOTP(ctx, code)
+	}
+
 	_, err := c.syncEmit(ctx, "save2FA", currentPassword)
 
 	return err
@@ -782,6 +992,10 @@ func (c *Client) save2FA(ctx context.Context, currentPassword string) error {
 
 // disable2FA turns two-factor authentication off for the logged in account.
 func (c *Client) disable2FA(ctx context.Context, currentPassword string) error {
+	if c.scheme == AuthSchemeHTTP {
+		return c.auth.disableTwoFactor(ctx, currentPassword)
+	}
+
 	_, err := c.syncEmit(ctx, "disable2FA", currentPassword)
 
 	return err
@@ -790,6 +1004,12 @@ func (c *Client) disable2FA(ctx context.Context, currentPassword string) error {
 // twoFAStatus reports whether two-factor authentication is on for the logged
 // in account.
 func (c *Client) twoFAStatus(ctx context.Context) (bool, error) {
+	if c.scheme == AuthSchemeHTTP {
+		_, enabled, err := c.auth.getSession(ctx)
+
+		return enabled, err
+	}
+
 	response, err := c.syncEmit(ctx, "twoFAStatus")
 	if err != nil {
 		return false, err
