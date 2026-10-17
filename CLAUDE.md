@@ -78,6 +78,18 @@ operations concurrently over a single client):
 
 `Resync()` remains the way out of a cache that missed a broadcast anyway.
 
+**Authentication (`auth.go`, `auth_http.go`, `socket.go`, `transport.go`)**:
+
+- Uptime Kuma 2.x logs in with a socket command (`AuthSchemeSocket`), 3.x over
+  HTTP with better-auth and a session cookie the socket.io handshake carries
+  (`AuthSchemeHTTP`). `New` detects the scheme with `GET /api/auth/ok` (JSON
+  means 3.x) before connecting.
+- The socket.io client is built with cookie-aware transports in `transport.go`;
+  the fork needs no change for that.
+- The socket.io client is single-use, so a reconnect is a new `socketConn` with
+  every handler registered again (`newSocket()`); handlers drop events of a
+  torn-down connection (`applyEvent()`).
+
 **NotificationIDList Handling**:
 
 - Server expects `map[string]bool` format for notification IDs

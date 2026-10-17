@@ -54,9 +54,10 @@
 //	// ... later, in another process
 //	client, err := kuma.New(ctx, url, "", "", kuma.WithSessionToken(token))
 //
-// The token is a bearer credential that does not expire. Store it the way the
-// password would be stored, see [WithSessionToken] for what invalidates it and
-// for the fallback a client with a password gets when it is refused.
+// The token is a bearer credential. Store it the way the password would be
+// stored, see [WithSessionToken] for what invalidates it and for the fallback a
+// client with a password gets when it is refused. On an Uptime Kuma 3.x server
+// it expires, so keep the username and password configured alongside.
 //
 // A server with authentication disabled logs the client in by itself, so it
 // takes no credentials at all:
@@ -65,12 +66,21 @@
 //
 // # Server Versions
 //
-// The client targets Uptime Kuma 2.x and is tested against 2.5.5. Uptime Kuma
-// 1.x is not supported and connecting to it is not expected to work: it never
-// announces loginRequired, so New cannot tell a server that wants a login from
-// one that does not and takes the full auth barrier wait on every connect, and
-// it reports rejected logins with untranslated messages that are not mapped to
-// the package's sentinel errors, see [New].
+// The client targets Uptime Kuma 2.x and 3.x and is tested against 2.5.6 and
+// the 3.0 nightly image. The two lines authenticate differently, see
+// [AuthSchemeSocket] and [AuthSchemeHTTP]: a 2.x server takes a login command
+// on the socket.io connection, a 3.x server takes it over HTTP and
+// authenticates the connection from the session cookie that answers it. New
+// detects the scheme with one request before it connects, [Client.AuthScheme]
+// reports it, and [WithAuthScheme] pins it. On a 3.x server the session token
+// expires, logins are rate limited per client address (see [RateLimitedError])
+// and [Client.Resync] connects again instead of logging in again.
+//
+// Uptime Kuma 1.x is not supported and connecting to it is not expected to
+// work: it never announces loginRequired, so New cannot tell a server that
+// wants a login from one that does not and takes the full auth barrier wait on
+// every connect, and it reports rejected logins with untranslated messages that
+// are not mapped to the package's sentinel errors, see [New].
 //
 // # Supported Monitor Types
 //
