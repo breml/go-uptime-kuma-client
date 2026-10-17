@@ -308,6 +308,10 @@ type Client struct {
 	authScheme AuthScheme
 	scheme     AuthScheme
 
+	// connLock orders the commands on the connection against a reconnect, see
+	// lockConn and lockConnExclusive. Created in New.
+	connLock *semaphore.Weighted
+
 	// operationTimeout is set once in New, before any goroutine exists, and so
 	// is read without the lock. See WithOperationTimeout.
 	operationTimeout time.Duration
@@ -654,6 +658,7 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		mu:        &sync.Mutex{},
 		updates:   signals.New[string](),
 		listLocks: newListLocks(),
+		connLock:  semaphore.NewWeighted(exclusiveListWeight),
 	}
 
 	for _, opt := range opts {
@@ -909,12 +914,25 @@ func (c *Client) Disconnect() error {
 // was deactivated or deleted. Neither is recoverable here: a new New is what
 // obtains a fresh token.
 //
+// An Uptime Kuma 3.x server, see AuthSchemeHTTP, has no login command: it
+// authenticates a connection from the session cookie on its handshake and
+// answers that with every list. Against it Resync connects again, with the
+// cookie the client holds, and replaces the connection once the server has
+// authenticated the new one. Commands in flight finish first, and commands
+// that arrive while the resync runs wait for it, see lockConnExclusive. A
+// server with authentication disabled authenticates the new connection as it
+// did the first, so there the resync needs no credentials at all.
+//
 // Which lists Resync waits for follows New: the events configured with
 // WithReadyEvents are required and the remaining known events are best-effort,
 // awaited for the ready grace period. The best-effort events New never saw are
 // skipped altogether, because a server (or a proxy in front of it) that does
 // not emit one while connecting does not emit it here either.
 func (c *Client) Resync(ctx context.Context) error {
+	if c.scheme == AuthSchemeHTTP {
+		return c.resyncByReconnect(ctx)
+	}
+
 	c.mu.Lock()
 	token := c.sessionToken
 	autoLoggedIn := c.autoLoggedIn
@@ -1059,7 +1077,7 @@ func (c *Client) runSetup(ctx context.Context, username string, password string)
 	}
 
 	if c.scheme == AuthSchemeHTTP {
-		return errors.New("setup: autosetup against a 3.x server is not supported yet")
+		return c.runSetupHTTP(ctx, username, password)
 	}
 
 	_, err := c.syncEmit(ctx, "setup", username, password)
@@ -1075,6 +1093,187 @@ func (c *Client) runSetup(ctx context.Context, username string, password string)
 	}
 
 	return nil
+}
+
+// runSetupHTTP is runSetup for a 3.x server, see AuthSchemeHTTP: the setup and
+// the login that follows are HTTP requests, and the connection made before
+// them carries no session, so it is replaced by one that does.
+func (c *Client) runSetupHTTP(ctx context.Context, username string, password string) error {
+	err := c.auth.setup(ctx, username, password)
+	if err != nil {
+		return err
+	}
+
+	err = c.signInHTTP(ctx, username, password)
+	if err != nil {
+		return fmt.Errorf("login: %w", err)
+	}
+
+	release, err := c.lockConnExclusive(ctx)
+	if err != nil {
+		return fmt.Errorf("login: %w", err)
+	}
+
+	defer release()
+
+	err = c.reconnectLocked(ctx)
+	if err != nil {
+		return fmt.Errorf("login: %w", err)
+	}
+
+	return nil
+}
+
+// resyncByReconnect is Resync for a 3.x server, see AuthSchemeHTTP.
+//
+// The exclusive side of the connection lock is held from before the new
+// connection is made until the required lists have arrived on it, so that no
+// command goes out on the connection about to be replaced and none reads the
+// cache between the swap and the lists that rebuild it. The best-effort lists
+// are then given their grace period without holding anyone up.
+func (c *Client) resyncByReconnect(ctx context.Context) error {
+	// Resync is one command and the lists it resends, so the operation budget
+	// covers both, see WithOperationTimeout.
+	ctx, cancel := c.operationContext(ctx, "resync")
+	defer cancel()
+
+	release, err := c.lockConnExclusive(ctx)
+	if err != nil {
+		return fmt.Errorf("resync: %w", err)
+	}
+
+	released := false
+
+	defer func() {
+		if !released {
+			release()
+		}
+	}()
+
+	gate := newReadyGate(c.resyncReadyEvents())
+
+	// Registered before the connection is made, so that no list can arrive
+	// unnoticed between the two.
+	listenerID := uuid.New().String()
+	c.updates.AddListener(func(_ context.Context, update string) {
+		gate.observe(update)
+	}, listenerID)
+
+	defer c.updates.RemoveListener(listenerID)
+
+	err = c.reconnectLocked(ctx)
+	if err != nil {
+		return fmt.Errorf("resync: %w", err)
+	}
+
+	select {
+	case <-gate.requiredDone:
+
+	case <-ctx.Done():
+		return fmt.Errorf(
+			"resync: %w (missing events: %s)",
+			contextErr(ctx),
+			strings.Join(gate.missingRequired(), ", "),
+		)
+	}
+
+	release()
+
+	released = true
+
+	c.awaitOptionalReadyEvents(ctx, "Resync", gate, nil)
+
+	return nil
+}
+
+// reconnectLocked replaces the connection with a fresh one, which a 3.x server
+// authenticates from the session cookie in the jar and answers with every
+// list, see AuthSchemeHTTP. The caller holds the exclusive side of the
+// connection lock, see lockConnExclusive.
+//
+// The connection is replaced only once the server has authenticated the new
+// one. A server that asks the new connection for a login instead no longer
+// accepts the cookie - it expired, or the password changed - and the old
+// connection, which the server authenticated when it was made, stays in
+// service for the commands that still work on it.
+func (c *Client) reconnectLocked(ctx context.Context) error {
+	if c.isClosed() {
+		return errClientClosed
+	}
+
+	next, err := c.newSocket()
+	if err != nil {
+		return err
+	}
+
+	dialCtx, cancel := c.connectContext(ctx)
+	defer cancel()
+
+	err = c.dial(dialCtx, next)
+	if err != nil {
+		return err
+	}
+
+	mode := next.barrier().await(dialCtx)
+
+	err = dialCtx.Err()
+	if err != nil {
+		c.disconnectOrphan(next)
+
+		return fmt.Errorf("waiting for the server's auth mode: %w", err)
+	}
+
+	switch mode {
+	case authModeSession:
+
+	case authModeLoginRequired:
+		c.disconnectOrphan(next)
+
+		if c.SessionToken() == "" {
+			// The server authenticated the first connection by itself and
+			// wants a login now: authentication was turned on since.
+			return ErrAuthRequired
+		}
+
+		return fmt.Errorf("%w: the server asked the new connection for a login", ErrInvalidSessionToken)
+
+	case authModeSetup, authModeAutoLogin, authModeUnknown:
+		c.disconnectOrphan(next)
+
+		return errors.New("the server stated neither a session nor that it wants a login on the new connection")
+
+	default:
+		c.disconnectOrphan(next)
+
+		return fmt.Errorf("auth mode: unknown: %d", mode)
+	}
+
+	old, ok := c.installConn(next)
+	if !ok {
+		c.disconnectOrphan(next)
+
+		return errClientClosed
+	}
+
+	if old != nil {
+		// Taken out of service at once, so that a list of the old connection
+		// delivered late cannot overwrite what the new one sent, and closed
+		// in the background.
+		c.markClosed(old)
+		c.disconnectOrphan(old)
+	}
+
+	return nil
+}
+
+// connectContext bounds a connect the way New bounds its own, see
+// WithConnectTimeout, on top of whatever bounds ctx already.
+func (c *Client) connectContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	if c.socketioClientConnectTimeout == 0 {
+		return ctx, func() {}
+	}
+
+	return context.WithTimeout(ctx, c.socketioClientConnectTimeout)
 }
 
 // setMissingReadyEvents records what New waited for in vain, see
@@ -1383,6 +1582,15 @@ func (c *Client) emitAck(ctx context.Context, command string, args ...any) (ackR
 	ctx, cancel := c.operationContext(ctx, command)
 	defer cancel()
 
+	// Held until the ack is in, so that a resync cannot replace the
+	// connection under the command, see lockConn.
+	release, err := c.lockConn(ctx)
+	if err != nil {
+		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
+	}
+
+	defer release()
+
 	// Buffered and never closed, so a late ack (e.g. after the context
 	// expired) neither leaks the ack goroutine forever nor panics sending on
 	// a closed channel.
@@ -1390,7 +1598,7 @@ func (c *Client) emitAck(ctx context.Context, command string, args ...any) (ackR
 
 	args = append(args, ackOptions(ctx, res)...)
 
-	err := c.currentConn().socket.Emit(command, args...)
+	err = c.currentConn().socket.Emit(command, args...)
 	if err != nil {
 		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
@@ -1502,6 +1710,16 @@ func (c *Client) syncEmitWithConfirmedUpdateEvent(
 	// before the command is even sent.
 	ctx, cancel := c.operationContext(ctx, command)
 	defer cancel()
+
+	// Held through the wait for the update event as well: a resync that
+	// replaced the connection in between would answer with a whole list
+	// where this command waits for the single-entry event of its write.
+	releaseConn, err := c.lockConn(ctx)
+	if err != nil {
+		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
+	}
+
+	defer releaseConn()
 
 	// Buffered with room for one token and written to without blocking: the
 	// listener runs on the goroutine that applied the state and must never be

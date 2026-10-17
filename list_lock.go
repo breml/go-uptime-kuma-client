@@ -56,6 +56,41 @@ func sharedListUpdateEvents() map[string]string {
 // the two exclude each other while single-entry commands share the lock.
 const exclusiveListWeight = 1 << 30
 
+// lockConn takes the shared side of the connection lock and returns the
+// release. Every command holds it from the moment it is emitted until its ack,
+// and its update event where it waits for one, is in, so that the connection
+// is never replaced under a command in flight, see lockConnExclusive.
+//
+// Like lockList it is a weighted semaphore rather than a sync.RWMutex: a
+// caller waiting its turn has to be able to give up with its context. Waiters
+// are served in order, so a resync waiting for the commands in flight holds
+// back those that arrive after it and cannot be starved by them.
+func (c *Client) lockConn(ctx context.Context) (func(), error) {
+	err := c.connLock.Acquire(ctx, 1)
+	if err != nil {
+		return nil, fmt.Errorf("waiting for the resync in progress: %w", contextErr(ctx))
+	}
+
+	return func() { c.connLock.Release(1) }, nil
+}
+
+// lockConnExclusive takes the exclusive side of the connection lock, which
+// excludes every command, and returns the release. It is what a resync that
+// reconnects holds while it replaces the connection and until the lists the
+// new one answers with have rebuilt the cache, so that no command is emitted
+// on a connection about to be closed and none observes the cache half built.
+//
+// Lock order: a list lock, see lockList, is taken before the connection lock
+// and the connection lock is never held while another command is emitted.
+func (c *Client) lockConnExclusive(ctx context.Context) (func(), error) {
+	err := c.connLock.Acquire(ctx, exclusiveListWeight)
+	if err != nil {
+		return nil, fmt.Errorf("waiting for the commands in flight: %w", contextErr(ctx))
+	}
+
+	return func() { c.connLock.Release(exclusiveListWeight) }, nil
+}
+
 // newListLocks builds the lock per list-replacing update event. A weighted
 // semaphore rather than a sync.RWMutex, because a caller waiting its turn has
 // to be able to give up, see lockList.

@@ -2,6 +2,7 @@ package kuma
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -16,6 +17,10 @@ import (
 	"github.com/breml/go-uptime-kuma-client/proxy"
 	"github.com/breml/go-uptime-kuma-client/statuspage"
 )
+
+// errClientClosed is reported by a command or a resync on a client that was
+// disconnected.
+var errClientClosed = errors.New("client is disconnected")
 
 // handledEvents names the events registerHandlers applies to the state cache
 // or the auth barrier itself, and which the catch-all handler therefore leaves
@@ -416,24 +421,37 @@ func (c *Client) disconnectOrphan(conn *socketConn) {
 	}()
 }
 
-// installConn makes conn the connection the client's commands go out on,
-// unless the client was disconnected in the meantime, which takes no new
-// connection.
-func (c *Client) installConn(conn *socketConn) {
+// installConn makes conn the connection the client's commands go out on and
+// returns the one it replaces, or ok false for a client that was disconnected
+// in the meantime, which takes no new connection.
+func (c *Client) installConn(conn *socketConn) (old *socketConn, ok bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if c.closed {
-		return
+		return nil, false
 	}
 
+	old = c.conn
 	c.conn = conn
+
+	return old, true
 }
 
-// currentConn returns the connection the client's commands go out on.
+// currentConn returns the connection the client's commands go out on. Callers
+// hold the shared side of the connection lock, see lockConn, so the connection
+// cannot be replaced under them.
 func (c *Client) currentConn() *socketConn {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	return c.conn
+}
+
+// isClosed reports whether Disconnect ran.
+func (c *Client) isClosed() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.closed
 }

@@ -128,6 +128,18 @@ func (s *fakeAckServer) handshakeCookies() []string {
 	return cookies
 }
 
+// lastHandshakeAt returns when the latest handshake was made.
+func (s *fakeAckServer) lastHandshakeAt() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if len(s.handshakes) == 0 {
+		return time.Time{}
+	}
+
+	return s.handshakes[len(s.handshakes)-1].at
+}
+
 // receivedUnexpectedCommands returns the socket commands a 3.x server has no
 // handler for that the client sent anyway.
 func (s *fakeAckServer) receivedUnexpectedCommands() []string {
@@ -165,6 +177,16 @@ func (s *fakeAckServer) probeCount() int {
 	defer s.mu.Unlock()
 
 	return s.probes
+}
+
+// revokeSessions makes the fake refuse every session cookie from now on, the
+// way a password change or an expiry does on a 3.x server.
+func (s *fakeAckServer) revokeSessions() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.issuedSessions = nil
+	s.rejectTokenMsg = "authInvalidToken"
 }
 
 func (s *fakeAckServer) setProbeRateLimited(limited bool) {

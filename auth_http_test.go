@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kuma "github.com/breml/go-uptime-kuma-client"
+	"github.com/breml/go-uptime-kuma-client/notification"
 )
 
 // newHTTPAuthFake starts a fakeAckServer that authenticates the way an Uptime
@@ -390,6 +391,189 @@ func TestNewHTTPAutoLogin(t *testing.T) {
 
 	require.Equal(t, 0, fake.loginFrameCount())
 	require.Empty(t, client.SessionToken())
+
+	// Such a server authenticates the next connection the same way, so a
+	// resync needs no credentials here, unlike on a 2.x server.
+	require.NoError(t, client.Resync(ctx))
+	require.Equal(t, 2, fake.handshakeCount())
+}
+
+// TestNewHTTPAutosetup covers the server that is not set up yet: the setup is
+// an HTTP request, and the connection made before it, which the server could
+// not authenticate, is replaced by one it can.
+func TestNewHTTPAutosetup(t *testing.T) {
+	fake, url := newHTTPAuthFake(t)
+	fake.setSetupRequired()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"admin",
+		"admin1",
+		kuma.WithAutosetup(),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	require.Equal(t, 2, fake.loginFrameCount(), "the sign-in the setup explains, and the one after it")
+	require.Equal(t, 2, fake.handshakeCount(), "the connection made before the setup carries no session")
+	require.Equal(t, fakeSessionToken, client.SessionToken())
+	require.Empty(t, fake.receivedUnexpectedCommands(), "the setup command of a 2.x server is not sent")
+
+	notif, err := client.GetNotification(ctx, fakeSeededNotificationID)
+	require.NoError(t, err)
+	require.Equal(t, int64(fakeSeededNotificationID), notif.GetID())
+}
+
+// TestResyncHTTP covers the resync against a 3.x server, which has no command
+// that resends every list: the client connects again with its cookie, and the
+// server answers the new connection the way it answered the first.
+func TestResyncHTTP(t *testing.T) {
+	t.Run("connects again with the same cookie", func(t *testing.T) {
+		fake, url := newHTTPAuthFake(t)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+		require.NoError(t, err)
+
+		t.Cleanup(func() { _ = client.Disconnect() })
+
+		require.NoError(t, client.Resync(ctx))
+
+		cookies := fake.handshakeCookies()
+		require.Len(t, cookies, 2)
+		require.Equal(t, cookies[0], cookies[1])
+		require.Empty(t, fake.receivedUnexpectedCommands(), "no loginByToken on a 3.x server")
+
+		notif, err := client.GetNotification(ctx, fakeSeededNotificationID)
+		require.NoError(t, err, "the resync has to leave the cache complete, not empty")
+		require.Equal(t, int64(fakeSeededNotificationID), notif.GetID())
+
+		// The new connection is the one commands go out on.
+		msg, err := client.TestNotification(ctx, notification.Generic{
+			Base:           notification.Base{Name: "after resync"},
+			GenericDetails: notification.GenericDetails{},
+			TypeName:       "generic",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "ok", msg)
+	})
+
+	t.Run("a command in flight finishes before the connection is replaced", func(t *testing.T) {
+		fake, url := newHTTPAuthFake(t)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+		require.NoError(t, err)
+
+		t.Cleanup(func() { _ = client.Disconnect() })
+
+		const ackDelay = 300 * time.Millisecond
+
+		fake.setAckDelay(ackDelay)
+
+		type result struct {
+			msg   string
+			err   error
+			ackAt time.Time
+		}
+
+		done := make(chan result, 1)
+
+		go func() {
+			msg, err := client.TestNotification(ctx, notification.Generic{
+				Base:           notification.Base{Name: "in flight"},
+				GenericDetails: notification.GenericDetails{},
+				TypeName:       "generic",
+			})
+			done <- result{msg: msg, err: err, ackAt: time.Now()}
+		}()
+
+		// Give the command a moment to be emitted, then resync underneath it.
+		time.Sleep(50 * time.Millisecond)
+
+		fake.setAckDelay(0)
+
+		require.NoError(t, client.Resync(ctx))
+
+		got := <-done
+		require.NoError(t, got.err, "the resync must not cost the command its ack")
+		require.Equal(t, "ok", got.msg)
+		require.False(t, fake.lastHandshakeAt().Before(got.ackAt),
+			"the new connection must be made after the command in flight was answered")
+	})
+
+	t.Run("a revoked cookie is reported and the old connection kept", func(t *testing.T) {
+		fake, url := newHTTPAuthFake(t)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+		require.NoError(t, err)
+
+		t.Cleanup(func() { _ = client.Disconnect() })
+
+		fake.revokeSessions()
+
+		err = client.Resync(ctx)
+		require.ErrorIs(t, err, kuma.ErrInvalidSessionToken)
+
+		msg, err := client.TestNotification(ctx, notification.Generic{
+			Base:           notification.Base{Name: "still served"},
+			GenericDetails: notification.GenericDetails{},
+			TypeName:       "generic",
+		})
+		require.NoError(t, err, "the connection the server did authenticate stays in service")
+		require.Equal(t, "ok", msg)
+	})
+
+	t.Run("waits for the lists and names the ones that did not arrive", func(t *testing.T) {
+		fake, url := newHTTPAuthFake(t)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+		require.NoError(t, err)
+
+		t.Cleanup(func() { _ = client.Disconnect() })
+
+		fake.setSuppressLists(true)
+
+		resyncCtx, resyncCancel := context.WithTimeout(ctx, 500*time.Millisecond)
+		defer resyncCancel()
+
+		err = client.Resync(resyncCtx)
+
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.ErrorContains(t, err, "monitorList")
+	})
+
+	t.Run("after a disconnect it reports that instead of connecting", func(t *testing.T) {
+		fake, url := newHTTPAuthFake(t)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+		require.NoError(t, err)
+		require.NoError(t, client.Disconnect())
+
+		err = client.Resync(ctx)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "disconnected")
+		require.Equal(t, 1, fake.handshakeCount())
+	})
 }
 
 // TestServerVersion covers the version the server states to an authenticated

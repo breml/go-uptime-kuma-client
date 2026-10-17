@@ -265,6 +265,31 @@ func (a *betterAuthClient) getSession(ctx context.Context) (ok bool, twoFactor b
 	return true, response.User.TwoFactorEnabled, nil
 }
 
+// setup creates the first user, which is what a server that announces setup
+// asks for. It is answered like a socket.io ack, with an ok and a message.
+func (a *betterAuthClient) setup(ctx context.Context, username string, password string) error {
+	body, err := a.do(ctx, http.MethodPost, "/api/setup", map[string]any{
+		"username": username,
+		"password": password,
+	})
+	if err != nil {
+		return fmt.Errorf("setup: %w", err)
+	}
+
+	var response setupResponse
+
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return fmt.Errorf("setup: parse response: %w", err)
+	}
+
+	if !response.OK {
+		return fmt.Errorf("setup: %s", response.Msg)
+	}
+
+	return nil
+}
+
 // enableTwoFactor asks the server for a new two-factor secret and returns it.
 // The server turns two-factor authentication on only once verifyTOTP confirmed
 // a code for it.
