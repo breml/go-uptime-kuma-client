@@ -6,7 +6,7 @@ require (
 	github.com/maldikhan/go.socket.io v0.1.1
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/pquerna/otp v1.5.0
-	golang.org/x/sync v0.22.0
+	golang.org/x/sync v0.24.0
 )
 
 require (
