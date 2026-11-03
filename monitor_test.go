@@ -269,9 +269,6 @@ func TestMonitorCRUD(t *testing.T) {
 				tcp.Name = "Updated TCP Port Monitor"
 				tcp.Hostname = "cloudflare.com"
 				tcp.Port = 465
-				tcp.SMTPSecurity = new("secure")
-				tcp.ExpiryNotification = true
-				tcp.ExpectedTLSAlert = new("certificate_required")
 				tcp.DomainExpiryNotification = true
 			},
 			verifyCreatedFunc: func(t *testing.T, actual monitor.Monitor, id int64) {
@@ -297,11 +294,6 @@ func TestMonitorCRUD(t *testing.T) {
 				require.Equal(t, "Updated TCP Port Monitor", tcp.Name)
 				require.Equal(t, "cloudflare.com", tcp.Hostname)
 				require.Equal(t, 465, tcp.Port)
-				require.NotNil(t, tcp.SMTPSecurity)
-				require.Equal(t, "secure", *tcp.SMTPSecurity)
-				require.True(t, tcp.ExpiryNotification)
-				require.NotNil(t, tcp.ExpectedTLSAlert)
-				require.Equal(t, "certificate_required", *tcp.ExpectedTLSAlert)
 				require.True(t, tcp.DomainExpiryNotification)
 			},
 			testPauseResume: true,

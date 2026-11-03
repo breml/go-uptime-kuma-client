@@ -101,10 +101,18 @@ type TCPPortDetails struct {
 	// "starttls" (negotiate TLS via STARTTLS). Only "secure" and
 	// "starttls" perform a TLS handshake and certificate validation.
 	// Leave nil/unset to fall back to a plain TCP check.
+	//
+	// Deprecated: Uptime Kuma 2.5.8 dropped TLS support from the TCP Port
+	// monitor and ignores this field; every TCP Port monitor is a plain
+	// TCP check. Only Uptime Kuma 2.5.7 and older honour it.
 	SMTPSecurity *string `json:"smtpSecurity"`
 	// ExpiryNotification enables certificate expiry notifications. It is
 	// only honoured by the upstream server when SMTPSecurity is set to
 	// "secure" or "starttls".
+	//
+	// Deprecated: Uptime Kuma 2.5.8 dropped TLS support from the TCP Port
+	// monitor and ignores this field. Only Uptime Kuma 2.5.7 and older
+	// honour it.
 	ExpiryNotification bool `json:"expiryNotification"`
 	// DomainExpiryNotification enables domain expiry notifications
 	// for the monitored domain (for TLDs supported by Uptime Kuma's RDAP
@@ -114,6 +122,10 @@ type TCPPortDetails struct {
 	// ExpectedTLSAlert is the TLS alert name that the server is expected
 	// to return during the handshake (e.g. "certificate_required" for
 	// mTLS verification). Leave nil/unset for a successful TLS handshake.
+	//
+	// Deprecated: Uptime Kuma 2.5.8 dropped TLS support from the TCP Port
+	// monitor and no longer stores this field; it reads back as nil. Only
+	// Uptime Kuma 2.5.7 and older honour it.
 	ExpectedTLSAlert *string `json:"expectedTlsAlert"`
 }
 
