@@ -23,6 +23,17 @@ import (
 //
 // monitorList broadcasts it did not ask for, from Resync, from another session
 // of the same user or from addProxy with applyExisting, are not ordered with it.
+//
+// The list identifies monitors, it does not describe them. An Uptime Kuma 3.x
+// server sends it in a compact form that carries only ID, Name, Type, IsActive,
+// Parent, PathName, Interval and Tags; every other field of the returned
+// monitor.Base values, and of anything decoded from them with As, is the zero
+// value there. (The compact form also carries the children, the path and the
+// weight of a monitor, which Base has no field for.) A 2.x server sends the
+// full monitors, and so does the updateMonitorIntoList a write is answered
+// with on either line, so the list can hold both shapes until the next
+// broadcast replaces it. GetMonitor and GetMonitorAs return the full monitor
+// on both lines; read the details there.
 func (c *Client) GetMonitors(ctx context.Context) ([]monitor.Base, error) {
 	_, err := c.syncEmitWithUpdateEvent(ctx, "getMonitorList", "monitorList")
 	if err != nil {

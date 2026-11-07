@@ -98,10 +98,13 @@ type fakeAckServer struct {
 	issuedSessions   map[string]struct{}
 	twoFactorCookies map[string]struct{}
 	// probeRateLimited answers the auth scheme probe the way the rate limiter
-	// of a 3.x server does, with a 429 that is still JSON. signInRateLimited
-	// does the same for the sign-in, with the wait the server states.
-	probeRateLimited  bool
-	signInRateLimited bool
+	// of a 3.x server does, see rateLimited. signInRateLimited does the same
+	// for the sign-in, with the wait the server states. probeRateLimitedByProxy
+	// answers the probe of a socket-mode server the way a proxy in front of it
+	// limits the path, see proxyRateLimited.
+	probeRateLimited        bool
+	signInRateLimited       bool
+	probeRateLimitedByProxy bool
 	// stripCookie ignores the cookie on the handshake, the way a proxy in
 	// between that drops it makes a server behave.
 	stripCookie bool
@@ -411,15 +414,21 @@ func (s *fakeAckServer) setSetupRequired() {
 	s.setupRequired = true
 }
 
+// lateSetupDelay is how long setLateSetup holds the setup event back: long
+// enough for the barrier to have read loginRequired and for New to have
+// reached setupPending with the rejection, on either scheme, and well inside
+// the grace the tests widen setupPending to.
+const lateSetupDelay = 50 * time.Millisecond
+
 // setLateSetup makes the server state that it wants a login first and send the
-// setup event only after d, the way the per-handler goroutines of a real client
-// can deliver two events of one payload in that order.
-func (s *fakeAckServer) setLateSetup(d time.Duration) {
+// setup event only lateSetupDelay later, the way the per-handler goroutines of
+// a real client can deliver two events of one payload in that order.
+func (s *fakeAckServer) setLateSetup() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.setupRequired = true
-	s.setupDelay = d
+	s.setupDelay = lateSetupDelay
 }
 
 func (s *fakeAckServer) runSetup() {

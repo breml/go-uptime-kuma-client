@@ -196,6 +196,13 @@ func (s *fakeAckServer) setProbeRateLimited(limited bool) {
 	s.probeRateLimited = limited
 }
 
+func (s *fakeAckServer) setProbeRateLimitedByProxy(limited bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.probeRateLimitedByProxy = limited
+}
+
 func (s *fakeAckServer) setSignInRateLimited(limited bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -257,11 +264,25 @@ func unknownSession(w http.ResponseWriter) {
 	_, _ = w.Write([]byte(`{"code":1,"message":"Session ID unknown"}`))
 }
 
-// rateLimited answers a request the way better-auth's rate limiter does.
+// rateLimited answers a request the way the better-auth of the early 3.0
+// nightlies does: a JSON body under a text/plain media type, with the wait in
+// better-auth's own header. Later versions say application/json; the fake
+// keeps text/plain on purpose, it is what makes the probe test depend on the
+// status and the header rather than on the media type.
 func rateLimited(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/plain;charset=UTF-8")
 	w.Header().Set("X-Retry-After", strconv.Itoa(fakeRetryAfter))
 	w.WriteHeader(http.StatusTooManyRequests)
 	_, _ = w.Write([]byte(`{"message":"Too many requests. Please try again later."}`))
+}
+
+// proxyRateLimited answers a request the way a rate limiting proxy in front
+// of a 2.x server does: a 429 with an error page and none of better-auth's
+// headers.
+func proxyRateLimited(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusTooManyRequests)
+	_, _ = w.Write([]byte("<html><body>429 Too Many Requests</body></html>"))
 }
 
 // betterAuthError answers a request the way better-auth refuses one, with the
@@ -276,6 +297,16 @@ func betterAuthError(w http.ResponseWriter, code string, message string) {
 // to a catch-all, which serves the single-page application as HTML.
 func (s *fakeAckServer) serveAuthHTTP(w http.ResponseWriter, r *http.Request) {
 	if !s.isHTTPAuth() {
+		s.mu.Lock()
+		limitedByProxy := r.URL.Path == "/api/auth/ok" && s.probeRateLimitedByProxy
+		s.mu.Unlock()
+
+		if limitedByProxy {
+			proxyRateLimited(w)
+
+			return
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write([]byte("<!DOCTYPE html><html><body>Uptime Kuma</body></html>"))
 
@@ -442,6 +473,7 @@ func (s *fakeAckServer) sendAuthModeHTTP(session *fakeSession) {
 	auto := s.autoLogin
 	strip := s.stripCookie
 	delay := s.loginRequiredDelay
+	setupDelay := s.setupDelay
 	suppressLists := s.suppressLists
 	s.mu.Unlock()
 
@@ -451,6 +483,19 @@ func (s *fakeAckServer) sendAuthModeHTTP(session *fakeSession) {
 	}
 
 	switch {
+	case needsSetup && setupDelay > 0:
+		// The events in the order the per-handler goroutines of a real client
+		// can apply them, see setLateSetup: the client reads a server that
+		// wants a login, with its sign-in already rejected, and only then
+		// learns that a setup is what it was rejected for.
+		s.sendTo(session, []byte(`42["loginRequired"]`))
+
+		go func() {
+			time.Sleep(setupDelay)
+
+			s.sendTo(session, []byte(`42["setup"]`))
+		}()
+
 	case needsSetup:
 		s.sendTo(session, []byte("42[\"setup\"]\x1e42[\"loginRequired\"]"))
 

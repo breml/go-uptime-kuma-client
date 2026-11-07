@@ -173,12 +173,21 @@ type twoFactorEnableResponse struct {
 // detectAuthScheme asks the server how it authenticates, see AuthSchemeHTTP.
 //
 // The probe is better-auth's health endpoint, which a 3.x server answers with
-// JSON, as it answers every request under /api/auth/ - its refusals and its
-// rate limiting included. A 2.x server has no such route and answers the
-// request with the single-page application its catch-all serves for any
-// unknown path, as HTML. The media type is therefore what tells them apart,
-// not the status: a 429 from the rate limiter is as much a 3.x answer as the
-// 200.
+// JSON. A 2.x server has no such route and answers the request with the
+// single-page application its catch-all serves for any unknown path, as HTML
+// and with a 200. The media type is therefore what tells them apart, with one
+// exception: the better-auth of the early 3.0 nightlies answered a limited
+// request with a 429 whose body is JSON but whose media type is text/plain
+// (later versions say application/json, better-auth #11469), so the status
+// settles that one. A 2.x server never rate limits the path, so a 429 is as
+// much a 3.x answer as the 200, as long as it is better-auth's: its limiter
+// states the wait in a header of its own, X-Retry-After, which a proxy in
+// front of a 2.x server that limits the path does not send.
+//
+// The limited probe is not reported as a RateLimitedError: the limiter keeps a
+// bucket per client address and path, so a probe over its limit says nothing
+// about the sign-in, which reports its own refusal with the wait the server
+// asked for.
 func (a *betterAuthClient) detectAuthScheme(ctx context.Context) (AuthScheme, error) {
 	ctx, cancel := context.WithTimeout(ctx, betterAuthProbeTimeout)
 	defer cancel()
@@ -199,7 +208,8 @@ func (a *betterAuthClient) detectAuthScheme(ctx context.Context) (AuthScheme, er
 	// matter.
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
 
-	if isJSON(resp.Header.Get("Content-Type")) {
+	limitedByBetterAuth := resp.StatusCode == http.StatusTooManyRequests && resp.Header.Get("X-Retry-After") != ""
+	if limitedByBetterAuth || isJSON(resp.Header.Get("Content-Type")) {
 		return AuthSchemeHTTP, nil
 	}
 

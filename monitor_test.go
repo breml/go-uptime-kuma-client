@@ -2,11 +2,13 @@ package kuma_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	kuma "github.com/breml/go-uptime-kuma-client"
 	"github.com/breml/go-uptime-kuma-client/dockerhost"
 	"github.com/breml/go-uptime-kuma-client/monitor"
 )
@@ -2291,4 +2293,76 @@ func TestMonitorPingTimeoutBelowPerRequestDefault(t *testing.T) {
 	err = client.GetMonitorAs(ctx, monitorID, &updated)
 	require.NoError(t, err)
 	require.Equal(t, new(float64(1)), updated.Timeout)
+}
+
+// TestGetMonitorsListShape pins what the monitor list describes on each server
+// line, see GetMonitors: a 3.x server sends compact entries that identify the
+// monitor and leave every other field at its zero value, with Description
+// standing in for the fields the compact form drops, while GetMonitor returns
+// the full monitor on both lines. If this assertion fails, the server changed
+// the payload and the GetMonitors documentation and the README have to follow.
+func TestGetMonitorsListShape(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	description := "list shape " + randomString(8)
+
+	ping := &monitor.Ping{
+		Base: monitor.Base{
+			Name:          "Test List Shape",
+			Description:   &description,
+			Interval:      60,
+			RetryInterval: 60,
+			MaxRetries:    0,
+			IsActive:      false,
+		},
+		PingDetails: monitor.PingDetails{
+			Hostname:   "127.0.0.1",
+			PacketSize: 56,
+			Timeout:    new(float64(1)),
+		},
+	}
+
+	monitorID, err := client.CreateMonitor(ctx, ping)
+	require.NoError(t, err)
+
+	defer func() {
+		err := client.DeleteMonitor(ctx, monitorID)
+		require.NoError(t, err)
+	}()
+
+	monitors, err := client.GetMonitors(ctx)
+	require.NoError(t, err)
+
+	index := slices.IndexFunc(monitors, func(m monitor.Base) bool { return m.ID == monitorID })
+	require.NotEqual(t, -1, index, "the list identifies the monitor on both lines")
+
+	listed := monitors[index]
+	require.Equal(t, "Test List Shape", listed.Name)
+	require.Equal(t, "ping", listed.Type())
+	require.Equal(t, int64(60), listed.Interval)
+
+	full, err := client.GetMonitor(ctx, monitorID)
+	require.NoError(t, err)
+	require.NotNil(t, full.Description)
+	require.Equal(t, description, *full.Description)
+
+	switch client.AuthScheme() {
+	case kuma.AuthSchemeHTTP:
+		require.Nil(t, listed.Description, "a 3.x server sends the list in its compact form")
+
+	case kuma.AuthSchemeSocket:
+		require.NotNil(t, listed.Description, "a 2.x server sends the full monitors")
+		require.Equal(t, description, *listed.Description)
+
+	case kuma.AuthSchemeAuto:
+		t.Fatal("the client reports the scheme it detected, never auto")
+
+	default:
+		t.Fatalf("unexpected auth scheme %s", client.AuthScheme())
+	}
 }
