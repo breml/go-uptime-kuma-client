@@ -786,24 +786,22 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	switch c.scheme {
 	case AuthSchemeHTTP:
 		err = c.confirmSession(ctxWithConnectTimeout, creds, conn.barrier(), httpLoginErr)
-		if err != nil {
-			return nil, err
-		}
 
 	case AuthSchemeSocket, AuthSchemeAuto:
 		err = c.authenticate(ctxWithConnectTimeout, creds, conn.barrier())
-		if err != nil {
-			// A server that is not set up yet rejects the credentials it does
-			// not have a user for; running the setup is what makes them work,
-			// so that is not a failure when the server asked for one.
-			if !errors.Is(err, ErrInvalidCredentials) ||
-				!setupPending(ctxWithConnectTimeout, setupRequired) {
-				return nil, err
-			}
-		}
 
 	default:
 		return nil, fmt.Errorf("auth scheme: unknown: %d", c.scheme)
+	}
+
+	// A server that is not set up yet rejects the credentials it does not have
+	// a user for; running the setup is what makes them work, so that is not a
+	// failure when the server asked for one. The setup event may still be on
+	// its way when the rejection is read, on both server lines, see
+	// setupPending.
+	if err != nil && (!errors.Is(err, ErrInvalidCredentials) ||
+		!setupPending(ctxWithConnectTimeout, setupRequired)) {
+		return nil, err
 	}
 
 	// Both success paths hand the client over through returnReady, so neither

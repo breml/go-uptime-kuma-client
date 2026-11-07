@@ -177,6 +177,10 @@ What differs on a 3.x server, beyond the token's expiry:
   no command that resends every list. Commands in flight finish first.
 - There is no replay guard on one-time codes, so two clients may log in with the
   same code.
+- `GetMonitors` returns compact entries: ID, name, type, active, parent, path
+  name, interval and tags, with every other field at its zero value.
+  The list identifies monitors; `GetMonitor` and `GetMonitorAs` describe them,
+  on both server lines.
 - User IDs are opaque strings instead of numbers. The `UserID` field of
   notifications, proxies and Docker hosts is therefore an `ids.UserID`, which
   decodes both forms and writes each back the way it came; `Int64()` returns the
