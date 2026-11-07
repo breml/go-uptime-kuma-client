@@ -176,14 +176,18 @@ type twoFactorEnableResponse struct {
 // JSON. A 2.x server has no such route and answers the request with the
 // single-page application its catch-all serves for any unknown path, as HTML
 // and with a 200. The media type is therefore what tells them apart, with one
-// exception: better-auth's rate limiter answers a 429 whose body is JSON but
-// whose media type is text/plain, so the status settles that one. A 2.x
-// server never rate limits the path, so a 429 is as much a 3.x answer as the
-// 200.
+// exception: the better-auth of the early 3.0 nightlies answered a limited
+// request with a 429 whose body is JSON but whose media type is text/plain
+// (later versions say application/json, better-auth #11469), so the status
+// settles that one. A 2.x server never rate limits the path, so a 429 is as
+// much a 3.x answer as the 200, as long as it is better-auth's: its limiter
+// states the wait in a header of its own, X-Retry-After, which a proxy in
+// front of a 2.x server that limits the path does not send.
 //
 // The limited probe is not reported as a RateLimitedError: the limiter keeps a
-// bucket per path, so a probe over its limit says nothing about the sign-in,
-// which reports its own refusal with the wait the server asked for.
+// bucket per client address and path, so a probe over its limit says nothing
+// about the sign-in, which reports its own refusal with the wait the server
+// asked for.
 func (a *betterAuthClient) detectAuthScheme(ctx context.Context) (AuthScheme, error) {
 	ctx, cancel := context.WithTimeout(ctx, betterAuthProbeTimeout)
 	defer cancel()
@@ -204,7 +208,8 @@ func (a *betterAuthClient) detectAuthScheme(ctx context.Context) (AuthScheme, er
 	// matter.
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
 
-	if resp.StatusCode == http.StatusTooManyRequests || isJSON(resp.Header.Get("Content-Type")) {
+	limitedByBetterAuth := resp.StatusCode == http.StatusTooManyRequests && resp.Header.Get("X-Retry-After") != ""
+	if limitedByBetterAuth || isJSON(resp.Header.Get("Content-Type")) {
 		return AuthSchemeHTTP, nil
 	}
 

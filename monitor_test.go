@@ -2297,10 +2297,10 @@ func TestMonitorPingTimeoutBelowPerRequestDefault(t *testing.T) {
 
 // TestGetMonitorsListShape pins what the monitor list describes on each server
 // line, see GetMonitors: a 3.x server sends compact entries that identify the
-// monitor and carry its tags, and leaves every other field at its zero value,
-// while GetMonitor returns the full monitor on both lines. A change in this
-// assertion means the server changed the payload and the documentation has to
-// follow.
+// monitor and leave every other field at its zero value, with Description
+// standing in for the fields the compact form drops, while GetMonitor returns
+// the full monitor on both lines. If this assertion fails, the server changed
+// the payload and the GetMonitors documentation and the README have to follow.
 func TestGetMonitorsListShape(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")

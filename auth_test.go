@@ -30,6 +30,25 @@ func newAuthFake(t *testing.T) (fake *fakeAckServer, url string) {
 	return fake, server.URL
 }
 
+// TestNewProbeRateLimitedByProxy covers a 2.x server behind a proxy that rate
+// limits the auth scheme probe: a 429 that does not carry better-auth's
+// X-Retry-After header is not a 3.x answer, and the client logs in over the
+// socket as it would have without the proxy.
+func TestNewProbeRateLimitedByProxy(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setProbeRateLimitedByProxy(true)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	require.Equal(t, kuma.AuthSchemeSocket, client.AuthScheme())
+}
+
 // TestNewTwoFactorRequired covers the account with two-factor authentication
 // enabled. The server answers such a login with an ack that carries neither an
 // ok nor a message, which without the typed error surfaces as an error with an

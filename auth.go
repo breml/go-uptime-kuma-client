@@ -203,10 +203,15 @@ const authBarrierWait = 500 * time.Millisecond
 // arrived yet, to settle its race with the ack of the login the server rejects
 // because it has no users to match against.
 //
+// The race is between handler goroutines of one connection, so the event is
+// normally in within a millisecond; the window is wide enough for a loaded
+// host because it is only ever paid on a rejected login, where it delays the
+// error and nothing else.
+//
 // It is a variable so the tests can widen it, see export_test.go.
 //
 //nolint:gochecknoglobals // widened by the tests, constant everywhere else.
-var setupEventGrace = 10 * time.Millisecond
+var setupEventGrace = 250 * time.Millisecond
 
 // authMode is how the server wants the connection to be authenticated, as the
 // events it emits right after the connect state it.
@@ -360,9 +365,11 @@ func (b authBarrier) await(ctx context.Context) authMode {
 
 	// A server that wants to be set up emits setup before it states how it
 	// wants to be authenticated, so by the time either of those events is in,
-	// a setup that is coming has been delivered too. Answering it here rather
-	// than from the select above is what keeps a server that sent both from
-	// being read one way or the other at random.
+	// a setup that is coming has usually been delivered too. Answering it here
+	// rather than from the select above is what keeps a server that sent both
+	// from being read one way or the other at random. The handlers run on
+	// goroutines of their own, so the setup may still be in flight; that is
+	// what setupPending covers.
 	if isRequested(b.setupRequired) {
 		return authModeSetup
 	}
@@ -625,10 +632,11 @@ func (c *Client) keepSessionCookie() error {
 // authenticateHTTP, see AuthSchemeHTTP. loginErr is what authenticateHTTP
 // reported, which New carried on past only for a rejection that a setup
 // event explains. The rejection is handed back when the server asks for a
-// login instead, and New re-examines it against a setup event that may still
-// be in flight, see setupPending: the server emits setup before loginRequired,
-// but the handlers run on goroutines of their own, so the barrier can read the
-// second before the first has been applied.
+// login instead, or stated no auth mode in time, and New re-examines it
+// against a setup event that may still be in flight, see setupPending: the
+// server emits setup before loginRequired, but the handlers run on goroutines
+// of their own, so the barrier can read the second before the first has been
+// applied.
 //
 // A server that authenticated the connection without being handed a session
 // cookie has authentication disabled and is treated like the autoLogin of a

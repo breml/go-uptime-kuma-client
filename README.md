@@ -178,7 +178,7 @@ What differs on a 3.x server, beyond the token's expiry:
 - There is no replay guard on one-time codes, so two clients may log in with the
   same code.
 - `GetMonitors` returns compact entries: ID, name, type, active, parent, path
-  name, interval, tags and weight, with every other field at its zero value.
+  name, interval and tags, with every other field at its zero value.
   The list identifies monitors; `GetMonitor` and `GetMonitorAs` describe them,
   on both server lines.
 - User IDs are opaque strings instead of numbers. The `UserID` field of
