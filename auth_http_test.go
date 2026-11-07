@@ -430,6 +430,57 @@ func TestNewHTTPAutosetup(t *testing.T) {
 	require.Equal(t, int64(fakeSeededNotificationID), notif.GetID())
 }
 
+// TestNewHTTPSetupFallbackAfterLateSetupEvent covers the setup fallback when
+// the barrier reads loginRequired before the setup event has been applied: the
+// server emits setup first, but a real client dispatches every handler on its
+// own goroutine, so the carried rejection of the sign-in is re-examined against
+// a setup event still in flight rather than handed to the caller.
+func TestNewHTTPSetupFallbackAfterLateSetupEvent(t *testing.T) {
+	t.Cleanup(kuma.SetSetupEventGrace(2 * time.Second))
+
+	fake, url := newHTTPAuthFake(t)
+	fake.setLateSetup()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"admin",
+		"admin1",
+		kuma.WithAutosetup(),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	require.Equal(t, 2, fake.loginFrameCount(), "the sign-in the setup explains, and the one after it")
+	require.Equal(t, 2, fake.handshakeCount(), "the connection made before the setup carries no session")
+	require.Equal(t, fakeSessionToken, client.SessionToken())
+}
+
+// TestNewHTTPSetupRequiredWithoutAutosetup covers the same server for a caller
+// that did not ask for the setup to be run: the rejection it gets has to say
+// that the server wants to be set up, not that the password is wrong.
+func TestNewHTTPSetupRequiredWithoutAutosetup(t *testing.T) {
+	t.Cleanup(kuma.SetSetupEventGrace(2 * time.Second))
+
+	fake, url := newHTTPAuthFake(t)
+	fake.setLateSetup()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+
+	require.Error(t, err)
+	require.Nil(t, client)
+	require.NotErrorIs(t, err, kuma.ErrInvalidCredentials)
+	require.Contains(t, err.Error(), "autosetup is disabled")
+}
+
 // TestResyncHTTP covers the resync against a 3.x server, which has no command
 // that resends every list: the client connects again with its cookie, and the
 // server answers the new connection the way it answered the first.

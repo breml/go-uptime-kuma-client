@@ -411,15 +411,20 @@ func (s *fakeAckServer) setSetupRequired() {
 	s.setupRequired = true
 }
 
+// lateSetupDelay is how long setLateSetup holds the setup event back: long
+// enough for the client to have read the login request and answered it, and
+// well inside the grace the tests widen setupPending to.
+const lateSetupDelay = 50 * time.Millisecond
+
 // setLateSetup makes the server state that it wants a login first and send the
-// setup event only after d, the way the per-handler goroutines of a real client
-// can deliver two events of one payload in that order.
-func (s *fakeAckServer) setLateSetup(d time.Duration) {
+// setup event only lateSetupDelay later, the way the per-handler goroutines of
+// a real client can deliver two events of one payload in that order.
+func (s *fakeAckServer) setLateSetup() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.setupRequired = true
-	s.setupDelay = d
+	s.setupDelay = lateSetupDelay
 }
 
 func (s *fakeAckServer) runSetup() {

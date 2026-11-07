@@ -257,8 +257,10 @@ func unknownSession(w http.ResponseWriter) {
 	_, _ = w.Write([]byte(`{"code":1,"message":"Session ID unknown"}`))
 }
 
-// rateLimited answers a request the way better-auth's rate limiter does.
+// rateLimited answers a request the way better-auth's rate limiter does: a
+// JSON body under a text/plain media type.
 func rateLimited(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/plain;charset=UTF-8")
 	w.Header().Set("X-Retry-After", strconv.Itoa(fakeRetryAfter))
 	w.WriteHeader(http.StatusTooManyRequests)
 	_, _ = w.Write([]byte(`{"message":"Too many requests. Please try again later."}`))
@@ -442,6 +444,7 @@ func (s *fakeAckServer) sendAuthModeHTTP(session *fakeSession) {
 	auto := s.autoLogin
 	strip := s.stripCookie
 	delay := s.loginRequiredDelay
+	setupDelay := s.setupDelay
 	suppressLists := s.suppressLists
 	s.mu.Unlock()
 
@@ -451,6 +454,19 @@ func (s *fakeAckServer) sendAuthModeHTTP(session *fakeSession) {
 	}
 
 	switch {
+	case needsSetup && setupDelay > 0:
+		// The events in the order the per-handler goroutines of a real client
+		// can apply them, see setLateSetup: the client reads a server that
+		// wants a login, with its sign-in already rejected, and only then
+		// learns that a setup is what it was rejected for.
+		s.sendTo(session, []byte(`42["loginRequired"]`))
+
+		go func() {
+			time.Sleep(setupDelay)
+
+			s.sendTo(session, []byte(`42["setup"]`))
+		}()
+
 	case needsSetup:
 		s.sendTo(session, []byte("42[\"setup\"]\x1e42[\"loginRequired\"]"))
 

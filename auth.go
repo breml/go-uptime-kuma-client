@@ -624,7 +624,11 @@ func (c *Client) keepSessionCookie() error {
 // confirmSession reads how the server authenticated a connection made after
 // authenticateHTTP, see AuthSchemeHTTP. loginErr is what authenticateHTTP
 // reported, which New carried on past only for a rejection that a setup
-// event explains.
+// event explains. The rejection is handed back when the server asks for a
+// login instead, and New re-examines it against a setup event that may still
+// be in flight, see setupPending: the server emits setup before loginRequired,
+// but the handlers run on goroutines of their own, so the barrier can read the
+// second before the first has been applied.
 //
 // A server that authenticated the connection without being handed a session
 // cookie has authentication disabled and is treated like the autoLogin of a

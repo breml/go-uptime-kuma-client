@@ -203,7 +203,7 @@ func TestNewSetupFallbackAfterLateSetupEvent(t *testing.T) {
 	t.Cleanup(kuma.SetSetupEventGrace(2 * time.Second))
 
 	fake, url := newAuthFake(t)
-	fake.setLateSetup(50 * time.Millisecond)
+	fake.setLateSetup()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -235,7 +235,7 @@ func TestNewSetupRequiredWithoutAutosetup(t *testing.T) {
 	t.Cleanup(kuma.SetSetupEventGrace(2 * time.Second))
 
 	fake, url := newAuthFake(t)
-	fake.setLateSetup(50 * time.Millisecond)
+	fake.setLateSetup()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -260,7 +260,7 @@ func TestNewSetupFallbackUntranslatedRejection(t *testing.T) {
 	t.Cleanup(kuma.SetSetupEventGrace(2 * time.Second))
 
 	fake, url := newAuthFake(t)
-	fake.setLateSetup(50 * time.Millisecond)
+	fake.setLateSetup()
 	fake.setCredsRejectionMsg(untranslatedCredsRejection)
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
