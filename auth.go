@@ -59,6 +59,34 @@ var ErrInvalidSessionToken = errors.New("session token rejected")
 // back, see WithSessionToken.
 var ErrUserInactive = fmt.Errorf("%w: user inactive or deleted", ErrInvalidSessionToken)
 
+// SessionTokenFallbackError is returned when the server refused the session
+// token given to WithSessionToken and the password login that followed failed
+// too, see WithSessionToken.
+//
+// It wraps both errors, so errors.Is matches ErrInvalidSessionToken on it
+// whatever the password login failed with, and matches the password failure
+// as well. A caller that has to tell the two apart - the token rejection is
+// permanent, while a password login that timed out or was rate limited is
+// worth another attempt - reads PasswordErr through errors.As instead.
+type SessionTokenFallbackError struct {
+	// TokenErr is the error the session token was refused with. It wraps
+	// ErrInvalidSessionToken.
+	TokenErr error
+	// PasswordErr is the error the password login that followed failed with.
+	PasswordErr error
+}
+
+// Error names both failures, the token rejection first, because it is what
+// sent the login to the password.
+func (e *SessionTokenFallbackError) Error() string {
+	return fmt.Sprintf("%v, and the password login that followed: %v", e.TokenErr, e.PasswordErr)
+}
+
+// Unwrap returns the token rejection and the password failure.
+func (e *SessionTokenFallbackError) Unwrap() []error {
+	return []error{e.TokenErr, e.PasswordErr}
+}
+
 // ErrRateLimited is returned when the server refuses a login because too many
 // were attempted in a short time. The server allows 20 per minute and answers
 // the ones beyond that with an untranslated sentence rather than a key.
@@ -83,8 +111,9 @@ var ErrRateLimited = errors.New("too many login attempts, rate limited by the se
 // succeeds either way and the stored token is dead. The fallback is skipped
 // where the password cannot help: for a deactivated or deleted user, see
 // ErrUserInactive, and for a failure that is not a rejection at all, such as a
-// transport error. Without a username and password a rejected token fails New
-// with ErrInvalidSessionToken.
+// transport error. A password login that fails as well fails New with a
+// *SessionTokenFallbackError carrying both errors. Without a username and
+// password a rejected token fails New with ErrInvalidSessionToken.
 //
 // Security: the token is a bearer credential that does not expire. The server
 // invalidates it only when the password changes or the user is deactivated,
@@ -490,7 +519,7 @@ func (c *Client) authenticate(ctx context.Context, creds credentials, barrier au
 		if err != nil {
 			// The rejected token is what sent the login down this path, which
 			// the password failure on its own does not say.
-			return fmt.Errorf("%w, and the password login that followed: %w", tokenErr, err)
+			return &SessionTokenFallbackError{TokenErr: tokenErr, PasswordErr: err}
 		}
 
 		c.setSessionTokenRejected()
@@ -551,7 +580,7 @@ func (c *Client) authenticateHTTP(ctx context.Context, creds credentials) error 
 
 		err := c.signInHTTP(ctx, creds.username, creds.password)
 		if err != nil {
-			return fmt.Errorf("%w, and the password login that followed: %w", tokenErr, err)
+			return &SessionTokenFallbackError{TokenErr: tokenErr, PasswordErr: err}
 		}
 
 		c.setSessionTokenRejected()

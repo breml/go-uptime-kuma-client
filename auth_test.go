@@ -3,6 +3,7 @@ package kuma_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http/httptest"
 	"os"
 	"strconv"
@@ -577,7 +578,7 @@ func TestNewTOTPSecretRejected(t *testing.T) {
 
 	client, err := kuma.New(ctx, "http://127.0.0.1:1", "admin", "admin1", kuma.WithTOTPSecret("!!!"))
 
-	require.Error(t, err)
+	require.ErrorIs(t, err, kuma.ErrInvalidTOTPSecret)
 	require.Contains(t, err.Error(), "totp secret")
 	require.Nil(t, client)
 }
@@ -932,6 +933,13 @@ func TestNewRejectedSessionTokenAndPassword(t *testing.T) {
 	require.ErrorIs(t, err, kuma.ErrInvalidCredentials)
 	require.ErrorIs(t, err, kuma.ErrInvalidSessionToken,
 		"the rejected token is what sent the login to the password")
+
+	var fallbackErr *kuma.SessionTokenFallbackError
+	require.ErrorAs(t, err, &fallbackErr, "the two halves can be told apart")
+	require.ErrorIs(t, fallbackErr.TokenErr, kuma.ErrInvalidSessionToken)
+	require.ErrorIs(t, fallbackErr.PasswordErr, kuma.ErrInvalidCredentials)
+	require.NotErrorIs(t, fallbackErr.PasswordErr, kuma.ErrInvalidSessionToken,
+		"the password half does not carry the token rejection")
 }
 
 // TestNewSessionTokenUserInactive covers the rejection a password cannot
@@ -1191,4 +1199,34 @@ func TestNewSessionTokenAcceptedSkipsCallback(t *testing.T) {
 
 	require.False(t, called)
 	require.False(t, client.SessionTokenRejected())
+}
+
+// TestSessionTokenFallbackError covers the error type on its own: both halves
+// match through errors.Is and errors.As, also once wrapped, and the message
+// names the token rejection first.
+func TestSessionTokenFallbackError(t *testing.T) {
+	passwordErr := &kuma.RateLimitedError{RetryAfter: time.Second}
+
+	var err error = &kuma.SessionTokenFallbackError{
+		TokenErr:    kuma.ErrInvalidSessionToken,
+		PasswordErr: passwordErr,
+	}
+
+	err = fmt.Errorf("login: %w", err)
+
+	require.ErrorIs(t, err, kuma.ErrInvalidSessionToken)
+	require.ErrorIs(t, err, kuma.ErrRateLimited)
+
+	var rateLimited *kuma.RateLimitedError
+	require.ErrorAs(t, err, &rateLimited)
+	require.Equal(t, time.Second, rateLimited.RetryAfter)
+
+	var fallbackErr *kuma.SessionTokenFallbackError
+	require.ErrorAs(t, err, &fallbackErr)
+	require.Same(t, passwordErr, fallbackErr.PasswordErr)
+
+	require.Equal(t,
+		"login: session token rejected, and the password login that followed: "+passwordErr.Error(),
+		err.Error(),
+	)
 }
