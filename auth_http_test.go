@@ -372,6 +372,32 @@ func TestNewHTTPSessionToken(t *testing.T) {
 		require.Contains(t, fake.handshakeCookies()[0], fakeSessionCookie+"="+fakeSessionToken,
 			"the handshake carries the fresh cookie, not the stale one")
 	})
+
+	t.Run("a rejected token and a rejected password are told apart", func(t *testing.T) {
+		fake, url := newHTTPAuthFake(t)
+		fake.setRejectToken()
+		fake.setRejectCreds()
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		client, err := kuma.New(
+			ctx,
+			url,
+			"admin",
+			"outdated",
+			kuma.WithSessionToken("stale-token"),
+			kuma.WithConnectTimeout(5*time.Second),
+		)
+		require.Nil(t, client)
+		require.ErrorIs(t, err, kuma.ErrInvalidSessionToken)
+		require.ErrorIs(t, err, kuma.ErrInvalidCredentials)
+
+		var fallbackErr *kuma.SessionTokenFallbackError
+		require.ErrorAs(t, err, &fallbackErr)
+		require.ErrorIs(t, fallbackErr.TokenErr, kuma.ErrInvalidSessionToken)
+		require.ErrorIs(t, fallbackErr.PasswordErr, kuma.ErrInvalidCredentials)
+	})
 }
 
 // TestNewHTTPAutoLogin covers the 3.x server with authentication disabled: it

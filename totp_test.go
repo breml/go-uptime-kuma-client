@@ -72,14 +72,18 @@ func TestNormalizeTOTPSecret(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got, err := kuma.NormalizeTOTPSecret(test.secret)
+			validateErr := kuma.ValidateTOTPSecret(test.secret)
 
 			if test.wantErr {
-				require.Error(t, err)
+				require.ErrorIs(t, err, kuma.ErrInvalidTOTPSecret)
+				require.ErrorIs(t, validateErr, kuma.ErrInvalidTOTPSecret,
+					"ValidateTOTPSecret rejects what New rejects")
 
 				return
 			}
 
 			require.NoError(t, err)
+			require.NoError(t, validateErr, "ValidateTOTPSecret accepts what New accepts")
 			require.Equal(t, test.want, got)
 		})
 	}

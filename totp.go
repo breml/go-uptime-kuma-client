@@ -15,6 +15,22 @@ import (
 // with, see twoFAVerifyOptions in the server's server.js.
 const totpStep = 30 * time.Second
 
+// ErrInvalidTOTPSecret is returned when a TOTP secret is empty or not base32,
+// so no one-time code can be derived from it. New reports it for the secret
+// given to WithTOTPSecret, before any connection is made, and
+// ValidateTOTPSecret reports it for a secret checked up front.
+var ErrInvalidTOTPSecret = errors.New("invalid totp secret")
+
+// ValidateTOTPSecret reports whether secret is one WithTOTPSecret accepts,
+// wrapping ErrInvalidTOTPSecret when it is not. It applies the same rules, so
+// a caller can reject a malformed secret where it is configured, for example
+// in a configuration validator, rather than only once New runs.
+func ValidateTOTPSecret(secret string) error {
+	_, err := normalizeTOTPSecret(secret)
+
+	return err
+}
+
 // normalizeTOTPSecret returns the secret in the padded upper-case base32 form
 // base32.StdEncoding decodes, and reports a secret it cannot decode.
 //
@@ -27,7 +43,7 @@ const totpStep = 30 * time.Second
 func normalizeTOTPSecret(secret string) (string, error) {
 	normalized := strings.ToUpper(strings.NewReplacer(" ", "", "-", "", "=", "").Replace(secret))
 	if normalized == "" {
-		return "", errors.New("totp secret: empty")
+		return "", fmt.Errorf("%w: empty", ErrInvalidTOTPSecret)
 	}
 
 	if padding := len(normalized) % 8; padding != 0 {
@@ -36,7 +52,7 @@ func normalizeTOTPSecret(secret string) (string, error) {
 
 	_, err := base32.StdEncoding.DecodeString(normalized)
 	if err != nil {
-		return "", fmt.Errorf("totp secret: not base32: %w", err)
+		return "", fmt.Errorf("%w: not base32: %w", ErrInvalidTOTPSecret, err)
 	}
 
 	return normalized, nil
