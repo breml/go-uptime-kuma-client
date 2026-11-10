@@ -44,3 +44,9 @@ func SetDefaultOperationTimeout(d time.Duration) func() {
 
 	return func() { defaultOperationTimeout = previous }
 }
+
+// AdaptMonitorPayload runs the payload rewrite of CreateMonitor and
+// UpdateMonitor for a client that authenticated with scheme.
+func AdaptMonitorPayload(scheme AuthScheme, monitorData map[string]any) {
+	(&Client{scheme: scheme}).adaptMonitorPayload(monitorData)
+}
