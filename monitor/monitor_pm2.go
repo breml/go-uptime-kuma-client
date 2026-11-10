@@ -38,6 +38,15 @@ func (p *PM2) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("unmarshal pm2 monitor details: %w", err)
 	}
 
+	name, ok, err := systemServiceNameFromConfig(data)
+	if err != nil {
+		return fmt.Errorf("unmarshal pm2 monitor details: %w", err)
+	}
+
+	if ok {
+		details.ProcessName = name
+	}
+
 	*p = PM2{
 		Base:       base,
 		PM2Details: details,
@@ -111,9 +120,10 @@ type PM2Details struct {
 	// an empty (or whitespace-only) value, the remaining rules are enforced
 	// by the server only.
 	//
-	// Note: the wire field is shared with the system-service monitor and the
-	// upstream API uses snake_case for it, unlike most other Uptime Kuma
-	// fields.
+	// Note: the wire field is shared with the system-service monitor. A 2.x
+	// server takes it as the top-level snake_case system_service_name, a 3.x
+	// server as config.systemServiceName; the client translates on both write
+	// and read.
 	ProcessName string `json:"system_service_name"`
 }
 

@@ -104,6 +104,7 @@ func (c *Client) CreateMonitor(ctx context.Context, mon monitor.Monitor) (int64,
 	}
 
 	monitorData["notificationIDList"] = notificationIDList
+	c.adaptMonitorPayload(monitorData)
 
 	response, err := c.syncEmitWithConfirmedUpdateEvent(
 		ctx, "add", "updateMonitorIntoList",
@@ -150,6 +151,7 @@ func (c *Client) UpdateMonitor(ctx context.Context, mon monitor.Monitor) error {
 	}
 
 	monitorData["notificationIDList"] = notificationIDList
+	c.adaptMonitorPayload(monitorData)
 
 	_, err = c.syncEmitWithUpdateEvent(ctx, "editMonitor", "updateMonitorIntoList", monitorData)
 	if err != nil {
@@ -157,6 +159,40 @@ func (c *Client) UpdateMonitor(ctx context.Context, mon monitor.Monitor) error {
 	}
 
 	return nil
+}
+
+// adaptMonitorPayload rewrites a create or edit payload into the shape the
+// server line expects.
+//
+// Uptime Kuma 3.x keeps the name of a pm2 or system-service monitor in the
+// monitor's config, see AuthSchemeHTTP: it takes the name only as
+// config.systemServiceName and has dropped the system_service_name column. A
+// 2.x server has no config column and takes system_service_name. Both servers
+// import an add payload into the frozen monitor table as is, so a payload
+// carrying both fields fails on either line; the field is moved instead.
+func (c *Client) adaptMonitorPayload(monitorData map[string]any) {
+	if c.scheme != AuthSchemeHTTP {
+		return
+	}
+
+	name, ok := monitorData["system_service_name"]
+	if !ok {
+		return
+	}
+
+	delete(monitorData, "system_service_name")
+
+	if name == nil {
+		return
+	}
+
+	config, ok := monitorData["config"].(map[string]any)
+	if !ok {
+		config = map[string]any{}
+	}
+
+	config["systemServiceName"] = name
+	monitorData["config"] = config
 }
 
 // DeleteMonitor deletes a monitor by ID.

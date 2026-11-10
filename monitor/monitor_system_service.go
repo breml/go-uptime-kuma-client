@@ -36,6 +36,15 @@ func (s *SystemService) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("unmarshal system-service monitor details: %w", err)
 	}
 
+	name, ok, err := systemServiceNameFromConfig(data)
+	if err != nil {
+		return fmt.Errorf("unmarshal system-service monitor details: %w", err)
+	}
+
+	if ok {
+		details.SystemServiceName = name
+	}
+
 	*s = SystemService{
 		Base:                 base,
 		SystemServiceDetails: details,
@@ -96,7 +105,9 @@ type SystemServiceDetails struct {
 	// the check runs: on Linux (systemd) alphanumeric plus '.', '_', '-', and
 	// '@' (e.g. "nginx.service", "sshd@0.service"), on Windows alphanumeric plus
 	// '.', '_', '-' (e.g. "Spooler").
-	// Note: the upstream API uses snake_case for this field, unlike most other Uptime Kuma fields.
+	// Note: a 2.x server takes this as the top-level snake_case
+	// system_service_name, a 3.x server as config.systemServiceName; the client
+	// translates on both write and read.
 	SystemServiceName string `json:"system_service_name"`
 }
 
