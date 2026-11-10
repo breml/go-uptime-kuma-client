@@ -162,14 +162,16 @@ func (c *Client) UpdateMonitor(ctx context.Context, mon monitor.Monitor) error {
 }
 
 // adaptMonitorPayload rewrites a create or edit payload into the shape the
-// server line expects.
+// server line expects. The auth scheme tells the lines apart: a client that
+// signed in with AuthSchemeHTTP talks to a 3.x server.
 //
 // Uptime Kuma 3.x keeps the name of a pm2 or system-service monitor in the
-// monitor's config, see AuthSchemeHTTP: it takes the name only as
-// config.systemServiceName and has dropped the system_service_name column. A
-// 2.x server has no config column and takes system_service_name. Both servers
-// import an add payload into the frozen monitor table as is, so a payload
-// carrying both fields fails on either line; the field is moved instead.
+// monitor's config: add and editMonitor read it only from
+// config.systemServiceName, and the system_service_name column is gone. A 2.x
+// server has no config column and reads system_service_name. Sending both
+// fields fails the add on either line: both import the payload into the
+// monitor table as is, and that table is frozen, so a key without a column
+// fails the insert instead of adding the column. The field is moved instead.
 func (c *Client) adaptMonitorPayload(monitorData map[string]any) {
 	if c.scheme != AuthSchemeHTTP {
 		return

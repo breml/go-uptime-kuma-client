@@ -73,7 +73,8 @@ const fakePresetToken = "preset-session-token"
 //
 // It never emits an update event for those commands, so a caller using
 // syncEmitWithUpdateEvent keeps waiting after its ack arrived — the state in
-// which the deadline and the ack collide.
+// which the deadline and the ack collide. The exception are monitor writes
+// once a test turned recordMonitorWrites on.
 type fakeAckServer struct {
 	// messages is the channel the current engine.io session is served from.
 	// A test creates the fake with a buffered one, which the first session
@@ -183,6 +184,10 @@ type fakeAckServer struct {
 	firstLoginAt    time.Time
 	// loginFrames counts the login frames received.
 	loginFrames int
+	// monitorWrites, when non-nil, makes the fake answer the add and
+	// editMonitor commands the way Uptime Kuma does and records the monitor
+	// payload of each, see answerMonitorWrite.
+	monitorWrites map[string][]map[string]any
 }
 
 // loginCode extracts the one-time code a login frame carries.
@@ -776,6 +781,10 @@ func (s *fakeAckServer) handleClientMessage(session *fakeSession, body []byte) {
 				s.sendReadyEvents(session)
 			}
 
+			return
+		}
+
+		if s.answerMonitorWrite(session, ackID, payload) {
 			return
 		}
 

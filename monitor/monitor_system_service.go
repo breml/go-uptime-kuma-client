@@ -105,9 +105,10 @@ type SystemServiceDetails struct {
 	// the check runs: on Linux (systemd) alphanumeric plus '.', '_', '-', and
 	// '@' (e.g. "nginx.service", "sshd@0.service"), on Windows alphanumeric plus
 	// '.', '_', '-' (e.g. "Spooler").
-	// Note: a 2.x server takes this as the top-level snake_case
-	// system_service_name, a 3.x server as config.systemServiceName; the client
-	// translates on both write and read.
+	// Note: a 2.x server uses the top-level snake_case system_service_name, a
+	// 3.x server config.systemServiceName. Decoding accepts either (config
+	// wins), and Client.CreateMonitor and Client.UpdateMonitor send the 3.x
+	// shape to a 3.x server. MarshalJSON always emits the 2.x shape.
 	SystemServiceName string `json:"system_service_name"`
 }
 

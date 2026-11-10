@@ -5,8 +5,8 @@ import (
 	"fmt"
 )
 
-// monitorConfig is the per-type config an Uptime Kuma 3.x server sends with a
-// monitor.
+// monitorConfig holds the keys of an Uptime Kuma 3.x monitor's config that the
+// client reads.
 type monitorConfig struct {
 	SystemServiceName *string `json:"systemServiceName"`
 }

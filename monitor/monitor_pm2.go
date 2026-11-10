@@ -121,9 +121,10 @@ type PM2Details struct {
 	// by the server only.
 	//
 	// Note: the wire field is shared with the system-service monitor. A 2.x
-	// server takes it as the top-level snake_case system_service_name, a 3.x
-	// server as config.systemServiceName; the client translates on both write
-	// and read.
+	// server uses the top-level snake_case system_service_name, a 3.x server
+	// config.systemServiceName. Decoding accepts either (config wins), and
+	// Client.CreateMonitor and Client.UpdateMonitor send the 3.x shape to a 3.x
+	// server. MarshalJSON always emits the 2.x shape.
 	ProcessName string `json:"system_service_name"`
 }
 
