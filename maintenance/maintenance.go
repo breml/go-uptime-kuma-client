@@ -1,7 +1,5 @@
 package maintenance
 
-import "time"
-
 // Maintenance represents an Uptime Kuma maintenance window.
 // Maintenance windows allow scheduling planned downtime to prevent false alerts
 // during scheduled maintenance activities.
@@ -28,10 +26,13 @@ type Maintenance struct {
 	// Only used when Strategy is "recurring-interval".
 	IntervalDay int `json:"intervalDay,omitempty"`
 
-	// DateRange defines the start and end time for the maintenance window.
-	// Array with exactly 2 elements: [startDate, endDate].
-	// Elements can be nil for recurring strategies.
-	DateRange []*time.Time `json:"dateRange"`
+	// DateRange defines the start and end time for the maintenance window:
+	// [startDate, endDate]. The server may return a single element, and
+	// elements can be nil, as for the recurring strategies.
+	// The values are as the server returns them: floating values, see
+	// DateTime, whose digits are wall-clock time in Timezone, such as a window
+	// created in the Uptime Kuma UI holds, or values with an offset.
+	DateRange []*DateTime `json:"dateRange"`
 
 	// TimeRange defines the time of day range for recurring maintenance.
 	// Array with exactly 2 elements: [startTime, endTime].
@@ -95,7 +96,10 @@ type TimeOfDay struct {
 }
 
 // Timeslot represents a scheduled maintenance window with start and end times.
+// For the single strategy they are DateRange as stored, so they can be
+// floating, see DateTime; for the recurring strategies and cron they are
+// instants in UTC.
 type Timeslot struct {
-	StartDate time.Time `json:"startDate"`
-	EndDate   time.Time `json:"endDate"`
+	StartDate DateTime `json:"startDate"`
+	EndDate   DateTime `json:"endDate"`
 }
