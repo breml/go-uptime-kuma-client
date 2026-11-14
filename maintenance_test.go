@@ -526,3 +526,119 @@ func TestClient_MaintenanceEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestClient_MaintenanceFloatingDates(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	start := maintenance.NewFloatingDateTime(time.Date(2030, 1, 15, 10, 30, 0, 0, time.UTC))
+	end := maintenance.NewFloatingDateTime(time.Date(2030, 1, 15, 12, 30, 0, 0, time.UTC))
+
+	floatingWindow := &maintenance.Maintenance{
+		Title:          "Floating Dates",
+		Description:    "Dates in the UI's datetime-local format",
+		Strategy:       "single",
+		Active:         true,
+		DateRange:      []*maintenance.DateTime{&start, &end},
+		TimezoneOption: "Europe/Zurich",
+	}
+
+	_, err := client.CreateMaintenance(ctx, floatingWindow)
+	deleteMaintenanceOnCleanup(t, floatingWindow)
+	require.NoError(t, err)
+
+	floatingID := floatingWindow.ID
+
+	rfc3339Start := maintenance.NewDateTime(time.Date(2030, 2, 1, 8, 0, 0, 0, time.UTC))
+	rfc3339End := maintenance.NewDateTime(time.Date(2030, 2, 1, 10, 0, 0, 0, time.UTC))
+
+	rfc3339Window := maintenance.NewSingleMaintenance(
+		"RFC 3339 Dates", "Dates as written by this client", rfc3339Start.Time(), rfc3339End.Time(), "UTC",
+	)
+
+	_, err = client.CreateMaintenance(ctx, rfc3339Window)
+	deleteMaintenanceOnCleanup(t, rfc3339Window)
+	require.NoError(t, err)
+
+	rfc3339ID := rfc3339Window.ID
+
+	t.Run("get_maintenance_keeps_floating_digits", func(t *testing.T) {
+		got, err := client.GetMaintenance(ctx, floatingID)
+		require.NoError(t, err)
+		require.Equal(t, "Europe/Zurich", got.TimezoneOption)
+		requireDateRange(t, got.DateRange, start, end)
+
+		require.Len(t, got.TimeslotList, 1)
+		require.True(t, start.Equal(got.TimeslotList[0].StartDate), "got %v", got.TimeslotList[0].StartDate)
+		require.True(t, end.Equal(got.TimeslotList[0].EndDate), "got %v", got.TimeslotList[0].EndDate)
+	})
+
+	t.Run("get_maintenances_lists_both", func(t *testing.T) {
+		maintenances, err := client.GetMaintenances(ctx)
+		require.NoError(t, err)
+
+		byID := make(map[int64]maintenance.Maintenance, len(maintenances))
+		for _, m := range maintenances {
+			byID[m.ID] = m
+		}
+
+		require.Contains(t, byID, floatingID)
+		require.Contains(t, byID, rfc3339ID)
+		requireDateRange(t, byID[floatingID].DateRange, start, end)
+		requireDateRange(t, byID[rfc3339ID].DateRange, rfc3339Start, rfc3339End)
+	})
+
+	t.Run("update_keeps_floating_digits", func(t *testing.T) {
+		got, err := client.GetMaintenance(ctx, floatingID)
+		require.NoError(t, err)
+
+		got.Title = "Floating Dates Updated"
+
+		err = client.UpdateMaintenance(ctx, got)
+		require.NoError(t, err)
+
+		updated, err := client.GetMaintenance(ctx, floatingID)
+		require.NoError(t, err)
+		require.Equal(t, "Floating Dates Updated", updated.Title)
+		requireDateRange(t, updated.DateRange, start, end)
+	})
+}
+
+// deleteMaintenanceOnCleanup deletes the maintenance window in, the input of
+// CreateMaintenance, when the test ends. CreateMaintenance sets the ID on its
+// input as soon as the server assigned one, also when it then returns an
+// error, so the window is deleted whenever it was created.
+func deleteMaintenanceOnCleanup(t *testing.T, in *maintenance.Maintenance) {
+	t.Helper()
+
+	t.Cleanup(func() {
+		if in.ID == 0 {
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(t.Context()), 30*time.Second)
+		defer cancel()
+
+		err := client.DeleteMaintenance(ctx, in.ID)
+		require.NoError(t, err)
+	})
+}
+
+func requireDateRange(
+	t *testing.T,
+	dateRange []*maintenance.DateTime,
+	start maintenance.DateTime,
+	end maintenance.DateTime,
+) {
+	t.Helper()
+
+	require.Len(t, dateRange, 2)
+	require.NotNil(t, dateRange[0])
+	require.NotNil(t, dateRange[1])
+	require.True(t, start.Equal(*dateRange[0]), "start: want %v, got %v", start, dateRange[0])
+	require.True(t, end.Equal(*dateRange[1]), "end: want %v, got %v", end, dateRange[1])
+}
