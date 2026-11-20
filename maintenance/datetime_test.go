@@ -59,6 +59,21 @@ func TestDateTime_UnmarshalJSON(t *testing.T) {
 			want:  maintenance.NewDateTime(time.Date(2030, 2, 1, 8, 0, 0, 0, time.UTC)),
 		},
 		{
+			name:  "space separated minutes with utc offset",
+			input: `"2026-06-29 13:39Z"`,
+			want:  maintenance.NewDateTime(time.Date(2026, 6, 29, 13, 39, 0, 0, time.UTC)),
+		},
+		{
+			name:  "space separated minutes with offset",
+			input: `"2026-06-29 13:39+02:00"`,
+			want:  maintenance.NewDateTime(time.Date(2026, 6, 29, 13, 39, 0, 0, plus2)),
+		},
+		{
+			name:  "negative offset with seconds",
+			input: `"2026-06-29T13:39:07-05:00"`,
+			want:  maintenance.NewDateTime(time.Date(2026, 6, 29, 13, 39, 7, 0, time.FixedZone("", -5*60*60))),
+		},
+		{
 			name:  "space separated with offset as python str of an aware datetime",
 			input: `"2030-02-01 08:00:00+00:00"`,
 			want:  maintenance.NewDateTime(time.Date(2030, 2, 1, 8, 0, 0, 0, time.UTC)),
@@ -174,7 +189,8 @@ func TestDateTime_UnmarshalJSON(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := maintenance.NewFloatingDateTime(time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC))
+			before := maintenance.NewFloatingDateTime(time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC))
+			got := before
 
 			err := json.Unmarshal([]byte(tc.input), &got)
 			if len(tc.wantErr) > 0 {
@@ -183,6 +199,8 @@ func TestDateTime_UnmarshalJSON(t *testing.T) {
 				for _, want := range tc.wantErr {
 					require.ErrorContains(t, err, want)
 				}
+
+				require.True(t, before.Equal(got), "an error must leave the target unchanged, got %v", got)
 
 				return
 			}
@@ -453,11 +471,32 @@ func TestNewDateTime(t *testing.T) {
 
 func TestNewDateTime_DropsMonotonicReading(t *testing.T) {
 	now := time.Now()
-	require.Contains(t, now.String(), "m=")
 
 	got := maintenance.NewDateTime(now)
-	require.NotContains(t, got.Time().String(), "m=")
-	require.True(t, now.Equal(got.Time()))
+	require.Equal(t, now.Round(0), got.Time())
+}
+
+func TestParseDateTime(t *testing.T) {
+	got, err := maintenance.ParseDateTime("2026-06-29T13:39")
+	require.NoError(t, err)
+	require.True(t, got.Floating())
+	require.Equal(t, "2026-06-29T13:39", got.String())
+
+	got, err = maintenance.ParseDateTime("")
+	require.NoError(t, err)
+	require.True(t, got.IsZero())
+
+	_, err = maintenance.ParseDateTime("2026-06-29T13")
+	require.ErrorContains(t, err, `"2026-06-29T13"`)
+}
+
+func TestDateTime_UnmarshalTextErrorKeepsTarget(t *testing.T) {
+	got := maintenance.NewDateTime(time.Date(2030, 2, 1, 8, 0, 0, 0, time.UTC))
+	before := got
+
+	err := got.UnmarshalText([]byte("garbage"))
+	require.Error(t, err)
+	require.True(t, before.Equal(got), "got %v", got)
 }
 
 func TestDateTime_In(t *testing.T) {
@@ -594,12 +633,11 @@ func TestDateTime_Equal(t *testing.T) {
 	require.True(t, absent.Equal(maintenance.DateTime{}))
 }
 
-func TestDateTime_EqualNotDoubleEquals(t *testing.T) {
+func TestDateTime_EqualIgnoresLocation(t *testing.T) {
 	var utcZ, utcOffset maintenance.DateTime
 
 	require.NoError(t, json.Unmarshal([]byte(`"2030-02-01T08:00:00Z"`), &utcZ))
 	require.NoError(t, json.Unmarshal([]byte(`"2030-02-01T08:00:00+00:00"`), &utcOffset))
 
 	require.True(t, utcZ.Equal(utcOffset))
-	require.NotEqual(t, utcZ, utcOffset, "the values differ in their location")
 }

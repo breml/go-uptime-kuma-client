@@ -570,6 +570,7 @@ func TestClient_MaintenanceFloatingDates(t *testing.T) {
 		got, err := client.GetMaintenance(ctx, floatingID)
 		require.NoError(t, err)
 		require.Equal(t, "Europe/Zurich", got.TimezoneOption)
+		require.Equal(t, "scheduled", got.Status)
 		requireDateRange(t, got.DateRange, start, end)
 
 		require.Len(t, got.TimeslotList, 1)
@@ -590,6 +591,7 @@ func TestClient_MaintenanceFloatingDates(t *testing.T) {
 		require.Contains(t, byID, rfc3339ID)
 		requireDateRange(t, byID[floatingID].DateRange, start, end)
 		requireDateRange(t, byID[rfc3339ID].DateRange, rfc3339Start, rfc3339End)
+		require.Equal(t, "scheduled", byID[rfc3339ID].Status)
 	})
 
 	t.Run("update_keeps_floating_digits", func(t *testing.T) {

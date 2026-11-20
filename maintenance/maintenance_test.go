@@ -85,6 +85,13 @@ func TestMaintenance_UnmarshalDateVariants(t *testing.T) {
 			wantDateRange: []maintenance.DateTime{floating},
 		},
 		{
+			name: "single timeslot without end date",
+			input: `{"dateRange":["2026-06-29T13:39"],"timeslotList":[` +
+				`{"startDate":"2026-06-29T13:39","endDate":null}]}`,
+			wantDateRange: []maintenance.DateTime{floating},
+			wantTimeslots: []maintenance.Timeslot{{StartDate: floating}},
+		},
+		{
 			name: "cron timeslots as toISOString emits them",
 			input: `{"dateRange":[null,null],"timeslotList":[` +
 				`{"startDate":"2026-06-29T03:39:00.000Z","endDate":"2026-06-29T05:39:00.000Z"}]}`,
@@ -110,7 +117,7 @@ func TestMaintenance_UnmarshalDateVariants(t *testing.T) {
 					m.TimeslotList[i].StartDate,
 				)
 				require.True(t, want.EndDate.Equal(m.TimeslotList[i].EndDate), "got %v", m.TimeslotList[i].EndDate)
-				require.False(t, m.TimeslotList[i].StartDate.Floating())
+				require.Equal(t, want.StartDate.Floating(), m.TimeslotList[i].StartDate.Floating())
 			}
 		})
 	}
@@ -170,6 +177,33 @@ func TestHelpers_DateRangeWireFormat(t *testing.T) {
 	}
 }
 
+// mixedMaintenanceList holds one window of each date shape in a single
+// maintenanceList payload, so a shape that fails to decode fails the list.
+const mixedMaintenanceList = `{
+  "1": {"id": 1, "strategy": "single",
+    "dateRange": ["2026-06-29T13:39", "2026-07-12T14:39"],
+    "timeslotList": [{"startDate": "2026-06-29T13:39", "endDate": "2026-07-12T14:39"}]},
+  "2": {"id": 2, "strategy": "single",
+    "dateRange": ["2030-02-01T08:00:00Z", "2030-02-01T10:00:00Z"],
+    "timeslotList": [{"startDate": "2030-02-01T08:00:00Z", "endDate": "2030-02-01T10:00:00Z"}]},
+  "3": {"id": 3, "strategy": "cron", "dateRange": [null, null],
+    "timeslotList": [{"startDate": "2026-06-29T03:39:00.000Z", "endDate": "2026-06-29T05:39:00.000Z"}]}
+}`
+
+func TestMaintenance_UnmarshalMixedList(t *testing.T) {
+	var list map[string]maintenance.Maintenance
+
+	err := json.Unmarshal([]byte(mixedMaintenanceList), &list)
+	require.NoError(t, err)
+	require.Len(t, list, 3)
+
+	require.True(t, list["1"].DateRange[0].Floating())
+	require.False(t, list["2"].DateRange[0].Floating())
+	require.False(t, list["2"].DateRange[0].IsZero())
+	require.True(t, list["3"].DateRange[0].IsZero())
+	require.False(t, list["3"].TimeslotList[0].StartDate.Floating())
+}
+
 func TestMaintenance_ZeroInstantRoundTrip(t *testing.T) {
 	input := `{"dateRange":["0001-01-01T00:00:00Z","2030-02-01T10:00:00Z"]}`
 
@@ -190,6 +224,7 @@ func TestMaintenance_ZeroInstantRoundTrip(t *testing.T) {
 
 	err = json.Unmarshal(encoded, &wire)
 	require.NoError(t, err)
+	// The exact bytes are the contract here, so no JSONEq.
 	require.Equal(t, `["0001-01-01T00:00:00Z","2030-02-01T10:00:00Z"]`, string(wire.DateRange))
 }
 

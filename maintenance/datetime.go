@@ -63,10 +63,23 @@ const (
 // instant "0001-01-01T00:00:00Z", which is a present value with an offset.
 //
 // Compare values with Equal, not ==: two values with an offset holding the
-// same instant can differ in their location, such as "Z" and "+00:00".
+// same instant can differ in their location, such as "Z" and "+00:00". The
+// go-cmp package uses Equal on its own, reflect.DeepEqual does not.
 type DateTime struct {
 	t    time.Time
 	kind dateTimeKind
+}
+
+// ParseDateTime parses s as UnmarshalText does.
+func ParseDateTime(s string) (DateTime, error) {
+	var d DateTime
+
+	err := d.UnmarshalText([]byte(s))
+	if err != nil {
+		return DateTime{}, err
+	}
+
+	return d, nil
 }
 
 // NewDateTime returns t as a present DateTime with an offset, encoded as
@@ -98,7 +111,9 @@ func (d DateTime) Time() time.Time {
 // In reads a floating value's digits as wall-clock time in loc and converts a
 // value with an offset to loc; the latter is not how Uptime Kuma's status
 // computation reads such a value, see DateTime. A nil loc is UTC. The absent
-// value gives the zero time.Time.
+// value gives the zero time.Time. Floating digits that fall into a daylight
+// saving gap or repeat in loc are resolved as time.Date resolves them, which
+// need not match Uptime Kuma.
 func (d DateTime) In(loc *time.Location) time.Time {
 	if loc == nil {
 		loc = time.UTC
@@ -217,13 +232,12 @@ func (d DateTime) MarshalText() ([]byte, error) {
 // "2006-01-02T15:04Z07:00", also with a space instead of the "T", as a value
 // with an offset; and "2006-01-02T15:04", "2006-01-02T15:04:05",
 // "2006-01-02 15:04", "2006-01-02 15:04:05" and "2006-01-02" as a floating
-// value, whose fractional seconds, if any, are dropped. It always replaces all
-// of d; on error d is the absent value.
+// value, whose fractional seconds, if any, are dropped. On success it
+// replaces all of d; on error it leaves d unchanged.
 func (d *DateTime) UnmarshalText(text []byte) error {
-	*d = DateTime{}
-
 	s := string(text)
 	if s == "" {
+		*d = DateTime{}
 		return nil
 	}
 
