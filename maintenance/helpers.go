@@ -2,7 +2,12 @@ package maintenance
 
 import "time"
 
-// NewSingleMaintenance creates a one-time maintenance window.
+// NewSingleMaintenance creates a one-time maintenance window. The dates are
+// sent as RFC 3339 with the offset of their location, a zero time.Time as
+// "0001-01-01T00:00:00Z". A server backed by MariaDB rejects such dates, and
+// Uptime Kuma 2.5 reads them differently from this client unless the timezone
+// is UTC, see DateTime. To send wall-clock time in the window's timezone, as the
+// Uptime Kuma UI does, set DateRange to NewFloatingDateTime values.
 func NewSingleMaintenance(
 	title string,
 	description string,
@@ -15,7 +20,7 @@ func NewSingleMaintenance(
 		Description:    description,
 		Strategy:       "single",
 		Active:         true,
-		DateRange:      []*time.Time{&startDate, &endDate},
+		DateRange:      []DateTime{NewDateTime(startDate), NewDateTime(endDate)},
 		TimezoneOption: timezone,
 	}
 }
@@ -33,7 +38,7 @@ func NewRecurringIntervalMaintenance(
 		Strategy:       "recurring-interval",
 		Active:         true,
 		IntervalDay:    intervalDay,
-		DateRange:      []*time.Time{nil, nil},
+		DateRange:      make([]DateTime, 2),
 		TimeRange:      timeRange,
 		TimezoneOption: timezone,
 	}
@@ -52,7 +57,7 @@ func NewRecurringWeekdayMaintenance(
 		Description:    description,
 		Strategy:       "recurring-weekday",
 		Active:         true,
-		DateRange:      []*time.Time{nil, nil},
+		DateRange:      make([]DateTime, 2),
 		TimeRange:      timeRange,
 		Weekdays:       weekdays,
 		TimezoneOption: timezone,
@@ -72,7 +77,7 @@ func NewRecurringDayOfMonthMaintenance(
 		Description:    description,
 		Strategy:       "recurring-day-of-month",
 		Active:         true,
-		DateRange:      []*time.Time{nil, nil},
+		DateRange:      make([]DateTime, 2),
 		TimeRange:      timeRange,
 		DaysOfMonth:    daysOfMonth,
 		TimezoneOption: timezone,
@@ -94,7 +99,7 @@ func NewCronMaintenance(
 		Description:     description,
 		Strategy:        "cron",
 		Active:          true,
-		DateRange:       []*time.Time{nil, nil},
+		DateRange:       make([]DateTime, 2),
 		Cron:            cronExpr,
 		DurationMinutes: durationMinutes,
 		TimezoneOption:  timezone,
@@ -109,6 +114,6 @@ func NewManualMaintenance(title string, description string) *Maintenance {
 		Description: description,
 		Strategy:    "manual",
 		Active:      true,
-		DateRange:   []*time.Time{nil, nil},
+		DateRange:   make([]DateTime, 2),
 	}
 }

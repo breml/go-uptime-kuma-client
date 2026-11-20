@@ -34,4 +34,29 @@
 //	    },
 //	    "America/New_York",
 //	)
+//
+// Dates:
+//
+// DateRange and the dates of TimeslotList are DateTime values, either floating,
+// wall-clock time without UTC offset meant in the window's Timezone, such as
+// the "2026-06-29T13:39" the Uptime Kuma UI writes, or with an offset, such as
+// the RFC 3339 NewSingleMaintenance writes. An absent date is the zero
+// DateTime, check it with IsZero.
+//
+// Prefer floating dates, see DateTime for why. Take the digits in the window's
+// timezone:
+//
+//	loc, err := time.LoadLocation("Europe/Zurich")
+//	if err != nil {
+//	    return err
+//	}
+//	m := maintenance.NewSingleMaintenance("Upgrade", "", startTime, endTime, "Europe/Zurich")
+//	m.DateRange = []maintenance.DateTime{
+//	    maintenance.NewFloatingDateTime(startTime.In(loc)),
+//	    maintenance.NewFloatingDateTime(endTime.In(loc)),
+//	}
+//
+// For a floating date, DateTime.In with the window's timezone gives the
+// instant it means. For a date with an offset, In converts the instant, which
+// is not how Uptime Kuma's status computation reads it, see DateTime.
 package maintenance
