@@ -543,7 +543,7 @@ func TestClient_MaintenanceFloatingDates(t *testing.T) {
 		Description:    "Dates in the UI's datetime-local format",
 		Strategy:       "single",
 		Active:         true,
-		DateRange:      []*maintenance.DateTime{&start, &end},
+		DateRange:      []maintenance.DateTime{start, end},
 		TimezoneOption: "Europe/Zurich",
 	}
 
@@ -608,10 +608,10 @@ func TestClient_MaintenanceFloatingDates(t *testing.T) {
 	})
 }
 
-// deleteMaintenanceOnCleanup deletes the maintenance window in, the input of
-// CreateMaintenance, when the test ends. CreateMaintenance sets the ID on its
-// input as soon as the server assigned one, also when it then returns an
-// error, so the window is deleted whenever it was created.
+// deleteMaintenanceOnCleanup deletes the window passed to CreateMaintenance as
+// in when the test ends. CreateMaintenance sets the ID on its input once the
+// server acknowledged the create, also when it then returns an error, so the
+// window is deleted whenever the create was acknowledged.
 func deleteMaintenanceOnCleanup(t *testing.T, in *maintenance.Maintenance) {
 	t.Helper()
 
@@ -630,15 +630,13 @@ func deleteMaintenanceOnCleanup(t *testing.T, in *maintenance.Maintenance) {
 
 func requireDateRange(
 	t *testing.T,
-	dateRange []*maintenance.DateTime,
+	dateRange []maintenance.DateTime,
 	start maintenance.DateTime,
 	end maintenance.DateTime,
 ) {
 	t.Helper()
 
 	require.Len(t, dateRange, 2)
-	require.NotNil(t, dateRange[0])
-	require.NotNil(t, dateRange[1])
-	require.True(t, start.Equal(*dateRange[0]), "start: want %v, got %v", start, dateRange[0])
-	require.True(t, end.Equal(*dateRange[1]), "end: want %v, got %v", end, dateRange[1])
+	require.True(t, start.Equal(dateRange[0]), "start: want %v, got %v", start, dateRange[0])
+	require.True(t, end.Equal(dateRange[1]), "end: want %v, got %v", end, dateRange[1])
 }

@@ -45,7 +45,7 @@ const (
 // value carries whole seconds only: MariaDB drops a fraction and the server's
 // date library misreads one, so NewFloatingDateTime and decoding drop it.
 // Floating values are the only form both database backends accept and the
-// server reads the same way everywhere.
+// only form whose status Uptime Kuma computes in the window's timezone.
 //
 // A value with an offset is an instant. Uptime Kuma 2.5 computes the status of
 // a window with dayjs.tz(date, timezone), which reads the UTC digits of such a
@@ -60,8 +60,7 @@ const (
 //
 // The zero value is the absent date, decoded from and encoded as JSON null or
 // empty text. It is distinct from any present date, including the zero
-// instant "0001-01-01T00:00:00Z", which is a present value with an offset. The
-// absent value is never floating.
+// instant "0001-01-01T00:00:00Z", which is a present value with an offset.
 //
 // Compare values with Equal, not ==: two values with an offset holding the
 // same instant can differ in their location, such as "Z" and "+00:00".
@@ -219,7 +218,7 @@ func (d DateTime) MarshalText() ([]byte, error) {
 // with an offset; and "2006-01-02T15:04", "2006-01-02T15:04:05",
 // "2006-01-02 15:04", "2006-01-02 15:04:05" and "2006-01-02" as a floating
 // value, whose fractional seconds, if any, are dropped. It always replaces all
-// of d.
+// of d; on error d is the absent value.
 func (d *DateTime) UnmarshalText(text []byte) error {
 	*d = DateTime{}
 

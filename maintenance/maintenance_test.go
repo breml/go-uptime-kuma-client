@@ -38,7 +38,7 @@ func TestMaintenance_UnmarshalUICreatedList(t *testing.T) {
 	start := maintenance.NewFloatingDateTime(time.Date(2026, 6, 29, 13, 39, 0, 0, time.UTC))
 	end := maintenance.NewFloatingDateTime(time.Date(2026, 7, 12, 14, 39, 0, 0, time.UTC))
 
-	requireDates(t, []*maintenance.DateTime{&start, &end}, m.DateRange)
+	requireDates(t, []maintenance.DateTime{start, end}, m.DateRange)
 
 	require.Len(t, m.TimeslotList, 1)
 	require.True(t, start.Equal(m.TimeslotList[0].StartDate), "start: got %v", m.TimeslotList[0].StartDate)
@@ -66,24 +66,29 @@ func TestMaintenance_UnmarshalDateVariants(t *testing.T) {
 	tests := []struct {
 		name          string
 		input         string
-		wantDateRange []*maintenance.DateTime
+		wantDateRange []maintenance.DateTime
 		wantTimeslots []maintenance.Timeslot
 	}{
 		{
 			name:          "nil elements",
 			input:         `{"dateRange":[null,null]}`,
-			wantDateRange: []*maintenance.DateTime{nil, nil},
+			wantDateRange: []maintenance.DateTime{{}, {}},
+		},
+		{
+			name:          "null and empty string are both absent",
+			input:         `{"dateRange":[null,""]}`,
+			wantDateRange: []maintenance.DateTime{{}, {}},
 		},
 		{
 			name:          "single element",
 			input:         `{"dateRange":["2026-06-29T13:39"]}`,
-			wantDateRange: []*maintenance.DateTime{&floating},
+			wantDateRange: []maintenance.DateTime{floating},
 		},
 		{
 			name: "cron timeslots as toISOString emits them",
 			input: `{"dateRange":[null,null],"timeslotList":[` +
 				`{"startDate":"2026-06-29T03:39:00.000Z","endDate":"2026-06-29T05:39:00.000Z"}]}`,
-			wantDateRange: []*maintenance.DateTime{nil, nil},
+			wantDateRange: []maintenance.DateTime{{}, {}},
 			wantTimeslots: []maintenance.Timeslot{{StartDate: cronStart, EndDate: cronEnd}},
 		},
 	}
@@ -173,7 +178,6 @@ func TestMaintenance_ZeroInstantRoundTrip(t *testing.T) {
 	err := json.Unmarshal([]byte(input), &m)
 	require.NoError(t, err)
 	require.Len(t, m.DateRange, 2)
-	require.NotNil(t, m.DateRange[0])
 	require.False(t, m.DateRange[0].IsZero())
 	require.False(t, m.DateRange[0].Floating())
 
@@ -189,18 +193,12 @@ func TestMaintenance_ZeroInstantRoundTrip(t *testing.T) {
 	require.Equal(t, `["0001-01-01T00:00:00Z","2030-02-01T10:00:00Z"]`, string(wire.DateRange))
 }
 
-func requireDates(t *testing.T, want []*maintenance.DateTime, got []*maintenance.DateTime) {
+func requireDates(t *testing.T, want []maintenance.DateTime, got []maintenance.DateTime) {
 	t.Helper()
 
 	require.Len(t, got, len(want))
 
 	for i := range want {
-		if want[i] == nil {
-			require.Nil(t, got[i], "element %d", i)
-			continue
-		}
-
-		require.NotNil(t, got[i], "element %d", i)
-		require.True(t, want[i].Equal(*got[i]), "element %d: want %v, got %v", i, want[i], got[i])
+		require.True(t, want[i].Equal(got[i]), "element %d: want %v, got %v", i, want[i], got[i])
 	}
 }

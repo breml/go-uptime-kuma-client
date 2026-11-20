@@ -143,9 +143,8 @@ func TestDateTime_UnmarshalJSON(t *testing.T) {
 			input:   `"2026-06-31T13:39:00Z"`,
 			wantErr: []string{`"2026-06-31T13:39:00Z"`, "day out of range"},
 		},
-		// The server accepts whatever JavaScript's new Date(...) accepts, which
-		// is more than the rows below. These formats are deliberately out of
-		// scope for DateTime.
+		// The rows below parse with JavaScript's new Date(...), so the server
+		// accepts them, but DateTime deliberately does not.
 		{
 			name:    "offset without colon",
 			input:   `"2030-02-01T08:00:00+0000"`,

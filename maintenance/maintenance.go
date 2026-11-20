@@ -27,12 +27,11 @@ type Maintenance struct {
 	IntervalDay int `json:"intervalDay,omitempty"`
 
 	// DateRange defines the start and end time for the maintenance window:
-	// [startDate, endDate]. The server may return a single element, and
-	// elements can be nil, as for the recurring strategies.
-	// The values are as the server returns them: floating values, see
-	// DateTime, whose digits are wall-clock time in Timezone, such as a window
-	// created in the Uptime Kuma UI holds, or values with an offset.
-	DateRange []*DateTime `json:"dateRange"`
+	// [startDate, endDate]. The server may return a single element. An unset
+	// date, as usual for the recurring strategies, is the zero DateTime.
+	// Floating values (see DateTime), as a window created in the Uptime Kuma
+	// UI holds, are wall-clock time in Timezone; other values carry an offset.
+	DateRange []DateTime `json:"dateRange"`
 
 	// TimeRange defines the time of day range for recurring maintenance.
 	// Array with exactly 2 elements: [startTime, endTime].
