@@ -985,9 +985,9 @@ func TestOperationTimeoutNotSpentQueueing(t *testing.T) {
 
 	results := make(chan result, 2)
 
-	// One start for both: a goroutine that took its own would, when the
-	// other already holds the lock by then, measure less than the full
-	// budget it waited out.
+	// One start for both: a goroutine that took its own after the other
+	// already held the lock would start its clock late and measure less than
+	// the two budgets it waited out.
 	start := time.Now()
 
 	for _, name := range []string{"first", "second"} {
