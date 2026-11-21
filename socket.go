@@ -2,6 +2,7 @@ package kuma
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -164,9 +165,14 @@ func (c *Client) registerStateHandlers(conn *socketConn) {
 		})
 	})
 
-	socket.On("maintenanceList", func(maintenanceMap map[string]maintenance.Maintenance) {
+	// Decoded entry by entry: a typed handler is never called when any entry
+	// fails to decode, which would drop the whole list and leave every write
+	// waiting for it.
+	socket.On("maintenanceList", func(maintenanceMap map[string]json.RawMessage) {
+		maintenances, decodeErr := c.decodeMaintenanceList(maintenanceMap)
 		c.applyEvent(conn, "maintenanceList", func(s *state) {
-			s.maintenances = slices.Collect(maps.Values(maintenanceMap))
+			s.maintenances = maintenances
+			s.maintenanceDecodeErr = decodeErr
 		})
 	})
 
@@ -250,6 +256,33 @@ func (c *Client) registerConnectionHandlers(conn *socketConn) {
 
 		c.updates.Emit(context.Background(), event)
 	})
+}
+
+// decodeMaintenanceList decodes the entries of a maintenanceList event one by
+// one. It returns the entries that decode, and an error wrapping
+// ErrMaintenanceDecode for each that does not, which it also logs.
+func (c *Client) decodeMaintenanceList(
+	maintenanceMap map[string]json.RawMessage,
+) ([]maintenance.Maintenance, error) {
+	maintenances := make([]maintenance.Maintenance, 0, len(maintenanceMap))
+
+	var errs []error
+
+	for _, id := range slices.Sorted(maps.Keys(maintenanceMap)) {
+		var m maintenance.Maintenance
+
+		err := json.Unmarshal(maintenanceMap[id], &m)
+		if err != nil {
+			c.socketioLogger.Warnf("maintenanceList: skip maintenance %s: %s", id, err)
+			errs = append(errs, fmt.Errorf("maintenance %s: %w: %w", id, ErrMaintenanceDecode, err))
+
+			continue
+		}
+
+		maintenances = append(maintenances, m)
+	}
+
+	return maintenances, errors.Join(errs...)
 }
 
 // mergeMonitor replaces the cached monitor with the same ID, or appends one

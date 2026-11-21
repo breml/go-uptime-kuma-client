@@ -8,18 +8,29 @@ import (
 	"github.com/breml/go-uptime-kuma-client/maintenance"
 )
 
+// ErrMaintenanceDecode is wrapped by the error GetMaintenances returns for a
+// maintenance window the server sent but the client could not decode, for
+// example one whose dates another client wrote in a form maintenance.DateTime
+// does not read. GetMaintenance on that window's ID reports the cause too.
+var ErrMaintenanceDecode = errors.New("maintenance window could not be decoded")
+
 // GetMaintenances retrieves all maintenance windows from the client cache.
+//
+// A window that could not be decoded is left out, and the returned error wraps
+// ErrMaintenanceDecode once per such window. The windows that decoded are
+// returned along with that error, so a caller that can do with them checks
+// errors.Is(err, ErrMaintenanceDecode) rather than discarding the result.
 func (c *Client) GetMaintenances(_ context.Context) ([]maintenance.Maintenance, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.state.maintenances == nil {
-		return []maintenance.Maintenance{}, nil
-	}
-
 	// Return a copy to prevent external modifications
 	maintenances := make([]maintenance.Maintenance, len(c.state.maintenances))
 	copy(maintenances, c.state.maintenances)
+
+	if c.state.maintenanceDecodeErr != nil {
+		return maintenances, fmt.Errorf("get maintenances: %w", c.state.maintenanceDecodeErr)
+	}
 
 	return maintenances, nil
 }
