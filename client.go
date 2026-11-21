@@ -272,8 +272,13 @@ type state struct {
 	monitors      []monitor.Base
 	statusPages   map[int64]statuspage.StatusPage
 	maintenances  []maintenance.Maintenance
-	proxies       []proxy.Proxy
-	dockerHosts   []dockerhost.DockerHost
+	// maintenanceDecodeErrs are the entries of the last maintenanceList that
+	// failed to decode and are missing from maintenances, keyed by the ID the
+	// server sent them under, each with an error wrapping ErrMaintenanceDecode.
+	// Nil when every entry decoded.
+	maintenanceDecodeErrs map[string]error
+	proxies               []proxy.Proxy
+	dockerHosts           []dockerhost.DockerHost
 }
 
 // Client represents a connection to an Uptime Kuma server.

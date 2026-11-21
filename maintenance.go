@@ -4,22 +4,42 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
+	"strconv"
 
 	"github.com/breml/go-uptime-kuma-client/maintenance"
 )
 
+// ErrMaintenanceDecode is wrapped by the error GetMaintenances returns for a
+// maintenance window the server sent but the client could not decode, for
+// example one whose dates another client wrote in a form maintenance.DateTime
+// does not read. GetMaintenance and CreateMaintenance wrap it for such a
+// window as well.
+var ErrMaintenanceDecode = errors.New("maintenance window could not be decoded")
+
 // GetMaintenances retrieves all maintenance windows from the client cache.
+//
+// A window that could not be decoded is left out, and the returned error wraps
+// ErrMaintenanceDecode once per such window. The windows that decoded are
+// returned along with that error, so a caller that can do with them checks
+// errors.Is(err, ErrMaintenanceDecode) rather than discarding the result.
 func (c *Client) GetMaintenances(_ context.Context) ([]maintenance.Maintenance, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.state.maintenances == nil {
-		return []maintenance.Maintenance{}, nil
-	}
-
 	// Return a copy to prevent external modifications
 	maintenances := make([]maintenance.Maintenance, len(c.state.maintenances))
 	copy(maintenances, c.state.maintenances)
+
+	if len(c.state.maintenanceDecodeErrs) > 0 {
+		errs := make([]error, 0, len(c.state.maintenanceDecodeErrs))
+		for _, id := range slices.Sorted(maps.Keys(c.state.maintenanceDecodeErrs)) {
+			errs = append(errs, c.state.maintenanceDecodeErrs[id])
+		}
+
+		return maintenances, fmt.Errorf("get maintenances: %w", errors.Join(errs...))
+	}
 
 	return maintenances, nil
 }
@@ -38,7 +58,7 @@ func (c *Client) GetMaintenance(ctx context.Context, id int64) (*maintenance.Mai
 	var m maintenance.Maintenance
 	err = convertToStruct(response.Maintenance, &m)
 	if err != nil {
-		return nil, fmt.Errorf("get maintenance %d: %w", id, err)
+		return nil, fmt.Errorf("get maintenance %d: %w: %w", id, ErrMaintenanceDecode, err)
 	}
 
 	return &m, nil
@@ -52,6 +72,10 @@ func (c *Client) GetMaintenance(ctx context.Context, id int64) (*maintenance.Mai
 // duplicate. The context is spent at that point, so the complete object cannot
 // be fetched back: the returned value is m itself, carrying what the caller
 // passed in plus the ID the server assigned.
+//
+// An error wrapping ErrMaintenanceDecode means the same for a maintenance
+// window the server broadcast in a form the client could not decode: it was
+// created, m.ID identifies it, and the returned value is m.
 func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenance) (*maintenance.Maintenance, error) {
 	maintenanceData, err := structToMap(m)
 	if err != nil {
@@ -60,7 +84,11 @@ func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenan
 
 	response, err := c.syncEmitWithConfirmedUpdateEvent(
 		ctx, "addMaintenance", "maintenanceList",
-		func(response ackResponse) bool { return c.hasMaintenance(response.MaintenanceID) },
+		func(response ackResponse) bool {
+			present, decodeErr := c.cachedMaintenance(response.MaintenanceID)
+
+			return present || decodeErr != nil
+		},
 		maintenanceData,
 	)
 	if err != nil {
@@ -75,6 +103,11 @@ func (c *Client) CreateMaintenance(ctx context.Context, m *maintenance.Maintenan
 
 	// The server returns the maintenance ID in the response
 	m.ID = response.MaintenanceID
+
+	_, decodeErr := c.cachedMaintenance(m.ID)
+	if decodeErr != nil {
+		return m, fmt.Errorf("create maintenance: %w", decodeErr)
+	}
 
 	// Fetch the complete maintenance object from the server
 	return c.GetMaintenance(ctx, m.ID)
@@ -113,7 +146,11 @@ func (c *Client) UpdateMaintenance(ctx context.Context, m *maintenance.Maintenan
 func (c *Client) DeleteMaintenance(ctx context.Context, id int64) error {
 	_, err := c.syncEmitWithConfirmedUpdateEvent(
 		ctx, "deleteMaintenance", "maintenanceList",
-		func(ackResponse) bool { return !c.hasMaintenance(id) },
+		func(ackResponse) bool {
+			present, decodeErr := c.cachedMaintenance(id)
+
+			return !present && decodeErr == nil
+		},
 		id,
 	)
 	if err != nil {
@@ -235,18 +272,20 @@ func (c *Client) GetMaintenanceStatusPage(ctx context.Context, maintenanceID int
 	return statusPageIDs, nil
 }
 
-// hasMaintenance reports whether the state cache holds a maintenance window
-// with the given ID. maintenance.Maintenance carries its ID as a plain field
-// rather than through GetID, so this cannot use cachedByID.
-func (c *Client) hasMaintenance(id int64) bool {
+// cachedMaintenance reports whether the state cache holds a maintenance window
+// with the given ID, and the decode error of the last maintenanceList that
+// carried the window but could not decode it. maintenance.Maintenance carries
+// its ID as a plain field rather than through GetID, so this cannot use
+// cachedByID.
+func (c *Client) cachedMaintenance(id int64) (bool, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	for i := range c.state.maintenances {
 		if c.state.maintenances[i].ID == id {
-			return true
+			return true, nil
 		}
 	}
 
-	return false
+	return false, c.state.maintenanceDecodeErrs[strconv.FormatInt(id, 10)]
 }
