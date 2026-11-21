@@ -985,9 +985,13 @@ func TestOperationTimeoutNotSpentQueueing(t *testing.T) {
 
 	results := make(chan result, 2)
 
+	// One start for both: a goroutine that took its own would, when the
+	// other already holds the lock by then, measure less than the full
+	// budget it waited out.
+	start := time.Now()
+
 	for _, name := range []string{"first", "second"} {
 		go func() {
-			start := time.Now()
 			_, err := client.CreateNotification(t.Context(), newNotification(name))
 			results <- result{err: err, elapsed: time.Since(start)}
 		}()
