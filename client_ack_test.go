@@ -188,6 +188,10 @@ type fakeAckServer struct {
 	// editMonitor commands the way Uptime Kuma does and records the monitor
 	// payload of each, see answerMonitorWrite.
 	monitorWrites map[string][]map[string]any
+	// maintenanceAnswers, by command, makes the fake answer a maintenance
+	// command with the given ack and maintenanceList broadcast, see
+	// answerMaintenanceWrite.
+	maintenanceAnswers map[string]fakeMaintenanceAnswer
 }
 
 // loginCode extracts the one-time code a login frame carries.
@@ -785,6 +789,10 @@ func (s *fakeAckServer) handleClientMessage(session *fakeSession, body []byte) {
 		}
 
 		if s.answerMonitorWrite(session, ackID, payload) {
+			return
+		}
+
+		if s.answerMaintenanceWrite(session, ackID, payload) {
 			return
 		}
 

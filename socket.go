@@ -169,10 +169,10 @@ func (c *Client) registerStateHandlers(conn *socketConn) {
 	// fails to decode, which would drop the whole list and leave every write
 	// waiting for it.
 	socket.On("maintenanceList", func(maintenanceMap map[string]json.RawMessage) {
-		maintenances, decodeErr := c.decodeMaintenanceList(maintenanceMap)
+		maintenances, decodeErrs := c.decodeMaintenanceList(maintenanceMap)
 		c.applyEvent(conn, "maintenanceList", func(s *state) {
 			s.maintenances = maintenances
-			s.maintenanceDecodeErr = decodeErr
+			s.maintenanceDecodeErrs = decodeErrs
 		})
 	})
 
@@ -259,14 +259,12 @@ func (c *Client) registerConnectionHandlers(conn *socketConn) {
 }
 
 // decodeMaintenanceList decodes the entries of a maintenanceList event one by
-// one. It returns the entries that decode, and an error wrapping
+// one. It returns the entries that decode, and by key an error wrapping
 // ErrMaintenanceDecode for each that does not, which it also logs.
 func (c *Client) decodeMaintenanceList(
 	maintenanceMap map[string]json.RawMessage,
-) ([]maintenance.Maintenance, error) {
-	maintenances := make([]maintenance.Maintenance, 0, len(maintenanceMap))
-
-	var errs []error
+) (maintenances []maintenance.Maintenance, errs map[string]error) {
+	maintenances = make([]maintenance.Maintenance, 0, len(maintenanceMap))
 
 	for _, id := range slices.Sorted(maps.Keys(maintenanceMap)) {
 		var m maintenance.Maintenance
@@ -274,7 +272,12 @@ func (c *Client) decodeMaintenanceList(
 		err := json.Unmarshal(maintenanceMap[id], &m)
 		if err != nil {
 			c.socketioLogger.Warnf("maintenanceList: skip maintenance %s: %s", id, err)
-			errs = append(errs, fmt.Errorf("maintenance %s: %w: %w", id, ErrMaintenanceDecode, err))
+
+			if errs == nil {
+				errs = map[string]error{}
+			}
+
+			errs[id] = fmt.Errorf("maintenance %s: %w: %w", id, ErrMaintenanceDecode, err)
 
 			continue
 		}
@@ -282,7 +285,7 @@ func (c *Client) decodeMaintenanceList(
 		maintenances = append(maintenances, m)
 	}
 
-	return maintenances, errors.Join(errs...)
+	return maintenances, errs
 }
 
 // mergeMonitor replaces the cached monitor with the same ID, or appends one
