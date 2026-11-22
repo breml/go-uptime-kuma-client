@@ -3,8 +3,12 @@ package kuma_test
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -88,11 +92,13 @@ func TestAPIKeyAgainstServer(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("custom headers reach the server", func(t *testing.T) {
-		headers := http.Header{}
-		headers.Set("X-Forwarded-Proto", "http")
+	t.Run("the key and the configured headers reach the server on every path", func(t *testing.T) {
+		proxyURL, requests := newRecordingProxy(t, baseURL)
 
-		keyClient, err := kuma.New(ctx, baseURL, "", "",
+		headers := http.Header{}
+		headers.Set("X-E2E-Proxy", "seen")
+
+		keyClient, err := kuma.New(ctx, proxyURL, "", "",
 			kuma.WithAPIKey(key),
 			kuma.WithHeaders(headers),
 			kuma.WithUserAgent("go-uptime-kuma-client-e2e/1.0"),
@@ -100,6 +106,25 @@ func TestAPIKeyAgainstServer(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.NoError(t, keyClient.Disconnect())
+
+		seen := map[string]bool{}
+
+		for _, request := range requests() {
+			kind := request.path
+			if request.transport != "" {
+				kind = request.transport
+			}
+
+			seen[kind] = true
+
+			require.Equal(t, "seen", request.header.Get("X-E2E-Proxy"), kind)
+			require.Equal(t, "go-uptime-kuma-client-e2e/1.0", request.header.Get("User-Agent"), kind)
+			require.Equal(t, "Bearer "+key, request.header.Get("Authorization"), kind)
+		}
+
+		require.True(t, seen["/api/auth/ok"], "the probe went through the proxy")
+		require.True(t, seen["polling"], "the long polling went through the proxy")
+		require.True(t, seen["websocket"], "the WebSocket upgrade went through the proxy")
 	})
 
 	t.Run("an unknown key is refused", func(t *testing.T) {
@@ -107,4 +132,45 @@ func TestAPIKeyAgainstServer(t *testing.T) {
 		require.ErrorIs(t, err, kuma.ErrAPIKeyRejected)
 		require.Nil(t, keyClient)
 	})
+}
+
+// newRecordingProxy starts a reverse proxy to target that records the path,
+// the engine.io transport and the headers of every request it forwards, the
+// WebSocket upgrade included.
+func newRecordingProxy(t *testing.T, target string) (proxyURL string, requests func() []fakeRequest) {
+	t.Helper()
+
+	upstream, err := url.Parse(target)
+	require.NoError(t, err)
+
+	proxy := httputil.NewSingleHostReverseProxy(upstream)
+
+	var (
+		mu       sync.Mutex
+		recorded []fakeRequest
+	)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		recorded = append(recorded, fakeRequest{
+			path:      r.URL.Path,
+			transport: r.URL.Query().Get("transport"),
+			header:    r.Header.Clone(),
+		})
+		mu.Unlock()
+
+		proxy.ServeHTTP(w, r)
+	}))
+
+	t.Cleanup(func() {
+		server.CloseClientConnections()
+		server.Close()
+	})
+
+	return server.URL, func() []fakeRequest {
+		mu.Lock()
+		defer mu.Unlock()
+
+		return append([]fakeRequest(nil), recorded...)
+	}
 }
