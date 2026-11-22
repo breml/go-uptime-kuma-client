@@ -152,10 +152,72 @@ no credentials at all:
 client, err := kuma.New(ctx, url, "", "")
 ```
 
-These are the only ways in, on both server lines. API keys are not among
-them: the server accepts those for HTTP basic auth on `/metrics` only, never for
-the Socket.IO API this client speaks. There is likewise no OIDC, SSO, LDAP or
-client-certificate login.
+On Uptime Kuma 3.x an API key is a further way in, once "API and MCP"
+(`apiEnabled`, alpha upstream) is turned on in the server's settings:
+
+```go
+client, err := kuma.New(ctx, url, "", "", kuma.WithAPIKey(key))
+```
+
+The key goes out as `Authorization: Bearer <key>` (pass it without the
+`Bearer` prefix) and the server authenticates the Socket.IO connection by it,
+with no login and no session: `SessionToken` returns the empty string and
+`Resync` connects again with the key. It is the only credential such a client
+has; combining it with a username and password, `WithSessionToken`, a TOTP
+option or `WithAutosetup` fails `New`. `WithAPIKey("")` is a no-op.
+
+`New` takes a session the server answers the handshake with as the key being
+accepted. The server answers an unknown key and a disabled API alike, reported
+as `ErrAPIKeyRejected`. A 3.x server with authentication disabled ignores the
+key and opens a session for anyone, so there even an invalid key "succeeds".
+
+A 2.x server accepts API keys for HTTP basic auth on `/metrics` only, never for
+the Socket.IO API. `New` fails with `ErrAPIKeyUnsupported` when the scheme is
+detected as, or pinned to, `AuthSchemeSocket`, and when a pinned
+`AuthSchemeHTTP` meets a 2.x server with authentication disabled. Pinning
+`AuthSchemeHTTP` against a 2.x server that wants a login surfaces as
+`ErrAPIKeyRejected` instead. A 3.x server that is not set up yet fails with
+`ErrAPIKeySetupRequired`. A base URL with userinfo (`user:password@`) cannot be
+combined with a key. There is no OIDC, SSO, LDAP or client-certificate login.
+
+### HTTP headers
+
+`WithHeaders` adds headers to every request the client makes, including the
+Socket.IO long polling and the WebSocket handshake, for an access proxy in
+front of the server:
+
+```go
+headers := http.Header{}
+headers.Set("CF-Access-Client-Id", id)
+headers.Set("CF-Access-Client-Secret", secret)
+
+client, err := kuma.New(ctx, url, "username", "password",
+ kuma.WithHeaders(headers))
+```
+
+`New` rejects invalid header names and values, and the headers the client or
+its transport set themselves: `Host`, `Origin`, `Connection`, `Upgrade`,
+`Accept`, `Accept-Encoding`, `Content-Type`, `Content-Length`,
+`Transfer-Encoding`, `TE`, `Trailer` and `Sec-WebSocket-*`. A configured
+`Cookie` is appended to the client's own cookies. `Authorization` is accepted
+for a scheme other than `Bearer`, for a reverse proxy that wants HTTP basic
+auth; a Bearer token belongs in `WithAPIKey`.
+
+The headers, the API key included, go to the server's own origin only; other
+origins get the User-Agent alone.
+`WithUserAgent` replaces the default User-Agent,
+`go-uptime-kuma-client/<version>`.
+
+### Redirects
+
+The client follows no redirect that leaves the base URL's origin (scheme, host
+and port), whether or not headers or a key are configured. That includes a
+server or proxy that upgrades `http` to `https`: a redirect turns the POSTs of
+the login and the Socket.IO long polling into bodyless GETs and the WebSocket
+handshake follows none, so it never worked reliably. `New` fails with an error
+naming both URLs and, where the redirect tells it, the base URL to use instead
+(the `https` one, for an upgrade). URLs in errors never show a password from
+the base URL.
 
 ### Uptime Kuma 2.x and 3.x
 

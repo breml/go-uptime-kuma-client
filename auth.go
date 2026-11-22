@@ -289,6 +289,9 @@ type credentials struct {
 	username string
 	password string
 	token    string
+	// apiKey is the key WithAPIKey configured, which is presented on the
+	// handshake rather than in a login, see Client.useAPIKey.
+	apiKey string
 }
 
 // newCredentials gathers what New was given to authenticate with, and rejects a
@@ -300,6 +303,33 @@ func newCredentials(username string, password string, token string) (credentials
 	}
 
 	return credentials{username: username, password: password, token: token}, nil
+}
+
+// useAPIKey adds the key WithAPIKey configured to creds, and rejects it next
+// to any other credential: the server authenticates the connection by one of
+// them and would silently ignore the rest, see WithAPIKey.
+func (c *Client) useAPIKey(creds *credentials) error {
+	if c.apiKey == "" {
+		return nil
+	}
+
+	if creds.hasAny() || c.totpSources > 0 {
+		return errors.New(
+			"credentials: WithAPIKey cannot be combined with a username and password, " +
+				"WithSessionToken, WithTOTPSecret or WithTOTPCode",
+		)
+	}
+
+	if c.autosetup {
+		return errors.New(
+			"credentials: WithAPIKey cannot be combined with WithAutosetup: a server that " +
+				"is not set up has no API keys, and the setup takes a username and password",
+		)
+	}
+
+	creds.apiKey = c.apiKey
+
+	return nil
 }
 
 // loginError translates a rejected login ack into one of the package's sentinel
@@ -438,7 +468,7 @@ func (c credentials) hasPassword() bool {
 
 // hasAny reports whether there is anything at all to authenticate with.
 func (c credentials) hasAny() bool {
-	return c.hasPassword() || c.token != ""
+	return c.hasPassword() || c.token != "" || c.apiKey != ""
 }
 
 // authenticate logs the client in the way the server asked for, and records the
@@ -556,7 +586,14 @@ func recoverableWithPassword(err error, creds credentials) bool {
 // confirmSession. A server that is not set up yet rejects the credentials it
 // has no user for, and New reads that together with the setup event, so the
 // rejection is returned as it is.
+//
+// An API key is no login: the header carries it on the handshake, see
+// WithAPIKey, and confirmSession reads whether the server accepted it.
 func (c *Client) authenticateHTTP(ctx context.Context, creds credentials) error {
+	if creds.apiKey != "" {
+		return nil
+	}
+
 	if creds.token != "" {
 		tokenErr := c.loginWithCookie(ctx, creds.token)
 		if tokenErr == nil {
@@ -673,6 +710,11 @@ func (c *Client) keepSessionCookie() error {
 // did not see the cookie on the handshake, which is what a proxy in between
 // that drops it looks like; that is reported for what it is, because neither
 // the password nor the token is at fault.
+//
+// A client with an API key, see WithAPIKey, takes a session the server
+// answers the handshake that carried it with as the key being accepted (a
+// server with authentication disabled answers so for any key), and is
+// rejected with ErrAPIKeyRejected when the server asks for a login instead.
 func (c *Client) confirmSession(
 	ctx context.Context,
 	creds credentials,
@@ -684,6 +726,10 @@ func (c *Client) confirmSession(
 	err := ctx.Err()
 	if err != nil {
 		return fmt.Errorf("waiting for the server's auth mode: %w", err)
+	}
+
+	if creds.apiKey != "" {
+		return confirmAPIKeySession(ctx, mode, barrier)
 	}
 
 	switch mode {
@@ -726,6 +772,42 @@ func (c *Client) confirmSession(
 			return nil
 		}
 
+		return errors.New("the server stated neither a session nor that it wants a login")
+
+	default:
+		return fmt.Errorf("auth mode: unknown: %d", mode)
+	}
+}
+
+// confirmAPIKeySession is confirmSession for a client with an API key, see
+// WithAPIKey: a session is the key accepted (or a server with authentication
+// disabled ignoring it), a login asked for is the key rejected, and a server
+// that wants a setup cannot be helped by a key.
+func confirmAPIKeySession(ctx context.Context, mode authMode, barrier authBarrier) error {
+	switch mode {
+	case authModeSession:
+		return nil
+
+	case authModeSetup:
+		return ErrAPIKeySetupRequired
+
+	case authModeLoginRequired:
+		// The server emits setup before loginRequired, but the handlers run
+		// on goroutines of their own, see setupPending.
+		if setupPending(ctx, barrier.setupRequired) {
+			return ErrAPIKeySetupRequired
+		}
+
+		return ErrAPIKeyRejected
+
+	case authModeAutoLogin:
+		// Only a 2.x server with authentication disabled says autoLogin, and
+		// New reaches it with a key only through a pinned AuthSchemeHTTP.
+		return fmt.Errorf("%w (auth scheme %s, pinned with WithAuthScheme, but the server "+
+			"logged the client in the way a 2.x server with authentication disabled does)",
+			ErrAPIKeyUnsupported, AuthSchemeHTTP)
+
+	case authModeUnknown:
 		return errors.New("the server stated neither a session nor that it wants a login")
 
 	default:

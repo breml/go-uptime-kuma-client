@@ -59,13 +59,17 @@ func httpBaseURL(baseURL string) (*url.URL, error) {
 //
 // The library's own transports take neither a cookie jar nor a header, and an
 // Uptime Kuma 3.x server authenticates a socket.io connection by the session
-// cookie on its handshake alone, see AuthSchemeHTTP. Both transports are built
-// the way the library builds them by default otherwise.
+// cookie (or the API key, see WithAPIKey) on its handshake alone, see
+// AuthSchemeHTTP. The headers WithHeaders configures reach the long-polling
+// requests through the round tripper of httpClient, see headerRoundTripper,
+// and the WebSocket handshake through cookieWebSocket. Both transports are
+// built the way the library builds them by default otherwise.
 func newSocketIOClient(
 	baseURL string,
 	logger socketio.Logger,
 	httpClient *http.Client,
 	jar http.CookieJar,
+	headers *requestHeaderSet,
 ) (*socketio.Client, error) {
 	parsed, err := url.Parse(baseURL)
 	if err != nil {
@@ -78,7 +82,7 @@ func newSocketIOClient(
 
 	wsTransport, err := enginews.NewTransport(
 		enginews.WithLogger(logger),
-		enginews.WithWebSocket(&cookieWebSocket{jar: jar}),
+		enginews.WithWebSocket(&cookieWebSocket{jar: jar, headers: headers}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create websocket transport: %w", err)
@@ -116,13 +120,17 @@ func newSocketIOClient(
 // cookieWebSocket is the socket.io library's WebSocket implementation with
 // one addition: the handshake request carries the cookies the jar holds for
 // the target, which is how the session cookie reaches the server on an
-// upgraded connection.
+// upgraded connection, and the headers WithHeaders configured.
 type cookieWebSocket struct {
-	jar  http.CookieJar
-	conn *websocket.Conn
+	jar     http.CookieJar
+	headers *requestHeaderSet
+	conn    *websocket.Conn
 }
 
-// Dial opens the WebSocket connection with the jar's cookies on the handshake.
+// Dial opens the WebSocket connection with the jar's cookies and the
+// configured headers on the handshake, the way headerRoundTripper adds them
+// to the long-polling requests: only for the server's own origin, see
+// requestHeaderSet.
 func (w *cookieWebSocket) Dial(ctx context.Context, target *url.URL, origin *url.URL) error {
 	config, err := websocket.NewConfig(target.String(), origin.String())
 	if err != nil {
@@ -132,6 +140,8 @@ func (w *cookieWebSocket) Dial(ctx context.Context, target *url.URL, origin *url
 	if cookie := cookieHeader(w.jar, target); cookie != "" {
 		config.Header.Set("Cookie", cookie)
 	}
+
+	w.headers.apply(config.Header, target)
 
 	conn, err := config.DialContext(ctx)
 	if err != nil {

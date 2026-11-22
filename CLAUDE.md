@@ -88,10 +88,25 @@ operations concurrently over a single client):
 
 - Uptime Kuma 2.x logs in with a socket command (`AuthSchemeSocket`), 3.x over
   HTTP with better-auth and a session cookie the socket.io handshake carries
-  (`AuthSchemeHTTP`). `New` detects the scheme with `GET /api/auth/ok` (JSON
-  means 3.x) before connecting.
+  (`AuthSchemeHTTP`). `New` detects the scheme with `GET /api/auth/ok` before
+  connecting: JSON on a 2xx (or better-auth's 429) means 3.x, non-JSON on a
+  2xx, 404 or 429 means 2.x; anything else, including a redirected probe, is
+  an error rather than a guess (`detectAuthScheme`).
 - The socket.io client is built with cookie-aware transports in `transport.go`;
   the fork needs no change for that.
+- `WithHeaders`, `WithUserAgent` and `WithAPIKey` (`headers.go`) are one
+  mechanism: a round tripper on the shared `http.Client` (probe, better-auth,
+  long polling) plus the same headers in `cookieWebSocket.Dial`. A configured
+  `Cookie` is appended to the jar's, never replaces it. Only requests to the
+  base URL's origin (strict scheme+host+port, `sameOrigin`) get them;
+  others get only the UA, and `checkRedirect` refuses every redirect off that
+  origin, for every client, an http to https upgrade included.
+  `validateHeaders` rejects reserved headers.
+- `WithAPIKey` (`Authorization: Bearer`) works on 3.x only (`apiEnabled` on):
+  no HTTP login, the `session` event on connect means logged in, and
+  `loginRequired` is `ErrAPIKeyRejected`. On 2.x `New` fails with
+  `ErrAPIKeyUnsupported`. The key excludes every other credential, and
+  `SessionToken()` is empty for such a client.
 - The socket.io client is single-use, so a reconnect is a new `socketConn` with
   every handler registered again (`newSocket()`); handlers drop events of a
   torn-down connection (`applyEvent()`).

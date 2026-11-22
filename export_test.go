@@ -1,6 +1,15 @@
 package kuma
 
-import "time"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
+	"time"
+
+	"github.com/maldikhan/go.socket.io/socket.io/v5/client/emit"
+)
 
 // The two-factor management commands and the code generation are internal:
 // they administer an account rather than authenticate a client, and there is
@@ -49,4 +58,94 @@ func SetDefaultOperationTimeout(d time.Duration) func() {
 // UpdateMonitor for a client that authenticated with scheme.
 func AdaptMonitorPayload(scheme AuthScheme, monitorData map[string]any) {
 	(&Client{scheme: scheme}).adaptMonitorPayload(monitorData)
+}
+
+// The header and API key internals the tests reach directly:
+//
+//   - ModuleVersion is the version lookup of the default User-Agent, for a
+//     test that hands it build information of its own.
+//   - SameOrigin and CheckRedirect are the origin rule and the redirect policy
+//     the configured headers are bound by, for URLs no test server can have.
+//   - AddAPIKey and SetAPIEnabled put a real 3.x server into the state the
+//     end-to-end tests of WithAPIKey need, see addAPIKey and setAPIEnabled.
+//
+//nolint:gochecknoglobals // the standard way to reach internals from an external test package.
+var (
+	ModuleVersion = moduleVersion
+	SameOrigin    = sameOrigin
+	CheckRedirect = checkRedirect
+	AddAPIKey     = (*Client).addAPIKey
+	SetAPIEnabled = (*Client).setAPIEnabled
+)
+
+// SensitiveRedirectNote is the note a refused redirect carries for a client
+// with configured headers or an API key.
+const SensitiveRedirectNote = sensitiveRedirectNote
+
+// ApplyRequestHeaders returns the headers req goes out with when the client
+// for base is configured with headers, see requestHeaderSet.
+func ApplyRequestHeaders(base *url.URL, headers http.Header, req *http.Request) http.Header {
+	header := req.Header.Clone()
+	newRequestHeaderSet(base, headers).apply(header, req.URL)
+
+	return header
+}
+
+// addAPIKey, exported as AddAPIKey, creates an API key for the logged in account and returns it, the
+// way the settings page of an Uptime Kuma 3.x server does. It is for the
+// end-to-end tests of WithAPIKey, which need a key the client cannot create
+// for itself: the server wants a login session for the command.
+func (c *Client) addAPIKey(ctx context.Context, name string) (string, error) {
+	release, err := c.lockConn(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	defer release()
+
+	res := make(chan map[string]any, 1)
+
+	err = c.currentConn().socket.Emit(
+		"addAPIKey",
+		map[string]any{"name": name},
+		emit.WithAck(func(response map[string]any) { res <- response }),
+	)
+	if err != nil {
+		return "", fmt.Errorf("addAPIKey: %w", err)
+	}
+
+	select {
+	case response := <-res:
+		key, hasKey := response["key"].(string)
+		ok, hasOK := response["ok"].(bool)
+
+		if !hasKey || !hasOK || !ok || key == "" {
+			return "", fmt.Errorf("addAPIKey: %v", response)
+		}
+
+		return key, nil
+
+	case <-ctx.Done():
+		return "", fmt.Errorf("addAPIKey: %w", ctx.Err())
+	}
+}
+
+// setAPIEnabled, exported as SetAPIEnabled, turns the "API and MCP" setting (apiEnabled) of an Uptime Kuma
+// 3.x server on or off, keeping every other setting as it is. The Settings
+// type has no field for it, since it is a 3.x setting in alpha upstream.
+func (c *Client) setAPIEnabled(ctx context.Context, enabled bool, password string) error {
+	response, err := c.syncEmit(ctx, "getSettings")
+	if err != nil {
+		return err
+	}
+
+	if response.Data == nil {
+		return errors.New("getSettings: no data")
+	}
+
+	response.Data["apiEnabled"] = enabled
+
+	_, err = c.syncEmit(ctx, "setSettings", response.Data, password)
+
+	return err
 }
