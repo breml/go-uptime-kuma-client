@@ -176,7 +176,7 @@ the Socket.IO API. `New` fails with `ErrAPIKeyUnsupported` when the scheme is
 detected as, or pinned to, `AuthSchemeSocket`, and when a pinned
 `AuthSchemeHTTP` meets a 2.x server with authentication disabled. Pinning
 `AuthSchemeHTTP` against a 2.x server that wants a login surfaces as
-`ErrAPIKeyRejected` instead. A server that is not set up yet fails with
+`ErrAPIKeyRejected` instead. A 3.x server that is not set up yet fails with
 `ErrAPIKeySetupRequired`. A base URL with userinfo (`user:password@`) cannot be
 combined with a key. There is no OIDC, SSO, LDAP or client-certificate login.
 
@@ -203,7 +203,8 @@ its transport set themselves: `Host`, `Origin`, `Connection`, `Upgrade`,
 for a scheme other than `Bearer`, for a reverse proxy that wants HTTP basic
 auth; a Bearer token belongs in `WithAPIKey`.
 
-The headers, the API key included, go to the server's own origin only.
+The headers, the API key included, go to the server's own origin only; other
+origins get the User-Agent alone.
 `WithUserAgent` replaces the default User-Agent,
 `go-uptime-kuma-client/<version>`.
 
@@ -213,9 +214,10 @@ The client follows no redirect that leaves the base URL's origin (scheme, host
 and port), whether or not headers or a key are configured. That includes a
 server or proxy that upgrades `http` to `https`: a redirect turns the POSTs of
 the login and the Socket.IO long polling into bodyless GETs and the WebSocket
-handshake follows none, so it never worked reliably. Earlier versions followed
-such redirects; now `New` fails with an error naming both URLs and the one to
-use as the base URL instead (the `https` one, for an upgrade).
+handshake follows none, so it never worked reliably. `New` fails with an error
+naming both URLs and, where the redirect tells it, the base URL to use instead
+(the `https` one, for an upgrade). URLs in errors never show a password from
+the base URL.
 
 ### Uptime Kuma 2.x and 3.x
 
