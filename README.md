@@ -159,16 +159,23 @@ On Uptime Kuma 3.x an API key is a further way in, once "API and MCP"
 client, err := kuma.New(ctx, url, "", "", kuma.WithAPIKey(key))
 ```
 
-The key goes out as `Authorization: Bearer <key>` and the server authenticates
-the Socket.IO connection by it, with no login and no session:
-`SessionToken` returns the empty string and `Resync` connects again with the
-key. It is the only credential such a client has; combining it with a username
-and password, `WithSessionToken` or a TOTP option fails `New`. The server
-answers an unknown key and a disabled API alike, reported as
-`ErrAPIKeyRejected`. A 2.x server accepts API keys for HTTP basic auth on
-`/metrics` only, never for the Socket.IO API, so `New` fails there with
-`ErrAPIKeyUnsupported`. There is no OIDC, SSO, LDAP or client-certificate
-login.
+The key goes out as `Authorization: Bearer <key>` (pass it without the
+`Bearer` prefix) and the server authenticates the Socket.IO connection by it,
+with no login and no session: `SessionToken` returns the empty string and
+`Resync` connects again with the key. It is the only credential such a client
+has; combining it with a username and password, `WithSessionToken`, a TOTP
+option or `WithAutosetup` fails `New`. `WithAPIKey("")` is a no-op.
+
+`New` takes a session the server answers the handshake with as the key being
+accepted. The server answers an unknown key and a disabled API alike, reported
+as `ErrAPIKeyRejected`. A 3.x server with authentication disabled ignores the
+key and opens a session for anyone, so there even an invalid key "succeeds".
+
+A 2.x server accepts API keys for HTTP basic auth on `/metrics` only, never for
+the Socket.IO API. `New` fails with `ErrAPIKeyUnsupported` when the scheme is
+detected as, or pinned to, `AuthSchemeSocket`; pinning `AuthSchemeHTTP` against
+a 2.x server surfaces as `ErrAPIKeyRejected` instead. There is no OIDC, SSO,
+LDAP or client-certificate login.
 
 ### HTTP headers
 
@@ -185,11 +192,19 @@ client, err := kuma.New(ctx, url, "username", "password",
  kuma.WithHeaders(headers))
 ```
 
-Headers the client sets itself take precedence, except that a configured
-`Cookie` is appended to the client's own cookies. The headers, the API key
-included, go to the server's own origin only; a redirect elsewhere gets the
-User-Agent and nothing else. `WithUserAgent` replaces the
-default User-Agent, `go-uptime-kuma-client/<version>`.
+`New` rejects invalid header names and values, and the headers the client or
+its transport set themselves: `Host`, `Origin`, `Connection`, `Upgrade`,
+`Accept`, `Accept-Encoding`, `Content-Type`, `Content-Length`,
+`Transfer-Encoding`, `TE`, `Trailer` and `Sec-WebSocket-*`. A configured
+`Cookie` is appended to the client's own cookies. `Authorization` is accepted
+for a scheme other than `Bearer`, for a reverse proxy that wants HTTP basic
+auth; a Bearer token belongs in `WithAPIKey`.
+
+The headers, the API key included, go to the server's own origin only. `New`
+does not follow a redirect that leaves it, and names both URLs in the error;
+the one exception is the same host upgraded from `http` on port 80 to `https`
+on port 443, which gets the headers too. `WithUserAgent` replaces the default
+User-Agent, `go-uptime-kuma-client/<version>`.
 
 ### Uptime Kuma 2.x and 3.x
 

@@ -70,9 +70,10 @@
 //
 //	client, err := kuma.New(ctx, url, "", "", kuma.WithAPIKey(key))
 //
-// [WithHeaders] adds HTTP headers to every request, the socket.io transports
-// included, for an access proxy in front of the server, and [WithUserAgent]
-// replaces the default User-Agent.
+// [WithHeaders] adds HTTP headers to every request to the server, the
+// socket.io transports included, for an access proxy in front of it, and
+// [WithUserAgent] replaces the default User-Agent. Neither the headers nor the
+// key leave the server's origin: New does not follow a redirect elsewhere.
 //
 // # Server Versions
 //
