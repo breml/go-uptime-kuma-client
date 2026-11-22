@@ -48,7 +48,8 @@ const userAgentHeaderName = "User-Agent"
 // without configured headers, an upgrade of the same host from http to https
 // included: a redirect turns the POSTs of the login and the long polling into
 // GETs without a body, and the WebSocket handshake follows none. New reports
-// such a redirect with the URL to use as the base URL instead.
+// such a redirect with the base URL to use instead, as far as the redirect
+// tells it.
 //
 // The headers are copied when the option is called, so changing h afterwards
 // changes nothing. Names are canonicalised; values that one h holds under two
@@ -124,7 +125,8 @@ func WithUserAgent(userAgent string) Option {
 // ErrAPIKeyRejected instead, because that server asks for a login the way a
 // 3.x server refusing the key does.
 //
-// A server that is not set up yet fails New with ErrAPIKeySetupRequired.
+// A 3.x server that is not set up yet fails New with ErrAPIKeySetupRequired;
+// a 2.x one fails with ErrAPIKeyUnsupported, as every 2.x server does.
 //
 // The key is the only credential such a client has: New rejects it together
 // with a username and password, WithSessionToken, WithTOTPSecret or
@@ -159,8 +161,8 @@ var ErrAPIKeyUnsupported = errors.New(
 	"api key: Uptime Kuma authenticates the socket.io API with an API key only from 3.0 on",
 )
 
-// ErrAPIKeySetupRequired is returned by New when a server that is not set up
-// yet answers a client configured with WithAPIKey: such a server has no API
+// ErrAPIKeySetupRequired is returned by New when a 3.x server that is not set
+// up yet answers a client configured with WithAPIKey: such a server has no API
 // keys, and its setup takes a username and password.
 var ErrAPIKeySetupRequired = errors.New(
 	"api key: the server needs setup, which an API key cannot run: " +
@@ -428,15 +430,15 @@ func checkRedirect(base *url.URL, note string) func(req *http.Request, via []*ht
 		}
 
 		from := via[len(via)-1].URL
-		target := req.URL.Scheme + "://" + req.URL.Host
+		suggestion := suggestBaseURL(base, via[0].URL, req.URL)
 
-		msg := fmt.Sprintf("redirect from %s to %s leaves the server's origin; use %s as the base URL",
-			from, req.URL, target)
+		msg := fmt.Sprintf("redirect from %s to %s leaves the server's origin; %s",
+			from.Redacted(), req.URL.Redacted(), suggestion)
 
 		if strings.EqualFold(from.Hostname(), req.URL.Hostname()) &&
 			from.Scheme == "http" && req.URL.Scheme == "https" {
-			msg = fmt.Sprintf("redirect from %s to %s upgrades to https; use the https URL %s as the base URL",
-				from, req.URL, target)
+			msg = fmt.Sprintf("redirect from %s to %s upgrades to https; %s",
+				from.Redacted(), req.URL.Redacted(), suggestion)
 		}
 
 		if note != "" {
@@ -445,6 +447,26 @@ func checkRedirect(base *url.URL, note string) func(req *http.Request, via []*ht
 
 		return errors.New(msg)
 	}
+}
+
+// suggestBaseURL tells what to use instead of base after a redirect from the
+// client's first request to target: target without the part of the path the
+// client appended to base, or, for a redirect that does not keep that part,
+// target's origin. The URLs it prints carry no userinfo.
+func suggestBaseURL(base *url.URL, first *url.URL, target *url.URL) string {
+	origin := target.Scheme + "://" + target.Host
+
+	basePath := strings.TrimSuffix(base.Path, "/")
+	if !strings.HasPrefix(first.Path, basePath) {
+		return "connect to the server on " + origin
+	}
+
+	appended := strings.TrimPrefix(first.Path, basePath)
+	if !strings.HasSuffix(target.Path, appended) {
+		return "connect to the server on " + origin
+	}
+
+	return "use " + origin + strings.TrimSuffix(strings.TrimSuffix(target.Path, appended), "/") + " as the base URL"
 }
 
 // sensitiveRedirectNote is what a refused redirect adds for a client with

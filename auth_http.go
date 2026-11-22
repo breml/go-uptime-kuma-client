@@ -213,11 +213,17 @@ type twoFactorEnableResponse struct {
 // about the sign-in, which reports its own refusal with the wait the server
 // asked for.
 //
-// The status is read before the media type. JSON means 3.x only on a 2xx (a
-// 3.x server answers the probe with 200) and on better-auth's 429; JSON with
-// any other status is what an access proxy or API gateway in front of the
-// server answers (oauth2-proxy, Pomerium, a gateway's JSON 404), never the
-// server itself, and is reported as an error. A non-JSON answer is read as 2.x
+// Neither line redirects the probe, so an answer that took a redirect, within
+// the server's origin (others are refused, see checkRedirect), comes from
+// something in front of the server, such as an access proxy sending the client
+// to its sign-in page, and is reported as an error.
+//
+// The status is read before the media type. JSON on a 2xx (a 3.x server
+// answers the probe with 200) means 3.x, and so does better-auth's 429, which
+// X-Retry-After marks whatever its media type. JSON with any other status is
+// what an access proxy or API gateway in front of the server answers
+// (oauth2-proxy, Pomerium, a gateway's JSON 404), never the server itself, and
+// is reported as an error. A non-JSON answer is read as 2.x
 // only where a 2.x server, or a proxy in front of it, gives it: a 2xx (the
 // catch-all, 200 on 2.5.x), a 404 and a 429 without better-auth's header.
 // Anything else - an access proxy refusing the request with a 401 or 403, a
@@ -248,8 +254,19 @@ func (a *betterAuthClient) detectAuthScheme(ctx context.Context) (AuthScheme, st
 	// matter.
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
 
+	shownURL := req.URL.Redacted()
 	contentType := resp.Header.Get("Content-Type")
-	evidence := fmt.Sprintf("detected from GET %s: status %d, Content-Type %q", probeURL, resp.StatusCode, contentType)
+
+	if resp.Request.URL.String() != req.URL.String() {
+		return AuthSchemeAuto, "", fmt.Errorf(
+			"connect to server: detect auth scheme: GET %s was redirected to %s, which neither "+
+				"Uptime Kuma 2.x nor 3.x does; an access proxy in front of the server may be "+
+				"redirecting to its sign-in (check WithHeaders), or pin the scheme with WithAuthScheme",
+			shownURL, resp.Request.URL.Redacted(),
+		)
+	}
+
+	evidence := fmt.Sprintf("detected from GET %s: status %d, Content-Type %q", shownURL, resp.StatusCode, contentType)
 
 	success := resp.StatusCode >= 200 && resp.StatusCode < 300
 	limitedByBetterAuth := resp.StatusCode == http.StatusTooManyRequests && resp.Header.Get("X-Retry-After") != ""
@@ -269,7 +286,7 @@ func (a *betterAuthClient) detectAuthScheme(ctx context.Context) (AuthScheme, st
 			"connect to server: detect auth scheme: GET %s answered status %d with Content-Type %q, "+
 				"which is neither Uptime Kuma 2.x nor 3.x; an access proxy in front of the server may "+
 				"be rejecting the request (check WithHeaders), or pin the scheme with WithAuthScheme",
-			probeURL, resp.StatusCode, contentType,
+			shownURL, resp.StatusCode, contentType,
 		)
 	}
 }

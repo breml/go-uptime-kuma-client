@@ -699,7 +699,19 @@ func TestCheckRedirect(t *testing.T) {
 			name:    "the upgrade to https",
 			base:    "http://kuma.example.com",
 			target:  "https://kuma.example.com/api/auth/ok",
-			wantErr: []string{"upgrades to https", "use the https URL https://kuma.example.com as the base URL"},
+			wantErr: []string{"upgrades to https", "use https://kuma.example.com as the base URL"},
+		},
+		{
+			name:    "the upgrade keeps the base path",
+			base:    "http://kuma.example.com/kuma",
+			target:  "https://kuma.example.com/kuma/api/auth/ok",
+			wantErr: []string{"upgrades to https", "use https://kuma.example.com/kuma as the base URL"},
+		},
+		{
+			name:    "to a path that is not the request's",
+			base:    "http://kuma.example.com",
+			target:  "https://sso.example.com/sign_in",
+			wantErr: []string{"connect to the server on https://sso.example.com"},
 		},
 		{
 			name:    "the downgrade to http",
@@ -752,6 +764,17 @@ func TestCheckRedirect(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("no password in the error", func(t *testing.T) {
+		base, err := neturl.Parse("http://admin:s3cret@kuma.example.com")
+		require.NoError(t, err)
+
+		via := []*http.Request{request("http://admin:s3cret@kuma.example.com/api/auth/ok")}
+
+		err = kuma.CheckRedirect(base, "")(request("https://admin:s3cret@kuma.example.com/api/auth/ok"), via)
+		require.ErrorContains(t, err, "upgrades to https")
+		require.NotContains(t, err.Error(), "s3cret")
+	})
 
 	t.Run("no more than ten redirects", func(t *testing.T) {
 		base, err := neturl.Parse("http://kuma.example.com")
@@ -962,4 +985,57 @@ func TestProbeStatus(t *testing.T) {
 			require.Equal(t, kuma.AuthSchemeSocket, client.AuthScheme())
 		})
 	}
+}
+
+// TestProbeRedirectedWithinTheOrigin covers a probe that a proxy in front of
+// the server redirects to its sign-in page on the same host: neither Uptime
+// Kuma line redirects the probe, so New reports it instead of reading the
+// sign-in page as a 2.x server.
+func TestProbeRedirectedWithinTheOrigin(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/auth/ok" {
+			http.Redirect(w, r, "/oauth2/sign_in", http.StatusFound)
+
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte("<html></html>"))
+	}))
+
+	t.Cleanup(server.Close)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, server.URL, "", "",
+		kuma.WithConnectTimeout(2*time.Second),
+		kuma.WithAPIKey(fakeAPIKey),
+	)
+	require.ErrorContains(t, err, "was redirected to "+server.URL+"/oauth2/sign_in")
+	require.NotErrorIs(t, err, kuma.ErrAPIKeyUnsupported)
+	require.Nil(t, client)
+}
+
+// TestProbeErrorHidesPassword covers a base URL with userinfo, for HTTP basic
+// auth to a reverse proxy: an error that names the probe's URL does not show
+// the password.
+func TestProbeErrorHidesPassword(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+
+	t.Cleanup(server.Close)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	withUserinfo := strings.Replace(server.URL, "http://", "http://admin:s3cret@", 1)
+
+	client, err := kuma.New(ctx, withUserinfo, "admin", "admin1", kuma.WithConnectTimeout(2*time.Second))
+	require.ErrorContains(t, err, "status 502")
+	require.ErrorContains(t, err, "admin:xxxxx@")
+	require.NotContains(t, err.Error(), "s3cret")
+	require.Nil(t, client)
 }
