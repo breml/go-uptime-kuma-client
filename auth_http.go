@@ -213,11 +213,16 @@ type twoFactorEnableResponse struct {
 // about the sign-in, which reports its own refusal with the wait the server
 // asked for.
 //
-// A non-JSON answer is read as 2.x only where a 2.x server, or a proxy in
-// front of it, gives it: a 2xx (the catch-all, 200 on 2.5.x), a 404 and a 429
-// without better-auth's header. Anything else - an access proxy refusing the
-// request with a 401 or 403, a redirect not followed, a 5xx - says nothing
-// about the server behind it and is reported as an error rather than guessed.
+// The status is read before the media type. JSON means 3.x only on a 2xx (a
+// 3.x server answers the probe with 200) and on better-auth's 429; JSON with
+// any other status is what an access proxy or API gateway in front of the
+// server answers (oauth2-proxy, Pomerium, a gateway's JSON 404), never the
+// server itself, and is reported as an error. A non-JSON answer is read as 2.x
+// only where a 2.x server, or a proxy in front of it, gives it: a 2xx (the
+// catch-all, 200 on 2.5.x), a 404 and a 429 without better-auth's header.
+// Anything else - an access proxy refusing the request with a 401 or 403, a
+// redirect not followed, a 5xx - says nothing about the server behind it and
+// is reported as an error rather than guessed.
 //
 // The second result is the evidence the scheme was settled on, for an error
 // that depends on it, see ErrAPIKeyUnsupported.
@@ -246,15 +251,17 @@ func (a *betterAuthClient) detectAuthScheme(ctx context.Context) (AuthScheme, st
 	contentType := resp.Header.Get("Content-Type")
 	evidence := fmt.Sprintf("detected from GET %s: status %d, Content-Type %q", probeURL, resp.StatusCode, contentType)
 
+	success := resp.StatusCode >= 200 && resp.StatusCode < 300
 	limitedByBetterAuth := resp.StatusCode == http.StatusTooManyRequests && resp.Header.Get("X-Retry-After") != ""
-	if limitedByBetterAuth || isJSON(contentType) {
-		return AuthSchemeHTTP, evidence, nil
-	}
+	jsonBody := isJSON(contentType)
 
 	switch {
-	case resp.StatusCode >= 200 && resp.StatusCode < 300,
-		resp.StatusCode == http.StatusNotFound,
-		resp.StatusCode == http.StatusTooManyRequests:
+	case limitedByBetterAuth, success && jsonBody:
+		return AuthSchemeHTTP, evidence, nil
+
+	case !jsonBody && (success ||
+		resp.StatusCode == http.StatusNotFound ||
+		resp.StatusCode == http.StatusTooManyRequests):
 		return AuthSchemeSocket, evidence, nil
 
 	default:

@@ -716,18 +716,16 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		return nil, fmt.Errorf("create cookie jar: %w", err)
 	}
 
-	headers, err := c.requestHeaders()
+	err = c.buildRequestHeaders(httpBase)
 	if err != nil {
 		return nil, err
 	}
-
-	c.requestHeaderSet = newRequestHeaderSet(httpBase, headers)
 
 	c.jar = jar
 	c.httpClient = &http.Client{
 		Jar:           jar,
 		Transport:     &headerRoundTripper{base: http.DefaultTransport, headers: c.requestHeaderSet},
-		CheckRedirect: checkRedirect(httpBase),
+		CheckRedirect: checkRedirect(httpBase, c.redirectNote()),
 	}
 	c.auth = &betterAuthClient{base: httpBase, http: c.httpClient, jar: jar}
 

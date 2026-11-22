@@ -78,6 +78,10 @@ var (
 	SetAPIEnabled = (*Client).setAPIEnabled
 )
 
+// SensitiveRedirectNote is the note a refused redirect carries for a client
+// with configured headers or an API key.
+const SensitiveRedirectNote = sensitiveRedirectNote
+
 // ApplyRequestHeaders returns the headers req goes out with when the client
 // for base is configured with headers, see requestHeaderSet.
 func ApplyRequestHeaders(base *url.URL, headers http.Header, req *http.Request) http.Header {

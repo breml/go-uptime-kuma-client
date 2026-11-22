@@ -210,7 +210,10 @@ func TestBasicAuthorizationHeader(t *testing.T) {
 
 	t.Cleanup(func() { _ = client.Disconnect() })
 
-	for _, request := range fake.receivedRequests() {
+	requests := fake.receivedRequests()
+	require.NotEmpty(t, requests)
+
+	for _, request := range requests {
 		require.Equal(t, "Basic Zm9vOmJhcg==", request.header.Get("Authorization"), request.path)
 	}
 }
@@ -475,7 +478,7 @@ func TestNewWithAPIKey(t *testing.T) {
 			kuma.WithConnectTimeout(5*time.Second),
 			kuma.WithAPIKey(fakeAPIKey),
 		)
-		require.ErrorContains(t, err, "needs setup, which an API key cannot run")
+		require.ErrorIs(t, err, kuma.ErrAPIKeySetupRequired)
 		require.NotErrorIs(t, err, kuma.ErrAPIKeyRejected)
 		require.Nil(t, client)
 	})
@@ -512,6 +515,23 @@ func TestNewWithAPIKey(t *testing.T) {
 		require.ErrorContains(t, err, "pinned with WithAuthScheme")
 		require.Nil(t, client)
 		require.Zero(t, fake.probeCount(), "a pinned scheme is not detected")
+	})
+
+	t.Run("a pinned 3.x scheme meets a 2.x server with authentication disabled", func(t *testing.T) {
+		fake, url := newAuthFake(t)
+		fake.setAutoLogin()
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		client, err := kuma.New(ctx, url, "", "",
+			kuma.WithConnectTimeout(5*time.Second),
+			kuma.WithAuthScheme(kuma.AuthSchemeHTTP),
+			kuma.WithAPIKey(fakeAPIKey),
+		)
+		require.ErrorIs(t, err, kuma.ErrAPIKeyUnsupported)
+		require.ErrorContains(t, err, "pinned with WithAuthScheme")
+		require.Nil(t, client)
 	})
 
 	t.Run("an empty key configures nothing", func(t *testing.T) {
@@ -620,8 +640,8 @@ func TestSameOrigin(t *testing.T) {
 		{base: "http://kuma.example.com", target: "http://kuma.example.com:80/socket.io/?EIO=4", same: true},
 		{base: "https://Kuma.Example.com", target: "wss://kuma.example.com:443/socket.io/", same: true},
 		{base: "http://kuma.example.com:3001", target: "ws://kuma.example.com:3001/socket.io/", same: true},
-		{base: "http://kuma.example.com", target: "https://kuma.example.com/api/auth/ok", same: true},
-		{base: "http://kuma.example.com", target: "wss://kuma.example.com/socket.io/", same: true},
+		{base: "http://kuma.example.com", target: "https://kuma.example.com/api/auth/ok"},
+		{base: "http://kuma.example.com", target: "wss://kuma.example.com/socket.io/"},
 		{base: "https://kuma.example.com", target: "http://kuma.example.com"},
 		{base: "http://kuma.example.com:3001", target: "https://kuma.example.com:3001"},
 		{base: "http://kuma.example.com:3001", target: "https://kuma.example.com"},
@@ -645,29 +665,133 @@ func TestSameOrigin(t *testing.T) {
 }
 
 // TestCheckRedirect covers the redirects the client follows: within the
-// server's origin and the upgrade of its host to https, nothing else.
+// server's origin, nothing else.
 func TestCheckRedirect(t *testing.T) {
-	base, err := neturl.Parse("http://kuma.example.com")
-	require.NoError(t, err)
-
-	check := kuma.CheckRedirect(base)
-
 	request := func(target string) *http.Request {
-		req, reqErr := http.NewRequestWithContext(t.Context(), http.MethodGet, target, http.NoBody)
-		require.NoError(t, reqErr)
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, target, http.NoBody)
+		require.NoError(t, err)
 
 		return req
 	}
 
-	via := []*http.Request{request("http://kuma.example.com/api/auth/ok")}
+	tests := []struct {
+		name      string
+		base      string
+		target    string
+		sensitive bool
+		wantErr   []string
+	}{
+		{
+			name:   "within the origin",
+			base:   "http://kuma.example.com",
+			target: "http://kuma.example.com/dashboard",
+		},
+		{
+			name:   "to another host",
+			base:   "http://kuma.example.com",
+			target: "http://elsewhere.example.com/api/auth/ok",
+			wantErr: []string{
+				"http://elsewhere.example.com/api/auth/ok",
+				"use http://elsewhere.example.com as the base URL",
+			},
+		},
+		{
+			name:    "the upgrade to https",
+			base:    "http://kuma.example.com",
+			target:  "https://kuma.example.com/api/auth/ok",
+			wantErr: []string{"upgrades to https", "use the https URL https://kuma.example.com as the base URL"},
+		},
+		{
+			name:    "the downgrade to http",
+			base:    "https://kuma.example.com",
+			target:  "http://kuma.example.com/api/auth/ok",
+			wantErr: []string{"use http://kuma.example.com as the base URL"},
+		},
+		{
+			name:    "a port change",
+			base:    "http://kuma.example.com:3001",
+			target:  "http://kuma.example.com:3002/api/auth/ok",
+			wantErr: []string{"use http://kuma.example.com:3002 as the base URL"},
+		},
+		{
+			name:      "a client with credentials is told why",
+			base:      "http://kuma.example.com",
+			target:    "http://elsewhere.example.com/api/auth/ok",
+			sensitive: true,
+			wantErr:   []string{"configured headers and API key stay with the server"},
+		},
+	}
 
-	require.NoError(t, check(request("https://kuma.example.com/api/auth/ok"), via),
-		"the upgrade of the same host to https is followed")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			base, err := neturl.Parse(tc.base)
+			require.NoError(t, err)
 
-	err = check(request("https://elsewhere.example.com/api/auth/ok"), via)
-	require.ErrorContains(t, err, "http://kuma.example.com/api/auth/ok")
-	require.ErrorContains(t, err, "https://elsewhere.example.com/api/auth/ok")
-	require.ErrorContains(t, err, "use it as the base URL")
+			via := []*http.Request{request(tc.base + "/api/auth/ok")}
+
+			note := ""
+			if tc.sensitive {
+				note = kuma.SensitiveRedirectNote
+			}
+
+			err = kuma.CheckRedirect(base, note)(request(tc.target), via)
+			if len(tc.wantErr) == 0 {
+				require.NoError(t, err)
+
+				return
+			}
+
+			require.ErrorContains(t, err, tc.base+"/api/auth/ok")
+
+			for _, want := range tc.wantErr {
+				require.ErrorContains(t, err, want)
+			}
+
+			if !tc.sensitive {
+				require.NotContains(t, err.Error(), "API key")
+			}
+		})
+	}
+
+	t.Run("no more than ten redirects", func(t *testing.T) {
+		base, err := neturl.Parse("http://kuma.example.com")
+		require.NoError(t, err)
+
+		check := kuma.CheckRedirect(base, "")
+
+		via := make([]*http.Request, 0, 10)
+		for range 9 {
+			via = append(via, request("http://kuma.example.com/hop"))
+		}
+
+		require.NoError(t, check(request("http://kuma.example.com/hop"), via))
+
+		via = append(via, request("http://kuma.example.com/hop"))
+		require.ErrorContains(t, check(request("http://kuma.example.com/hop"), via), "stopped after 10 redirects")
+	})
+}
+
+// TestBaseURLUserinfo covers a base URL with userinfo, whose Basic
+// Authorization net/http sets before the configured headers are added.
+func TestBaseURLUserinfo(t *testing.T) {
+	for name, opt := range map[string]kuma.Option{
+		"API key":              kuma.WithAPIKey(fakeAPIKey),
+		"Authorization header": kuma.WithHeaders(http.Header{"Authorization": {"Basic Zm9vOmJhcg=="}}),
+	} {
+		t.Run(name, func(t *testing.T) {
+			fake, url := newHTTPAuthFake(t)
+
+			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+			defer cancel()
+
+			withUserinfo := strings.Replace(url, "http://", "http://user:secret@", 1)
+
+			client, err := kuma.New(ctx, withUserinfo, "", "", kuma.WithConnectTimeout(5*time.Second), opt)
+			require.ErrorContains(t, err, "userinfo")
+			require.Nil(t, client)
+			require.Empty(t, fake.receivedRequests(), "nothing is sent to the server")
+		})
+	}
 }
 
 // TestRedirectOffTheServersOrigin covers a redirect to another server: the
@@ -728,11 +852,7 @@ func TestRedirectOffTheServersOrigin(t *testing.T) {
 		require.Equal(t, "custom-agent/1.0", header.Get("User-Agent"))
 	}
 
-	for _, header := range otherHeaders {
-		require.Empty(t, header.Get("Authorization"))
-		require.Empty(t, header.Get("CF-Access-Client-Secret"))
-		require.Empty(t, header.Get("Cookie"))
-	}
+	require.Empty(t, otherHeaders, "the other server sees no request at all")
 }
 
 // TestHeadersOffTheServersOrigin covers the round tripper itself for a
@@ -749,7 +869,7 @@ func TestHeadersOffTheServersOrigin(t *testing.T) {
 
 	for target, wantSecrets := range map[string]bool{
 		"http://kuma.example.com/api/auth/ok":    true,
-		"https://kuma.example.com/api/auth/ok":   true,
+		"https://kuma.example.com/api/auth/ok":   false,
 		"http://other.example.com/api/auth/ok":   false,
 		"http://kuma.example.com:81/api/auth/ok": false,
 	} {
@@ -775,22 +895,31 @@ func TestHeadersOffTheServersOrigin(t *testing.T) {
 }
 
 // TestProbeStatus covers which answers of the auth scheme probe New reads as a
-// 2.x server, and which it reports instead of guessing.
+// 2.x server, and which it reports instead of guessing: JSON means 3.x only on
+// a 2xx, and JSON with any other status is what a proxy or gateway in front of
+// the server answers.
 func TestProbeStatus(t *testing.T) {
 	tests := []struct {
-		status  int
-		wantErr bool
+		status      int
+		contentType string
+		wantErr     bool
 	}{
-		{status: http.StatusOK},
-		{status: http.StatusNotFound},
-		{status: http.StatusUnauthorized, wantErr: true},
-		{status: http.StatusForbidden, wantErr: true},
-		{status: http.StatusFound, wantErr: true},
-		{status: http.StatusBadGateway, wantErr: true},
+		{status: http.StatusOK, contentType: "text/html"},
+		{status: http.StatusNotFound, contentType: "text/html"},
+		{status: http.StatusTooManyRequests, contentType: "text/html"},
+		{status: http.StatusUnauthorized, contentType: "text/html", wantErr: true},
+		{status: http.StatusForbidden, contentType: "text/html", wantErr: true},
+		{status: http.StatusFound, contentType: "text/html", wantErr: true},
+		{status: http.StatusBadGateway, contentType: "text/html", wantErr: true},
+		{status: http.StatusUnauthorized, contentType: "application/json", wantErr: true},
+		{status: http.StatusForbidden, contentType: "application/json", wantErr: true},
+		{status: http.StatusNotFound, contentType: "application/json", wantErr: true},
+		{status: http.StatusTooManyRequests, contentType: "application/json", wantErr: true},
+		{status: http.StatusBadGateway, contentType: "application/json", wantErr: true},
 	}
 
 	for _, tc := range tests {
-		t.Run(strconv.Itoa(tc.status), func(t *testing.T) {
+		t.Run(strconv.Itoa(tc.status)+" "+tc.contentType, func(t *testing.T) {
 			fake := &fakeAckServer{messages: make(chan []byte, 32)}
 
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -801,9 +930,9 @@ func TestProbeStatus(t *testing.T) {
 				}
 
 				// A 302 without a Location is not followed.
-				w.Header().Set("Content-Type", "text/html")
+				w.Header().Set("Content-Type", tc.contentType)
 				w.WriteHeader(tc.status)
-				_, _ = w.Write([]byte("<html></html>"))
+				_, _ = w.Write([]byte("{}"))
 			}))
 
 			t.Cleanup(func() {
@@ -818,7 +947,7 @@ func TestProbeStatus(t *testing.T) {
 
 			if tc.wantErr {
 				require.ErrorContains(t, err, "status "+strconv.Itoa(tc.status))
-				require.ErrorContains(t, err, `Content-Type "text/html"`)
+				require.ErrorContains(t, err, "Content-Type "+strconv.Quote(tc.contentType))
 				require.ErrorContains(t, err, server.URL+"/api/auth/ok")
 				require.ErrorContains(t, err, "WithHeaders")
 				require.Nil(t, client)

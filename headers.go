@@ -44,10 +44,11 @@ const userAgentHeaderName = "User-Agent"
 // (Cloudflare Access takes CF-Access-Client-Id and CF-Access-Client-Secret).
 //
 // The headers go to the server's origin (scheme, host and port of the base
-// URL) only, and New refuses to follow a redirect anywhere else, see
-// Client.httpClient. The one redirect followed off that origin is the upgrade
-// of the same host from http on port 80 to https on port 443, which counts as
-// the server's origin.
+// URL) only. The client follows no redirect that leaves that origin, with or
+// without configured headers, an upgrade of the same host from http to https
+// included: a redirect turns the POSTs of the login and the long polling into
+// GETs without a body, and the WebSocket handshake follows none. New reports
+// such a redirect with the URL to use as the base URL instead.
 //
 // The headers are copied when the option is called, so changing h afterwards
 // changes nothing. Names are canonicalised; values that one h holds under two
@@ -117,8 +118,13 @@ func WithUserAgent(userAgent string) Option {
 //
 // A 2.x server has no API key login on the socket.io API. New fails with
 // ErrAPIKeyUnsupported when the scheme is detected as, or pinned to,
-// AuthSchemeSocket. Pinning AuthSchemeHTTP against a 2.x server instead
-// surfaces as ErrAPIKeyRejected, because that server asks for a login.
+// AuthSchemeSocket, and when a pinned AuthSchemeHTTP meets a 2.x server with
+// authentication disabled, which logs the client in by itself (autoLogin).
+// Pinning AuthSchemeHTTP against a 2.x server that wants a login surfaces as
+// ErrAPIKeyRejected instead, because that server asks for a login the way a
+// 3.x server refusing the key does.
+//
+// A server that is not set up yet fails New with ErrAPIKeySetupRequired.
 //
 // The key is the only credential such a client has: New rejects it together
 // with a username and password, WithSessionToken, WithTOTPSecret or
@@ -153,9 +159,10 @@ var ErrAPIKeyUnsupported = errors.New(
 	"api key: Uptime Kuma authenticates the socket.io API with an API key only from 3.0 on",
 )
 
-// errAPIKeySetup is returned when a server that is not set up yet answers a
-// client configured with WithAPIKey.
-var errAPIKeySetup = errors.New(
+// ErrAPIKeySetupRequired is returned by New when a server that is not set up
+// yet answers a client configured with WithAPIKey: such a server has no API
+// keys, and its setup takes a username and password.
+var ErrAPIKeySetupRequired = errors.New(
 	"api key: the server needs setup, which an API key cannot run: " +
 		"set the server up with a username and password first",
 )
@@ -169,6 +176,32 @@ var ErrAPIKeyRejected = errors.New(
 	`api key rejected: the key is invalid, expired or revoked, or "API and MCP" ` +
 		"(apiEnabled) is disabled in the server's settings",
 )
+
+// buildRequestHeaders assembles the headers of every request, see
+// requestHeaders, and binds them to the origin of base, the server's HTTP
+// base URL.
+//
+// A base URL with userinfo is rejected next to an API key or a configured
+// Authorization header: net/http turns the userinfo into a Basic
+// Authorization of its own before the headers are added, so the key would
+// reach the server on the WebSocket handshake but not on the HTTP requests.
+func (c *Client) buildRequestHeaders(base *url.URL) error {
+	if base.User != nil && (c.apiKey != "" || len(c.headers.Values(authorizationHeaderName)) > 0) {
+		return errors.New(
+			"base url: userinfo (user:password@) sets an Authorization header of its own, " +
+				"which cannot be combined with WithAPIKey or an Authorization header from WithHeaders",
+		)
+	}
+
+	headers, err := c.requestHeaders()
+	if err != nil {
+		return err
+	}
+
+	c.requestHeaderSet = newRequestHeaderSet(base, headers)
+
+	return nil
+}
 
 // requestHeaders assembles the headers New configured: the default
 // User-Agent, what WithHeaders added, the User-Agent of WithUserAgent, and the
@@ -375,43 +408,59 @@ func (s *requestHeaderSet) apply(header http.Header, target *url.URL) {
 }
 
 // sameOrigin reports whether target belongs to the server at base: the same
-// origin, see origin, or the same host upgraded from http on port 80 to https
-// on port 443. The opposite direction is not, as it would send the headers in
-// the clear.
+// scheme, host and port, see origin.
 func sameOrigin(base *url.URL, target *url.URL) bool {
-	baseOrigin := origin(base)
-	targetOrigin := origin(target)
-
-	if baseOrigin == targetOrigin {
-		return true
-	}
-
-	host := strings.ToLower(base.Hostname())
-
-	return baseOrigin == "http://"+net.JoinHostPort(host, "80") &&
-		targetOrigin == "https://"+net.JoinHostPort(host, "443")
+	return origin(base) == origin(target)
 }
 
 // checkRedirect is the redirect policy of the client's http.Client: it
 // follows a redirect only within the server's origin, see sameOrigin, and no
-// more than ten of them, as net/http does by default.
-func checkRedirect(base *url.URL) func(req *http.Request, via []*http.Request) error {
+// more than ten of them, as net/http does by default. A non-empty note is
+// added to the error, see redirectNote.
+func checkRedirect(base *url.URL, note string) func(req *http.Request, via []*http.Request) error {
 	return func(req *http.Request, via []*http.Request) error {
 		if len(via) >= maxRedirects {
 			return fmt.Errorf("stopped after %d redirects", maxRedirects)
 		}
 
-		if !sameOrigin(base, req.URL) {
-			return fmt.Errorf(
-				"redirect from %s to %s leaves the server's origin and is not followed, "+
-					"which keeps the configured headers and the API key with the server; "+
-					"if %s is where the server lives, use it as the base URL",
-				via[len(via)-1].URL, req.URL, req.URL,
-			)
+		if sameOrigin(base, req.URL) {
+			return nil
 		}
 
-		return nil
+		from := via[len(via)-1].URL
+		target := req.URL.Scheme + "://" + req.URL.Host
+
+		msg := fmt.Sprintf("redirect from %s to %s leaves the server's origin; use %s as the base URL",
+			from, req.URL, target)
+
+		if strings.EqualFold(from.Hostname(), req.URL.Hostname()) &&
+			from.Scheme == "http" && req.URL.Scheme == "https" {
+			msg = fmt.Sprintf("redirect from %s to %s upgrades to https; use the https URL %s as the base URL",
+				from, req.URL, target)
+		}
+
+		if note != "" {
+			msg += ", " + note
+		}
+
+		return errors.New(msg)
 	}
+}
+
+// sensitiveRedirectNote is what a refused redirect adds for a client with
+// configured headers or an API key, see redirectNote.
+const sensitiveRedirectNote = "the redirect is not followed so that the configured headers and API key " +
+	"stay with the server"
+
+// redirectNote is the note checkRedirect adds to a refused redirect: why it
+// matters for a client with configured headers or an API key, and nothing for
+// one with neither.
+func (c *Client) redirectNote() string {
+	if len(c.headers) > 0 || c.apiKey != "" {
+		return sensitiveRedirectNote
+	}
+
+	return ""
 }
 
 // maxRedirects is how many redirects net/http follows by default.

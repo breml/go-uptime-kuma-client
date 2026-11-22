@@ -738,9 +738,7 @@ func (c *Client) confirmSession(
 		return nil
 
 	case authModeSession:
-		// A key client never gets here (see confirmAPIKeySession), and must
-		// not be recorded as one of a server with authentication disabled.
-		if c.SessionToken() == "" && creds.apiKey == "" {
+		if c.SessionToken() == "" {
 			c.setAutoLoggedIn()
 		}
 
@@ -791,18 +789,25 @@ func confirmAPIKeySession(ctx context.Context, mode authMode, barrier authBarrie
 		return nil
 
 	case authModeSetup:
-		return errAPIKeySetup
+		return ErrAPIKeySetupRequired
 
 	case authModeLoginRequired:
 		// The server emits setup before loginRequired, but the handlers run
 		// on goroutines of their own, see setupPending.
 		if setupPending(ctx, barrier.setupRequired) {
-			return errAPIKeySetup
+			return ErrAPIKeySetupRequired
 		}
 
 		return ErrAPIKeyRejected
 
-	case authModeAutoLogin, authModeUnknown:
+	case authModeAutoLogin:
+		// Only a 2.x server with authentication disabled says autoLogin, and
+		// New reaches it with a key only through a pinned AuthSchemeHTTP.
+		return fmt.Errorf("%w (auth scheme %s, pinned with WithAuthScheme, but the server "+
+			"logged the client in the way a 2.x server with authentication disabled does)",
+			ErrAPIKeyUnsupported, AuthSchemeHTTP)
+
+	case authModeUnknown:
 		return errors.New("the server stated neither a session nor that it wants a login")
 
 	default:
