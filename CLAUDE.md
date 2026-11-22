@@ -95,7 +95,8 @@ operations concurrently over a single client):
 - `WithHeaders`, `WithUserAgent` and `WithAPIKey` (`headers.go`) are one
   mechanism: a round tripper on the shared `http.Client` (probe, better-auth,
   long polling) plus the same headers in `cookieWebSocket.Dial`. A configured
-  `Cookie` is appended to the jar's, never replaces it.
+  `Cookie` is appended to the jar's, never replaces it. Only requests to the
+  base URL's origin get them (`requestHeaderSet`); others get only the UA.
 - `WithAPIKey` (`Authorization: Bearer`) works on 3.x only (`apiEnabled` on):
   no HTTP login, the `session` event on connect means logged in, and
   `loginRequired` is `ErrAPIKeyRejected`. On 2.x `New` fails with

@@ -386,7 +386,7 @@ type Client struct {
 	headers          http.Header
 	userAgent        string
 	apiKey           string
-	requestHeaderSet http.Header
+	requestHeaderSet *requestHeaderSet
 }
 
 // Option is a functional option for configuring a Client.
@@ -716,10 +716,12 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		return nil, fmt.Errorf("create cookie jar: %w", err)
 	}
 
-	c.requestHeaderSet, err = c.requestHeaders()
+	headers, err := c.requestHeaders()
 	if err != nil {
 		return nil, err
 	}
+
+	c.requestHeaderSet = newRequestHeaderSet(httpBase, headers)
 
 	c.jar = jar
 	c.httpClient = &http.Client{

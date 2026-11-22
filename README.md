@@ -186,7 +186,9 @@ client, err := kuma.New(ctx, url, "username", "password",
 ```
 
 Headers the client sets itself take precedence, except that a configured
-`Cookie` is appended to the client's own cookies. `WithUserAgent` replaces the
+`Cookie` is appended to the client's own cookies. The headers, the API key
+included, go to the server's own origin only; a redirect elsewhere gets the
+User-Agent and nothing else. `WithUserAgent` replaces the
 default User-Agent, `go-uptime-kuma-client/<version>`.
 
 ### Uptime Kuma 2.x and 3.x

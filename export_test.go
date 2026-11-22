@@ -64,6 +64,7 @@ func AdaptMonitorPayload(scheme AuthScheme, monitorData map[string]any) {
 //nolint:gochecknoglobals // the standard way to reach internals from an external test package.
 var (
 	ModuleVersion = moduleVersion
+	Origin        = origin
 	AddAPIKey     = (*Client).addAPIKey
 	SetAPIEnabled = (*Client).setAPIEnabled
 )

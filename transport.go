@@ -69,7 +69,7 @@ func newSocketIOClient(
 	logger socketio.Logger,
 	httpClient *http.Client,
 	jar http.CookieJar,
-	headers http.Header,
+	headers *requestHeaderSet,
 ) (*socketio.Client, error) {
 	parsed, err := url.Parse(baseURL)
 	if err != nil {
@@ -123,13 +123,14 @@ func newSocketIOClient(
 // upgraded connection, and the headers WithHeaders configured.
 type cookieWebSocket struct {
 	jar     http.CookieJar
-	headers http.Header
+	headers *requestHeaderSet
 	conn    *websocket.Conn
 }
 
 // Dial opens the WebSocket connection with the jar's cookies and the
 // configured headers on the handshake, the way headerRoundTripper adds them
-// to the long-polling requests.
+// to the long-polling requests: only for the server's own origin, see
+// requestHeaderSet.
 func (w *cookieWebSocket) Dial(ctx context.Context, target *url.URL, origin *url.URL) error {
 	config, err := websocket.NewConfig(target.String(), origin.String())
 	if err != nil {
@@ -140,7 +141,7 @@ func (w *cookieWebSocket) Dial(ctx context.Context, target *url.URL, origin *url
 		config.Header.Set("Cookie", cookie)
 	}
 
-	applyHeaders(config.Header, w.headers)
+	w.headers.apply(config.Header, target)
 
 	conn, err := config.DialContext(ctx)
 	if err != nil {

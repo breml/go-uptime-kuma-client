@@ -2,7 +2,9 @@ package kuma
 
 import (
 	"errors"
+	"net"
 	"net/http"
+	"net/url"
 	"runtime/debug"
 	"strings"
 )
@@ -27,11 +29,19 @@ const cookieHeaderName = "Cookie"
 // authorizationHeaderName is the header WithAPIKey sets.
 const authorizationHeaderName = "Authorization"
 
+// userAgentHeaderName is the header WithUserAgent sets.
+const userAgentHeaderName = "User-Agent"
+
 // WithHeaders adds HTTP headers to every request the client makes: the auth
 // scheme probe, the HTTP login of a 3.x server, the socket.io long-polling
 // requests and the WebSocket handshake. It is for what sits in front of the
 // server, such as an access proxy that wants a header of its own
 // (Cloudflare Access takes CF-Access-Client-Id and CF-Access-Client-Secret).
+//
+// The headers go to the server's origin (scheme, host and port of the base
+// URL) only. A redirect to anywhere else gets the User-Agent and none of the
+// rest, so neither the API key nor an access proxy's secret leaves the server
+// it was configured for.
 //
 // The headers are copied, so changing h afterwards changes nothing. Calling
 // the option more than once adds up; a header named again replaces the
@@ -120,14 +130,14 @@ var ErrAPIKeyRejected = errors.New(
 // Authorization of WithAPIKey.
 func (c *Client) requestHeaders() (http.Header, error) {
 	headers := http.Header{}
-	headers.Set("User-Agent", defaultUserAgent())
+	headers.Set(userAgentHeaderName, defaultUserAgent())
 
 	for name, values := range c.headers {
 		headers[name] = append([]string(nil), values...)
 	}
 
 	if c.userAgent != "" {
-		headers.Set("User-Agent", c.userAgent)
+		headers.Set(userAgentHeaderName, c.userAgent)
 	}
 
 	if c.apiKey != "" {
@@ -189,18 +199,88 @@ func moduleVersion(info *debug.BuildInfo) string {
 	return module.Version
 }
 
-// headerRoundTripper adds the configured headers to every request that goes
-// out through the client's shared http.Client, see WithHeaders.
+// requestHeaderSet is the headers New assembled, see requestHeaders, bound to
+// the origin of the server they are meant for.
+//
+// The configured headers carry credentials (the API key, an access proxy's
+// secret), so they go to that origin alone: net/http strips Authorization
+// from a redirect that leaves the original host, and a round tripper that
+// added it back on every request would hand the key to wherever the server,
+// or anything in between, redirects. A request to another origin gets the
+// User-Agent and nothing else.
+type requestHeaderSet struct {
+	origin  string
+	headers http.Header
+}
+
+// newRequestHeaderSet binds headers to the origin of base.
+func newRequestHeaderSet(base *url.URL, headers http.Header) *requestHeaderSet {
+	return &requestHeaderSet{origin: origin(base), headers: headers}
+}
+
+// apply adds the headers meant for target's origin to header, see
+// applyHeaders.
+func (s *requestHeaderSet) apply(header http.Header, target *url.URL) {
+	if s == nil {
+		return
+	}
+
+	if origin(target) == s.origin {
+		applyHeaders(header, s.headers)
+
+		return
+	}
+
+	if header.Get(userAgentHeaderName) == "" && s.headers.Get(userAgentHeaderName) != "" {
+		header.Set(userAgentHeaderName, s.headers.Get(userAgentHeaderName))
+	}
+}
+
+// origin renders the scheme, host and port of u the way two URLs of one
+// server compare equal: a ws or wss scheme as the http or https it is made
+// over, host names in lower case, and the default port spelled out.
+func origin(u *url.URL) string {
+	scheme := strings.ToLower(u.Scheme)
+
+	switch scheme {
+	case "ws":
+		scheme = "http"
+
+	case "wss":
+		scheme = "https"
+
+	default:
+	}
+
+	port := u.Port()
+	if port == "" {
+		switch scheme {
+		case "http":
+			port = "80"
+
+		case "https":
+			port = "443"
+
+		default:
+		}
+	}
+
+	return scheme + "://" + net.JoinHostPort(strings.ToLower(u.Hostname()), port)
+}
+
+// headerRoundTripper adds the configured headers to the requests that go out
+// through the client's shared http.Client to the server, see WithHeaders and
+// requestHeaderSet.
 type headerRoundTripper struct {
 	base    http.RoundTripper
-	headers http.Header
+	headers *requestHeaderSet
 }
 
 // RoundTrip sends req with the configured headers added to a copy of it, as a
 // RoundTripper must not change the request it is given.
 func (t *headerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	clone := req.Clone(req.Context())
-	applyHeaders(clone.Header, t.headers)
+	t.headers.apply(clone.Header, clone.URL)
 
 	return t.base.RoundTrip(clone) //nolint:wrapcheck // a transport passes its errors on as they are.
 }

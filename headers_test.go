@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	neturl "net/url"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -398,5 +399,101 @@ func TestNewWithAPIKeyRejectsOtherCredentials(t *testing.T) {
 			require.Nil(t, client)
 			require.Empty(t, fake.receivedRequests(), "nothing is sent to the server")
 		})
+	}
+}
+
+// TestOrigin covers how two URLs are told to point at the same server, which
+// decides whether a request gets the configured headers.
+func TestOrigin(t *testing.T) {
+	tests := []struct {
+		a, b string
+		same bool
+	}{
+		{a: "http://kuma.example.com", b: "http://kuma.example.com:80/socket.io/?EIO=4", same: true},
+		{a: "https://Kuma.Example.com", b: "wss://kuma.example.com:443/socket.io/", same: true},
+		{a: "http://kuma.example.com:3001", b: "ws://kuma.example.com:3001/socket.io/", same: true},
+		{a: "http://kuma.example.com", b: "https://kuma.example.com"},
+		{a: "http://kuma.example.com:3001", b: "http://kuma.example.com:3002"},
+		{a: "http://kuma.example.com", b: "http://evil.example.com"},
+		{a: "http://kuma.example.com", b: "http://kuma.example.com.evil.example"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.a+" "+tc.b, func(t *testing.T) {
+			a, err := neturl.Parse(tc.a)
+			require.NoError(t, err)
+
+			b, err := neturl.Parse(tc.b)
+			require.NoError(t, err)
+
+			require.Equal(t, tc.same, kuma.Origin(a) == kuma.Origin(b))
+		})
+	}
+}
+
+// TestHeadersStayOnTheServersOrigin covers a redirect to another server: it
+// gets the User-Agent, but neither the API key nor a configured header, while
+// the server the client was configured for gets all of them.
+func TestHeadersStayOnTheServersOrigin(t *testing.T) {
+	var mu sync.Mutex
+
+	var originHeaders, otherHeaders []http.Header
+
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		otherHeaders = append(otherHeaders, r.Header.Clone())
+		mu.Unlock()
+
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte("<html></html>"))
+	}))
+
+	t.Cleanup(other.Close)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		originHeaders = append(originHeaders, r.Header.Clone())
+		mu.Unlock()
+
+		http.Redirect(w, r, other.URL+r.URL.RequestURI(), http.StatusFound)
+	}))
+
+	t.Cleanup(server.Close)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	configured := http.Header{}
+	configured.Set("CF-Access-Client-Secret", "proxy-secret")
+	configured.Set("Cookie", "proxy=1")
+
+	_, err := kuma.New(ctx, server.URL, "", "",
+		kuma.WithConnectTimeout(2*time.Second),
+		kuma.WithAuthScheme(kuma.AuthSchemeHTTP),
+		kuma.WithAPIKey(fakeAPIKey),
+		kuma.WithHeaders(configured),
+		kuma.WithUserAgent("custom-agent/1.0"),
+	)
+	require.Error(t, err, "the redirect target is no Uptime Kuma")
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	require.NotEmpty(t, originHeaders)
+
+	for _, header := range originHeaders {
+		require.Equal(t, "Bearer "+fakeAPIKey, header.Get("Authorization"))
+		require.Equal(t, "proxy-secret", header.Get("CF-Access-Client-Secret"))
+		require.Equal(t, "proxy=1", header.Get("Cookie"))
+		require.Equal(t, "custom-agent/1.0", header.Get("User-Agent"))
+	}
+
+	require.NotEmpty(t, otherHeaders, "the client followed the redirect")
+
+	for _, header := range otherHeaders {
+		require.Empty(t, header.Get("Authorization"))
+		require.Empty(t, header.Get("CF-Access-Client-Secret"))
+		require.Empty(t, header.Get("Cookie"))
+		require.Equal(t, "custom-agent/1.0", header.Get("User-Agent"))
 	}
 }
