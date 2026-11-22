@@ -96,9 +96,10 @@ operations concurrently over a single client):
   mechanism: a round tripper on the shared `http.Client` (probe, better-auth,
   long polling) plus the same headers in `cookieWebSocket.Dial`. A configured
   `Cookie` is appended to the jar's, never replaces it. Only requests to the
-  base URL's origin (or its http:80 to https:443 upgrade, `sameOrigin`) get
-  them; others get only the UA, and `checkRedirect` refuses to follow a
-  redirect off that origin. `validateHeaders` rejects reserved headers.
+  base URL's origin (strict scheme+host+port, `sameOrigin`) get them;
+  others get only the UA, and `checkRedirect` refuses every redirect off that
+  origin, for every client, an http to https upgrade included.
+  `validateHeaders` rejects reserved headers.
 - `WithAPIKey` (`Authorization: Bearer`) works on 3.x only (`apiEnabled` on):
   no HTTP login, the `session` event on connect means logged in, and
   `loginRequired` is `ErrAPIKeyRejected`. On 2.x `New` fails with

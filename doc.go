@@ -73,7 +73,8 @@
 // [WithHeaders] adds HTTP headers to every request to the server, the
 // socket.io transports included, for an access proxy in front of it, and
 // [WithUserAgent] replaces the default User-Agent. Neither the headers nor the
-// key leave the server's origin: New does not follow a redirect elsewhere.
+// key leave the server's origin, and the client follows no redirect that
+// leaves it, an upgrade from http to https included.
 //
 // # Server Versions
 //

@@ -173,9 +173,12 @@ key and opens a session for anyone, so there even an invalid key "succeeds".
 
 A 2.x server accepts API keys for HTTP basic auth on `/metrics` only, never for
 the Socket.IO API. `New` fails with `ErrAPIKeyUnsupported` when the scheme is
-detected as, or pinned to, `AuthSchemeSocket`; pinning `AuthSchemeHTTP` against
-a 2.x server surfaces as `ErrAPIKeyRejected` instead. There is no OIDC, SSO,
-LDAP or client-certificate login.
+detected as, or pinned to, `AuthSchemeSocket`, and when a pinned
+`AuthSchemeHTTP` meets a 2.x server with authentication disabled. Pinning
+`AuthSchemeHTTP` against a 2.x server that wants a login surfaces as
+`ErrAPIKeyRejected` instead. A server that is not set up yet fails with
+`ErrAPIKeySetupRequired`. A base URL with userinfo (`user:password@`) cannot be
+combined with a key. There is no OIDC, SSO, LDAP or client-certificate login.
 
 ### HTTP headers
 
@@ -200,11 +203,19 @@ its transport set themselves: `Host`, `Origin`, `Connection`, `Upgrade`,
 for a scheme other than `Bearer`, for a reverse proxy that wants HTTP basic
 auth; a Bearer token belongs in `WithAPIKey`.
 
-The headers, the API key included, go to the server's own origin only. `New`
-does not follow a redirect that leaves it, and names both URLs in the error;
-the one exception is the same host upgraded from `http` on port 80 to `https`
-on port 443, which gets the headers too. `WithUserAgent` replaces the default
-User-Agent, `go-uptime-kuma-client/<version>`.
+The headers, the API key included, go to the server's own origin only.
+`WithUserAgent` replaces the default User-Agent,
+`go-uptime-kuma-client/<version>`.
+
+### Redirects
+
+The client follows no redirect that leaves the base URL's origin (scheme, host
+and port), whether or not headers or a key are configured. That includes a
+server or proxy that upgrades `http` to `https`: a redirect turns the POSTs of
+the login and the Socket.IO long polling into bodyless GETs and the WebSocket
+handshake follows none, so it never worked reliably. Earlier versions followed
+such redirects; now `New` fails with an error naming both URLs and the one to
+use as the base URL instead (the `https` one, for an upgrade).
 
 ### Uptime Kuma 2.x and 3.x
 
