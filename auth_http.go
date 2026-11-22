@@ -66,6 +66,30 @@ func WithAuthScheme(scheme AuthScheme) Option {
 	}
 }
 
+// settleAuthScheme sets the scheme the client authenticates with: the one
+// WithAuthScheme pinned, or the one the server is detected to speak. A client
+// with an API key fails here on any scheme but AuthSchemeHTTP, with the
+// evidence the scheme was settled on, see ErrAPIKeyUnsupported.
+func (c *Client) settleAuthScheme(ctx context.Context, creds credentials) error {
+	c.scheme = c.authScheme
+	evidence := "pinned with WithAuthScheme"
+
+	if c.scheme == AuthSchemeAuto {
+		var err error
+
+		c.scheme, evidence, err = c.auth.detectAuthScheme(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	if creds.apiKey != "" && c.scheme != AuthSchemeHTTP {
+		return fmt.Errorf("%w (auth scheme %s, %s)", ErrAPIKeyUnsupported, c.scheme, evidence)
+	}
+
+	return nil
+}
+
 // ErrTwoFactorLocked is returned when the server refuses to verify any further
 // one-time codes for a login because too many wrong ones were sent, see
 // ErrInvalidTOTPCode. An Uptime Kuma 3.x server locks the login after a
@@ -188,18 +212,29 @@ type twoFactorEnableResponse struct {
 // bucket per client address and path, so a probe over its limit says nothing
 // about the sign-in, which reports its own refusal with the wait the server
 // asked for.
-func (a *betterAuthClient) detectAuthScheme(ctx context.Context) (AuthScheme, error) {
+//
+// A non-JSON answer is read as 2.x only where a 2.x server, or a proxy in
+// front of it, gives it: a 2xx (the catch-all, 200 on 2.5.x), a 404 and a 429
+// without better-auth's header. Anything else - an access proxy refusing the
+// request with a 401 or 403, a redirect not followed, a 5xx - says nothing
+// about the server behind it and is reported as an error rather than guessed.
+//
+// The second result is the evidence the scheme was settled on, for an error
+// that depends on it, see ErrAPIKeyUnsupported.
+func (a *betterAuthClient) detectAuthScheme(ctx context.Context) (AuthScheme, string, error) {
 	ctx, cancel := context.WithTimeout(ctx, betterAuthProbeTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.endpoint("/api/auth/ok"), http.NoBody)
+	probeURL := a.endpoint("/api/auth/ok")
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, probeURL, http.NoBody)
 	if err != nil {
-		return AuthSchemeAuto, fmt.Errorf("connect to server: detect auth scheme: %w", err)
+		return AuthSchemeAuto, "", fmt.Errorf("connect to server: detect auth scheme: %w", err)
 	}
 
 	resp, err := a.http.Do(req)
 	if err != nil {
-		return AuthSchemeAuto, fmt.Errorf("connect to server: detect auth scheme: %w", err)
+		return AuthSchemeAuto, "", fmt.Errorf("connect to server: detect auth scheme: %w", err)
 	}
 
 	defer func() { _ = resp.Body.Close() }()
@@ -208,12 +243,28 @@ func (a *betterAuthClient) detectAuthScheme(ctx context.Context) (AuthScheme, er
 	// matter.
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
 
+	contentType := resp.Header.Get("Content-Type")
+	evidence := fmt.Sprintf("detected from GET %s: status %d, Content-Type %q", probeURL, resp.StatusCode, contentType)
+
 	limitedByBetterAuth := resp.StatusCode == http.StatusTooManyRequests && resp.Header.Get("X-Retry-After") != ""
-	if limitedByBetterAuth || isJSON(resp.Header.Get("Content-Type")) {
-		return AuthSchemeHTTP, nil
+	if limitedByBetterAuth || isJSON(contentType) {
+		return AuthSchemeHTTP, evidence, nil
 	}
 
-	return AuthSchemeSocket, nil
+	switch {
+	case resp.StatusCode >= 200 && resp.StatusCode < 300,
+		resp.StatusCode == http.StatusNotFound,
+		resp.StatusCode == http.StatusTooManyRequests:
+		return AuthSchemeSocket, evidence, nil
+
+	default:
+		return AuthSchemeAuto, "", fmt.Errorf(
+			"connect to server: detect auth scheme: GET %s answered status %d with Content-Type %q, "+
+				"which is neither Uptime Kuma 2.x nor 3.x; an access proxy in front of the server may "+
+				"be rejecting the request (check WithHeaders), or pin the scheme with WithAuthScheme",
+			probeURL, resp.StatusCode, contentType,
+		)
+	}
 }
 
 // isJSON reports whether a Content-Type names a JSON media type.

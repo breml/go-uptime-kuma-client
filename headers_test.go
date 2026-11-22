@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	neturl "net/url"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -27,23 +28,25 @@ func TestHeadersOnEveryHTTPRequest(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
-	configured := http.Header{}
+	// A lower-case name in a literal is canonicalised like any other.
+	configured := http.Header{"cookie": {"proxy=1"}}
 	configured.Set("CF-Access-Client-Id", "client-id")
-	configured.Set("Cookie", "proxy=1")
-	configured.Set("Accept", "text/html")
 	configured.Set("User-Agent", "overridden-by-with-user-agent")
+
+	withHeaders := kuma.WithHeaders(configured)
+
+	// The option copied the headers when it was called, so changing them
+	// before New runs it changes nothing.
+	configured.Set("CF-Access-Client-Id", "changed")
 
 	client, err := kuma.New(ctx, url, "admin", "admin1",
 		kuma.WithConnectTimeout(5*time.Second),
-		kuma.WithHeaders(configured),
+		withHeaders,
 		kuma.WithUserAgent("custom-agent/1.0"),
 	)
 	require.NoError(t, err)
 
 	t.Cleanup(func() { _ = client.Disconnect() })
-
-	// Changing the header after the option was applied changes nothing.
-	configured.Set("CF-Access-Client-Id", "changed")
 
 	require.NoError(t, client.Resync(ctx))
 
@@ -63,13 +66,9 @@ func TestHeadersOnEveryHTTPRequest(t *testing.T) {
 		case request.path == "/api/auth/sign-in/username":
 			sawSignIn = true
 
-			require.Equal(t, "application/json", request.header.Get("Accept"),
-				"a header the client sets itself takes precedence")
-
 		case request.transport == "polling":
 			sawPolling = true
 
-			require.Equal(t, "text/html", request.header.Get("Accept"))
 			require.Contains(t, request.header.Get("Cookie"), "better-auth.session_token="+fakeSessionToken,
 				"the configured cookie is added to the jar's, not put in its place")
 
@@ -80,6 +79,140 @@ func TestHeadersOnEveryHTTPRequest(t *testing.T) {
 	require.True(t, sawProbe, "the probe carries the headers")
 	require.True(t, sawSignIn, "the sign-in carries the headers")
 	require.True(t, sawPolling, "the long polling carries the headers")
+}
+
+// TestWithHeadersAddsUp covers WithHeaders given more than once, and one
+// header literal holding two spellings of a name.
+func TestWithHeadersAddsUp(t *testing.T) {
+	fake, url := newHTTPAuthFake(t)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, url, "admin", "admin1",
+		kuma.WithConnectTimeout(5*time.Second),
+		kuma.WithHeaders(http.Header{"X-A": {"a1"}, "X-B": {"b1"}}),
+		kuma.WithHeaders(http.Header{"X-B": {"b2"}, "X-C": {"c2"}}),
+		kuma.WithHeaders(http.Header{"x-spelled": {"lower"}, "X-Spelled": {"canonical"}}),
+	)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	requests := fake.receivedRequests()
+	require.NotEmpty(t, requests)
+
+	for _, request := range requests {
+		require.Equal(t, []string{"a1"}, request.header.Values("X-A"), request.path)
+		require.Equal(t, []string{"b2"}, request.header.Values("X-B"), "a repeated name replaces")
+		require.Equal(t, []string{"c2"}, request.header.Values("X-C"), request.path)
+		require.Equal(t, []string{"canonical", "lower"}, request.header.Values("X-Spelled"),
+			"two spellings are kept, in the sorted order of the spellings")
+	}
+}
+
+// TestNewRejectsInvalidHeaders covers the headers and keys New refuses before
+// it sends anything.
+func TestNewRejectsInvalidHeaders(t *testing.T) {
+	tests := []struct {
+		name    string
+		opts    []kuma.Option
+		wantErr string
+	}{
+		{name: "Host", opts: []kuma.Option{kuma.WithHeaders(http.Header{"Host": {"x"}})}, wantErr: "Host is set by"},
+		{
+			name:    "Origin",
+			opts:    []kuma.Option{kuma.WithHeaders(http.Header{"origin": {"x"}})},
+			wantErr: "Origin is set by",
+		},
+		{
+			name:    "Accept-Encoding",
+			opts:    []kuma.Option{kuma.WithHeaders(http.Header{"Accept-Encoding": {"gzip"}})},
+			wantErr: "Accept-Encoding is set by",
+		},
+		{
+			name:    "Accept",
+			opts:    []kuma.Option{kuma.WithHeaders(http.Header{"Accept": {"x"}})},
+			wantErr: "Accept is set by",
+		},
+		{name: "TE", opts: []kuma.Option{kuma.WithHeaders(http.Header{"TE": {"x"}})}, wantErr: "Te is set by"},
+		{
+			name:    "Sec-WebSocket-Extensions",
+			opts:    []kuma.Option{kuma.WithHeaders(http.Header{"Sec-WebSocket-Extensions": {"x"}})},
+			wantErr: "Sec-Websocket-Extensions is set by",
+		},
+		{
+			name:    "invalid name",
+			opts:    []kuma.Option{kuma.WithHeaders(http.Header{"X Bad": {"x"}})},
+			wantErr: "not a valid header name",
+		},
+		{
+			name:    "invalid value",
+			opts:    []kuma.Option{kuma.WithHeaders(http.Header{"X-Bad": {"a\r\nX-Injected: 1"}})},
+			wantErr: "X-Bad: not a valid header value",
+		},
+		{
+			name:    "a Bearer token in Authorization",
+			opts:    []kuma.Option{kuma.WithHeaders(http.Header{"Authorization": {"bearer abc"}})},
+			wantErr: "use WithAPIKey",
+		},
+		{
+			name:    "an invalid User-Agent",
+			opts:    []kuma.Option{kuma.WithUserAgent("agent\n")},
+			wantErr: "WithUserAgent",
+		},
+		{
+			name:    "an API key with the Bearer prefix",
+			opts:    []kuma.Option{kuma.WithAPIKey("BEARER " + fakeAPIKey)},
+			wantErr: "without the Bearer prefix",
+		},
+		{
+			name:    "an API key with whitespace",
+			opts:    []kuma.Option{kuma.WithAPIKey("uk1 key")},
+			wantErr: "whitespace or control characters",
+		},
+		{
+			name:    "an API key with a control character",
+			opts:    []kuma.Option{kuma.WithAPIKey("uk1_key\x00")},
+			wantErr: "whitespace or control characters",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			fake, url := newHTTPAuthFake(t)
+
+			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+			defer cancel()
+
+			client, err := kuma.New(ctx, url, "", "",
+				append([]kuma.Option{kuma.WithConnectTimeout(5 * time.Second)}, tc.opts...)...)
+			require.ErrorContains(t, err, tc.wantErr)
+			require.Nil(t, client)
+			require.Empty(t, fake.receivedRequests(), "nothing is sent to the server")
+		})
+	}
+}
+
+// TestBasicAuthorizationHeader covers an Authorization header for a reverse
+// proxy in front of the server that wants HTTP basic auth.
+func TestBasicAuthorizationHeader(t *testing.T) {
+	fake, url := newHTTPAuthFake(t)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(ctx, url, "admin", "admin1",
+		kuma.WithConnectTimeout(5*time.Second),
+		kuma.WithHeaders(http.Header{"Authorization": {"Basic Zm9vOmJhcg=="}}),
+	)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	for _, request := range fake.receivedRequests() {
+		require.Equal(t, "Basic Zm9vOmJhcg==", request.header.Get("Authorization"), request.path)
+	}
 }
 
 // TestDefaultUserAgent covers the User-Agent a client sends unless it is told
@@ -174,9 +307,12 @@ func TestModuleVersion(t *testing.T) {
 }
 
 // headerRecorder records the headers of the WebSocket handshake a server it
-// wraps is asked for.
+// wraps is asked for. With setCookie it answers the auth scheme probe with that
+// cookie, so the jar holds a cookie of the server's by the time the client
+// upgrades.
 type headerRecorder struct {
-	next http.Handler
+	next      http.Handler
+	setCookie *http.Cookie
 
 	mu        sync.Mutex
 	websocket http.Header
@@ -189,6 +325,10 @@ func (r *headerRecorder) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		r.mu.Unlock()
 	}
 
+	if req.URL.Path == "/api/auth/ok" && r.setCookie != nil {
+		http.SetCookie(w, r.setCookie)
+	}
+
 	r.next.ServeHTTP(w, req)
 }
 
@@ -199,11 +339,12 @@ func (r *headerRecorder) websocketHeader() http.Header {
 	return r.websocket
 }
 
-// TestHeadersOnWebSocketHandshake covers the configured headers on the
-// WebSocket handshake, which the socket.io client makes without the shared
-// http.Client, see cookieWebSocket.
-func TestHeadersOnWebSocketHandshake(t *testing.T) {
-	recorder := &headerRecorder{next: &fakeSocketIOServerWithWebSocket{}}
+// newWebSocketRecorder starts a fake that upgrades to WebSocket behind a
+// headerRecorder.
+func newWebSocketRecorder(t *testing.T, setCookie *http.Cookie) (recorder *headerRecorder, url string) {
+	t.Helper()
+
+	recorder = &headerRecorder{next: &fakeSocketIOServerWithWebSocket{}, setCookie: setCookie}
 	server := httptest.NewServer(recorder)
 
 	t.Cleanup(func() {
@@ -211,27 +352,59 @@ func TestHeadersOnWebSocketHandshake(t *testing.T) {
 		server.Close()
 	})
 
-	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
-	defer cancel()
+	return recorder, server.URL
+}
 
-	configured := http.Header{}
-	configured.Set("CF-Access-Client-Id", "client-id")
-	configured.Set("Cookie", "proxy=1")
+// TestHeadersOnWebSocketHandshake covers the configured headers on the
+// WebSocket handshake, which the socket.io client makes without the shared
+// http.Client, see cookieWebSocket.
+func TestHeadersOnWebSocketHandshake(t *testing.T) {
+	t.Run("the configured headers and cookies, next to the jar's", func(t *testing.T) {
+		recorder, url := newWebSocketRecorder(t, &http.Cookie{Name: "server-session", Value: "abc", Path: "/"})
 
-	// The fake upgrades and then never sends the lists, so New fails waiting
-	// for them; the handshake has been made by then.
-	_, err := kuma.New(ctx, server.URL, "admin", "admin1",
-		kuma.WithConnectTimeout(time.Second),
-		kuma.WithHeaders(configured),
-		kuma.WithUserAgent("custom-agent/1.0"),
-	)
-	require.Error(t, err)
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
 
-	header := recorder.websocketHeader()
-	require.NotNil(t, header, "the client upgraded to WebSocket")
-	require.Equal(t, "client-id", header.Get("CF-Access-Client-Id"))
-	require.Equal(t, "custom-agent/1.0", header.Get("User-Agent"))
-	require.Equal(t, "proxy=1", header.Get("Cookie"))
+		configured := http.Header{}
+		configured.Set("CF-Access-Client-Id", "client-id")
+		configured.Set("Cookie", "proxy=1")
+
+		// The fake upgrades and then never sends the lists, so New fails
+		// waiting for them; the handshake has been made by then.
+		_, err := kuma.New(ctx, url, "admin", "admin1",
+			kuma.WithConnectTimeout(time.Second),
+			kuma.WithHeaders(configured),
+			kuma.WithUserAgent("custom-agent/1.0"),
+		)
+		require.Error(t, err)
+
+		header := recorder.websocketHeader()
+		require.NotNil(t, header, "the client upgraded to WebSocket")
+		require.Equal(t, "client-id", header.Get("CF-Access-Client-Id"))
+		require.Equal(t, "custom-agent/1.0", header.Get("User-Agent"))
+		require.Equal(t, "server-session=abc; proxy=1", header.Get("Cookie"),
+			"the configured cookie is added to the jar's, not put in its place")
+	})
+
+	t.Run("the API key", func(t *testing.T) {
+		recorder, url := newWebSocketRecorder(t, nil)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		// The fake speaks no 3.x auth, so the scheme is pinned to get the key
+		// past New's check; the handshake is made before New fails.
+		_, err := kuma.New(ctx, url, "", "",
+			kuma.WithConnectTimeout(time.Second),
+			kuma.WithAuthScheme(kuma.AuthSchemeHTTP),
+			kuma.WithAPIKey(fakeAPIKey),
+		)
+		require.Error(t, err)
+
+		header := recorder.websocketHeader()
+		require.NotNil(t, header, "the client upgraded to WebSocket")
+		require.Equal(t, "Bearer "+fakeAPIKey, header.Get("Authorization"))
+	})
 }
 
 // TestNewWithAPIKey covers the API key login of a 3.x server, see
@@ -269,6 +442,9 @@ func TestNewWithAPIKey(t *testing.T) {
 		// connection in service stays.
 		fake.setAPIKey("")
 		require.ErrorIs(t, client.Resync(ctx), kuma.ErrAPIKeyRejected)
+
+		_, err = client.GetSettings(ctx)
+		require.NoError(t, err, "the connection in service still answers commands")
 	})
 
 	t.Run("a key the server refuses", func(t *testing.T) {
@@ -287,6 +463,23 @@ func TestNewWithAPIKey(t *testing.T) {
 		require.Nil(t, client)
 	})
 
+	t.Run("a server that needs setup", func(t *testing.T) {
+		fake, url := newHTTPAuthFake(t)
+		fake.setAPIKey(fakeAPIKey)
+		fake.setSetupRequired()
+
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		client, err := kuma.New(ctx, url, "", "",
+			kuma.WithConnectTimeout(5*time.Second),
+			kuma.WithAPIKey(fakeAPIKey),
+		)
+		require.ErrorContains(t, err, "needs setup, which an API key cannot run")
+		require.NotErrorIs(t, err, kuma.ErrAPIKeyRejected)
+		require.Nil(t, client)
+	})
+
 	t.Run("a 2.x server has no API key login", func(t *testing.T) {
 		fake, url := newAuthFake(t)
 
@@ -298,6 +491,7 @@ func TestNewWithAPIKey(t *testing.T) {
 			kuma.WithAPIKey(fakeAPIKey),
 		)
 		require.ErrorIs(t, err, kuma.ErrAPIKeyUnsupported)
+		require.ErrorContains(t, err, "status 200", "the error carries what the scheme was detected from")
 		require.Nil(t, client)
 		require.Zero(t, fake.handshakeCount(), "the client does not connect")
 	})
@@ -315,6 +509,7 @@ func TestNewWithAPIKey(t *testing.T) {
 			kuma.WithAPIKey(fakeAPIKey),
 		)
 		require.ErrorIs(t, err, kuma.ErrAPIKeyUnsupported)
+		require.ErrorContains(t, err, "pinned with WithAuthScheme")
 		require.Nil(t, client)
 		require.Zero(t, fake.probeCount(), "a pinned scheme is not detected")
 	})
@@ -341,9 +536,6 @@ func TestNewWithAPIKey(t *testing.T) {
 // TestNewWithAPIKeyRejectsOtherCredentials covers the credentials an API key
 // cannot be combined with: New fails before it makes a single request.
 func TestNewWithAPIKeyRejectsOtherCredentials(t *testing.T) {
-	authorization := http.Header{}
-	authorization.Set("Authorization", "Basic Zm9vOmJhcg==")
-
 	tests := []struct {
 		name     string
 		username string
@@ -375,9 +567,24 @@ func TestNewWithAPIKeyRejectsOtherCredentials(t *testing.T) {
 			wantErr: "WithAPIKey cannot be combined",
 		},
 		{
+			name:    "autosetup",
+			opts:    []kuma.Option{kuma.WithAutosetup()},
+			wantErr: "WithAPIKey cannot be combined with WithAutosetup",
+		},
+		{
 			name:    "an Authorization header",
-			opts:    []kuma.Option{kuma.WithHeaders(authorization)},
-			wantErr: "Authorization",
+			opts:    []kuma.Option{kuma.WithHeaders(http.Header{"Authorization": {"Basic Zm9vOmJhcg=="}})},
+			wantErr: "WithAPIKey sets the Authorization header",
+		},
+		{
+			name:    "a lower-case authorization header",
+			opts:    []kuma.Option{kuma.WithHeaders(http.Header{"authorization": {"Basic Zm9vOmJhcg=="}})},
+			wantErr: "WithAPIKey sets the Authorization header",
+		},
+		{
+			name:    "an empty Authorization header",
+			opts:    []kuma.Option{kuma.WithHeaders(http.Header{"Authorization": {""}})},
+			wantErr: "WithAPIKey sets the Authorization header",
 		},
 	}
 
@@ -402,39 +609,72 @@ func TestNewWithAPIKeyRejectsOtherCredentials(t *testing.T) {
 	}
 }
 
-// TestOrigin covers how two URLs are told to point at the same server, which
-// decides whether a request gets the configured headers.
-func TestOrigin(t *testing.T) {
+// TestSameOrigin covers how a URL is told to belong to the server, which
+// decides whether a request gets the configured headers and whether a
+// redirect is followed.
+func TestSameOrigin(t *testing.T) {
 	tests := []struct {
-		a, b string
-		same bool
+		base, target string
+		same         bool
 	}{
-		{a: "http://kuma.example.com", b: "http://kuma.example.com:80/socket.io/?EIO=4", same: true},
-		{a: "https://Kuma.Example.com", b: "wss://kuma.example.com:443/socket.io/", same: true},
-		{a: "http://kuma.example.com:3001", b: "ws://kuma.example.com:3001/socket.io/", same: true},
-		{a: "http://kuma.example.com", b: "https://kuma.example.com"},
-		{a: "http://kuma.example.com:3001", b: "http://kuma.example.com:3002"},
-		{a: "http://kuma.example.com", b: "http://evil.example.com"},
-		{a: "http://kuma.example.com", b: "http://kuma.example.com.evil.example"},
+		{base: "http://kuma.example.com", target: "http://kuma.example.com:80/socket.io/?EIO=4", same: true},
+		{base: "https://Kuma.Example.com", target: "wss://kuma.example.com:443/socket.io/", same: true},
+		{base: "http://kuma.example.com:3001", target: "ws://kuma.example.com:3001/socket.io/", same: true},
+		{base: "http://kuma.example.com", target: "https://kuma.example.com/api/auth/ok", same: true},
+		{base: "http://kuma.example.com", target: "wss://kuma.example.com/socket.io/", same: true},
+		{base: "https://kuma.example.com", target: "http://kuma.example.com"},
+		{base: "http://kuma.example.com:3001", target: "https://kuma.example.com:3001"},
+		{base: "http://kuma.example.com:3001", target: "https://kuma.example.com"},
+		{base: "http://kuma.example.com", target: "https://other.example.com"},
+		{base: "http://kuma.example.com:3001", target: "http://kuma.example.com:3002"},
+		{base: "http://kuma.example.com", target: "http://evil.example.com"},
+		{base: "http://kuma.example.com", target: "http://kuma.example.com.evil.example"},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.a+" "+tc.b, func(t *testing.T) {
-			a, err := neturl.Parse(tc.a)
+		t.Run(tc.base+" "+tc.target, func(t *testing.T) {
+			base, err := neturl.Parse(tc.base)
 			require.NoError(t, err)
 
-			b, err := neturl.Parse(tc.b)
+			target, err := neturl.Parse(tc.target)
 			require.NoError(t, err)
 
-			require.Equal(t, tc.same, kuma.Origin(a) == kuma.Origin(b))
+			require.Equal(t, tc.same, kuma.SameOrigin(base, target))
 		})
 	}
 }
 
-// TestHeadersStayOnTheServersOrigin covers a redirect to another server: it
-// gets the User-Agent, but neither the API key nor a configured header, while
-// the server the client was configured for gets all of them.
-func TestHeadersStayOnTheServersOrigin(t *testing.T) {
+// TestCheckRedirect covers the redirects the client follows: within the
+// server's origin and the upgrade of its host to https, nothing else.
+func TestCheckRedirect(t *testing.T) {
+	base, err := neturl.Parse("http://kuma.example.com")
+	require.NoError(t, err)
+
+	check := kuma.CheckRedirect(base)
+
+	request := func(target string) *http.Request {
+		req, reqErr := http.NewRequestWithContext(t.Context(), http.MethodGet, target, http.NoBody)
+		require.NoError(t, reqErr)
+
+		return req
+	}
+
+	via := []*http.Request{request("http://kuma.example.com/api/auth/ok")}
+
+	require.NoError(t, check(request("https://kuma.example.com/api/auth/ok"), via),
+		"the upgrade of the same host to https is followed")
+
+	err = check(request("https://elsewhere.example.com/api/auth/ok"), via)
+	require.ErrorContains(t, err, "http://kuma.example.com/api/auth/ok")
+	require.ErrorContains(t, err, "https://elsewhere.example.com/api/auth/ok")
+	require.ErrorContains(t, err, "use it as the base URL")
+}
+
+// TestRedirectOffTheServersOrigin covers a redirect to another server: the
+// client refuses to follow it, so the other server gets neither the API key
+// nor a configured header, while the server the client was configured for
+// gets all of them.
+func TestRedirectOffTheServersOrigin(t *testing.T) {
 	var mu sync.Mutex
 
 	var originHeaders, otherHeaders []http.Header
@@ -469,12 +709,12 @@ func TestHeadersStayOnTheServersOrigin(t *testing.T) {
 
 	_, err := kuma.New(ctx, server.URL, "", "",
 		kuma.WithConnectTimeout(2*time.Second),
-		kuma.WithAuthScheme(kuma.AuthSchemeHTTP),
 		kuma.WithAPIKey(fakeAPIKey),
 		kuma.WithHeaders(configured),
 		kuma.WithUserAgent("custom-agent/1.0"),
 	)
-	require.Error(t, err, "the redirect target is no Uptime Kuma")
+	require.ErrorContains(t, err, "leaves the server's origin")
+	require.ErrorContains(t, err, other.URL+"/api/auth/ok")
 
 	mu.Lock()
 	defer mu.Unlock()
@@ -488,12 +728,109 @@ func TestHeadersStayOnTheServersOrigin(t *testing.T) {
 		require.Equal(t, "custom-agent/1.0", header.Get("User-Agent"))
 	}
 
-	require.NotEmpty(t, otherHeaders, "the client followed the redirect")
-
 	for _, header := range otherHeaders {
 		require.Empty(t, header.Get("Authorization"))
 		require.Empty(t, header.Get("CF-Access-Client-Secret"))
 		require.Empty(t, header.Get("Cookie"))
-		require.Equal(t, "custom-agent/1.0", header.Get("User-Agent"))
+	}
+}
+
+// TestHeadersOffTheServersOrigin covers the round tripper itself for a
+// request that leaves the server's origin without a redirect the client
+// could refuse: it gets the User-Agent and nothing else.
+func TestHeadersOffTheServersOrigin(t *testing.T) {
+	base, err := neturl.Parse("http://kuma.example.com")
+	require.NoError(t, err)
+
+	configured := http.Header{}
+	configured.Set("Authorization", "Bearer "+fakeAPIKey)
+	configured.Set("CF-Access-Client-Secret", "proxy-secret")
+	configured.Set("User-Agent", "custom-agent/1.0")
+
+	for target, wantSecrets := range map[string]bool{
+		"http://kuma.example.com/api/auth/ok":    true,
+		"https://kuma.example.com/api/auth/ok":   true,
+		"http://other.example.com/api/auth/ok":   false,
+		"http://kuma.example.com:81/api/auth/ok": false,
+	} {
+		t.Run(target, func(t *testing.T) {
+			req, reqErr := http.NewRequestWithContext(t.Context(), http.MethodGet, target, http.NoBody)
+			require.NoError(t, reqErr)
+
+			header := kuma.ApplyRequestHeaders(base, configured, req)
+
+			require.Equal(t, "custom-agent/1.0", header.Get("User-Agent"))
+
+			if wantSecrets {
+				require.Equal(t, "Bearer "+fakeAPIKey, header.Get("Authorization"))
+				require.Equal(t, "proxy-secret", header.Get("CF-Access-Client-Secret"))
+
+				return
+			}
+
+			require.Empty(t, header.Get("Authorization"))
+			require.Empty(t, header.Get("CF-Access-Client-Secret"))
+		})
+	}
+}
+
+// TestProbeStatus covers which answers of the auth scheme probe New reads as a
+// 2.x server, and which it reports instead of guessing.
+func TestProbeStatus(t *testing.T) {
+	tests := []struct {
+		status  int
+		wantErr bool
+	}{
+		{status: http.StatusOK},
+		{status: http.StatusNotFound},
+		{status: http.StatusUnauthorized, wantErr: true},
+		{status: http.StatusForbidden, wantErr: true},
+		{status: http.StatusFound, wantErr: true},
+		{status: http.StatusBadGateway, wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(strconv.Itoa(tc.status), func(t *testing.T) {
+			fake := &fakeAckServer{messages: make(chan []byte, 32)}
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/api/auth/ok" {
+					fake.ServeHTTP(w, r)
+
+					return
+				}
+
+				// A 302 without a Location is not followed.
+				w.Header().Set("Content-Type", "text/html")
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte("<html></html>"))
+			}))
+
+			t.Cleanup(func() {
+				server.CloseClientConnections()
+				server.Close()
+			})
+
+			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+			defer cancel()
+
+			client, err := kuma.New(ctx, server.URL, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+
+			if tc.wantErr {
+				require.ErrorContains(t, err, "status "+strconv.Itoa(tc.status))
+				require.ErrorContains(t, err, `Content-Type "text/html"`)
+				require.ErrorContains(t, err, server.URL+"/api/auth/ok")
+				require.ErrorContains(t, err, "WithHeaders")
+				require.Nil(t, client)
+
+				return
+			}
+
+			require.NoError(t, err)
+
+			t.Cleanup(func() { _ = client.Disconnect() })
+
+			require.Equal(t, kuma.AuthSchemeSocket, client.AuthScheme())
+		})
 	}
 }

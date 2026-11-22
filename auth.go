@@ -320,6 +320,13 @@ func (c *Client) useAPIKey(creds *credentials) error {
 		)
 	}
 
+	if c.autosetup {
+		return errors.New(
+			"credentials: WithAPIKey cannot be combined with WithAutosetup: a server that " +
+				"is not set up has no API keys, and the setup takes a username and password",
+		)
+	}
+
 	creds.apiKey = c.apiKey
 
 	return nil
@@ -704,9 +711,10 @@ func (c *Client) keepSessionCookie() error {
 // that drops it looks like; that is reported for what it is, because neither
 // the password nor the token is at fault.
 //
-// A client with an API key, see WithAPIKey, is logged in once the server
-// answers the handshake that carried it with a session, and rejected with
-// ErrAPIKeyRejected when the server asks for a login instead.
+// A client with an API key, see WithAPIKey, takes a session the server
+// answers the handshake that carried it with as the key being accepted (a
+// server with authentication disabled answers so for any key), and is
+// rejected with ErrAPIKeyRejected when the server asks for a login instead.
 func (c *Client) confirmSession(
 	ctx context.Context,
 	creds credentials,
@@ -720,12 +728,18 @@ func (c *Client) confirmSession(
 		return fmt.Errorf("waiting for the server's auth mode: %w", err)
 	}
 
+	if creds.apiKey != "" {
+		return confirmAPIKeySession(ctx, mode, barrier)
+	}
+
 	switch mode {
 	case authModeSetup:
 		// The caller runs the setup and logs in afterwards.
 		return nil
 
 	case authModeSession:
+		// A key client never gets here (see confirmAPIKeySession), and must
+		// not be recorded as one of a server with authentication disabled.
 		if c.SessionToken() == "" && creds.apiKey == "" {
 			c.setAutoLoggedIn()
 		}
@@ -735,10 +749,6 @@ func (c *Client) confirmSession(
 	case authModeLoginRequired:
 		if loginErr != nil {
 			return loginErr
-		}
-
-		if creds.apiKey != "" {
-			return ErrAPIKeyRejected
 		}
 
 		if c.SessionToken() != "" {
@@ -764,6 +774,35 @@ func (c *Client) confirmSession(
 			return nil
 		}
 
+		return errors.New("the server stated neither a session nor that it wants a login")
+
+	default:
+		return fmt.Errorf("auth mode: unknown: %d", mode)
+	}
+}
+
+// confirmAPIKeySession is confirmSession for a client with an API key, see
+// WithAPIKey: a session is the key accepted (or a server with authentication
+// disabled ignoring it), a login asked for is the key rejected, and a server
+// that wants a setup cannot be helped by a key.
+func confirmAPIKeySession(ctx context.Context, mode authMode, barrier authBarrier) error {
+	switch mode {
+	case authModeSession:
+		return nil
+
+	case authModeSetup:
+		return errAPIKeySetup
+
+	case authModeLoginRequired:
+		// The server emits setup before loginRequired, but the handlers run
+		// on goroutines of their own, see setupPending.
+		if setupPending(ctx, barrier.setupRequired) {
+			return errAPIKeySetup
+		}
+
+		return ErrAPIKeyRejected
+
+	case authModeAutoLogin, authModeUnknown:
 		return errors.New("the server stated neither a session nor that it wants a login")
 
 	default:

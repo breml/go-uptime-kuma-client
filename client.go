@@ -725,8 +725,9 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 
 	c.jar = jar
 	c.httpClient = &http.Client{
-		Jar:       jar,
-		Transport: &headerRoundTripper{base: http.DefaultTransport, headers: c.requestHeaderSet},
+		Jar:           jar,
+		Transport:     &headerRoundTripper{base: http.DefaultTransport, headers: c.requestHeaderSet},
+		CheckRedirect: checkRedirect(httpBase),
 	}
 	c.auth = &betterAuthClient{base: httpBase, http: c.httpClient, jar: jar}
 
@@ -753,16 +754,9 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		}
 	}
 
-	c.scheme = c.authScheme
-	if c.scheme == AuthSchemeAuto {
-		c.scheme, err = c.auth.detectAuthScheme(ctxWithConnectTimeout)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if creds.apiKey != "" && c.scheme != AuthSchemeHTTP {
-		return nil, ErrAPIKeyUnsupported
+	err = c.settleAuthScheme(ctxWithConnectTimeout, creds)
+	if err != nil {
+		return nil, err
 	}
 
 	// A 3.x server is logged in to before the connection is made, because it

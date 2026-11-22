@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/maldikhan/go.socket.io/socket.io/v5/client/emit"
@@ -58,16 +60,32 @@ func AdaptMonitorPayload(scheme AuthScheme, monitorData map[string]any) {
 	(&Client{scheme: scheme}).adaptMonitorPayload(monitorData)
 }
 
-// ModuleVersion is the version lookup the default User-Agent makes, for a test
-// that hands it build information of its own.
+// The header and API key internals the tests reach directly:
+//
+//   - ModuleVersion is the version lookup of the default User-Agent, for a
+//     test that hands it build information of its own.
+//   - SameOrigin and CheckRedirect are the origin rule and the redirect policy
+//     the configured headers are bound by, for URLs no test server can have.
+//   - AddAPIKey and SetAPIEnabled put a real 3.x server into the state the
+//     end-to-end tests of WithAPIKey need, see addAPIKey and setAPIEnabled.
 //
 //nolint:gochecknoglobals // the standard way to reach internals from an external test package.
 var (
 	ModuleVersion = moduleVersion
-	Origin        = origin
+	SameOrigin    = sameOrigin
+	CheckRedirect = checkRedirect
 	AddAPIKey     = (*Client).addAPIKey
 	SetAPIEnabled = (*Client).setAPIEnabled
 )
+
+// ApplyRequestHeaders returns the headers req goes out with when the client
+// for base is configured with headers, see requestHeaderSet.
+func ApplyRequestHeaders(base *url.URL, headers http.Header, req *http.Request) http.Header {
+	header := req.Header.Clone()
+	newRequestHeaderSet(base, headers).apply(header, req.URL)
+
+	return header
+}
 
 // addAPIKey, exported as AddAPIKey, creates an API key for the logged in account and returns it, the
 // way the settings page of an Uptime Kuma 3.x server does. It is for the
