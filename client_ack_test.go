@@ -192,6 +192,11 @@ type fakeAckServer struct {
 	// command with the given ack and maintenanceList broadcast, see
 	// answerMaintenanceWrite.
 	maintenanceAnswers map[string]fakeMaintenanceAnswer
+	// apiKey is the API key the fake authenticates a handshake by, the way a
+	// 3.x server with "API and MCP" turned on does; the empty string accepts
+	// none. requests records the path and headers of every request.
+	apiKey   string
+	requests []fakeRequest
 }
 
 // loginCode extracts the one-time code a login frame carries.
@@ -233,6 +238,8 @@ func tokenFromFrame(payload string) string {
 }
 
 func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.recordRequest(r)
+
 	sid := r.URL.Query().Get("sid")
 
 	switch {

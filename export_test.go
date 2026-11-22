@@ -1,6 +1,13 @@
 package kuma
 
-import "time"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/maldikhan/go.socket.io/socket.io/v5/client/emit"
+)
 
 // The two-factor management commands and the code generation are internal:
 // they administer an account rather than authenticate a client, and there is
@@ -49,4 +56,73 @@ func SetDefaultOperationTimeout(d time.Duration) func() {
 // UpdateMonitor for a client that authenticated with scheme.
 func AdaptMonitorPayload(scheme AuthScheme, monitorData map[string]any) {
 	(&Client{scheme: scheme}).adaptMonitorPayload(monitorData)
+}
+
+// ModuleVersion is the version lookup the default User-Agent makes, for a test
+// that hands it build information of its own.
+//
+//nolint:gochecknoglobals // the standard way to reach internals from an external test package.
+var (
+	ModuleVersion = moduleVersion
+	AddAPIKey     = (*Client).addAPIKey
+	SetAPIEnabled = (*Client).setAPIEnabled
+)
+
+// addAPIKey, exported as AddAPIKey, creates an API key for the logged in account and returns it, the
+// way the settings page of an Uptime Kuma 3.x server does. It is for the
+// end-to-end tests of WithAPIKey, which need a key the client cannot create
+// for itself: the server wants a login session for the command.
+func (c *Client) addAPIKey(ctx context.Context, name string) (string, error) {
+	release, err := c.lockConn(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	defer release()
+
+	res := make(chan map[string]any, 1)
+
+	err = c.currentConn().socket.Emit(
+		"addAPIKey",
+		map[string]any{"name": name},
+		emit.WithAck(func(response map[string]any) { res <- response }),
+	)
+	if err != nil {
+		return "", fmt.Errorf("addAPIKey: %w", err)
+	}
+
+	select {
+	case response := <-res:
+		key, hasKey := response["key"].(string)
+		ok, hasOK := response["ok"].(bool)
+
+		if !hasKey || !hasOK || !ok || key == "" {
+			return "", fmt.Errorf("addAPIKey: %v", response)
+		}
+
+		return key, nil
+
+	case <-ctx.Done():
+		return "", fmt.Errorf("addAPIKey: %w", ctx.Err())
+	}
+}
+
+// setAPIEnabled, exported as SetAPIEnabled, turns the "API and MCP" setting (apiEnabled) of an Uptime Kuma
+// 3.x server on or off, keeping every other setting as it is. The Settings
+// type has no field for it, since it is a 3.x setting in alpha upstream.
+func (c *Client) setAPIEnabled(ctx context.Context, enabled bool, password string) error {
+	response, err := c.syncEmit(ctx, "getSettings")
+	if err != nil {
+		return err
+	}
+
+	if response.Data == nil {
+		return errors.New("getSettings: no data")
+	}
+
+	response.Data["apiEnabled"] = enabled
+
+	_, err = c.syncEmit(ctx, "setSettings", response.Data, password)
+
+	return err
 }

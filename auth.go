@@ -289,6 +289,9 @@ type credentials struct {
 	username string
 	password string
 	token    string
+	// apiKey is the key WithAPIKey configured, which is presented on the
+	// handshake rather than in a login, see Client.useAPIKey.
+	apiKey string
 }
 
 // newCredentials gathers what New was given to authenticate with, and rejects a
@@ -300,6 +303,26 @@ func newCredentials(username string, password string, token string) (credentials
 	}
 
 	return credentials{username: username, password: password, token: token}, nil
+}
+
+// useAPIKey adds the key WithAPIKey configured to creds, and rejects it next
+// to any other credential: the server authenticates the connection by one of
+// them and would silently ignore the rest, see WithAPIKey.
+func (c *Client) useAPIKey(creds *credentials) error {
+	if c.apiKey == "" {
+		return nil
+	}
+
+	if creds.hasAny() || c.totpSources > 0 {
+		return errors.New(
+			"credentials: WithAPIKey cannot be combined with a username and password, " +
+				"WithSessionToken, WithTOTPSecret or WithTOTPCode",
+		)
+	}
+
+	creds.apiKey = c.apiKey
+
+	return nil
 }
 
 // loginError translates a rejected login ack into one of the package's sentinel
@@ -438,7 +461,7 @@ func (c credentials) hasPassword() bool {
 
 // hasAny reports whether there is anything at all to authenticate with.
 func (c credentials) hasAny() bool {
-	return c.hasPassword() || c.token != ""
+	return c.hasPassword() || c.token != "" || c.apiKey != ""
 }
 
 // authenticate logs the client in the way the server asked for, and records the
@@ -556,7 +579,14 @@ func recoverableWithPassword(err error, creds credentials) bool {
 // confirmSession. A server that is not set up yet rejects the credentials it
 // has no user for, and New reads that together with the setup event, so the
 // rejection is returned as it is.
+//
+// An API key is no login: the header carries it on the handshake, see
+// WithAPIKey, and confirmSession reads whether the server accepted it.
 func (c *Client) authenticateHTTP(ctx context.Context, creds credentials) error {
+	if creds.apiKey != "" {
+		return nil
+	}
+
 	if creds.token != "" {
 		tokenErr := c.loginWithCookie(ctx, creds.token)
 		if tokenErr == nil {
@@ -673,6 +703,10 @@ func (c *Client) keepSessionCookie() error {
 // did not see the cookie on the handshake, which is what a proxy in between
 // that drops it looks like; that is reported for what it is, because neither
 // the password nor the token is at fault.
+//
+// A client with an API key, see WithAPIKey, is logged in once the server
+// answers the handshake that carried it with a session, and rejected with
+// ErrAPIKeyRejected when the server asks for a login instead.
 func (c *Client) confirmSession(
 	ctx context.Context,
 	creds credentials,
@@ -692,7 +726,7 @@ func (c *Client) confirmSession(
 		return nil
 
 	case authModeSession:
-		if c.SessionToken() == "" {
+		if c.SessionToken() == "" && creds.apiKey == "" {
 			c.setAutoLoggedIn()
 		}
 
@@ -701,6 +735,10 @@ func (c *Client) confirmSession(
 	case authModeLoginRequired:
 		if loginErr != nil {
 			return loginErr
+		}
+
+		if creds.apiKey != "" {
+			return ErrAPIKeyRejected
 		}
 
 		if c.SessionToken() != "" {

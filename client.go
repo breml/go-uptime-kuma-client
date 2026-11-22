@@ -379,6 +379,14 @@ type Client struct {
 	// readyEventsMissing are the best-effort ready events the server did not
 	// emit while New was connecting, see MissingReadyEvents.
 	readyEventsMissing []string
+
+	// headers, userAgent and apiKey are what WithHeaders, WithUserAgent and
+	// WithAPIKey configured, and requestHeaderSet what New assembled from
+	// them for every request, see requestHeaders.
+	headers          http.Header
+	userAgent        string
+	apiKey           string
+	requestHeaderSet http.Header
 }
 
 // Option is a functional option for configuring a Client.
@@ -639,15 +647,18 @@ func setupDatabase(ctx context.Context, httpClient *http.Client, baseURL string)
 //
 // username and password have to be set together or both be empty. Passing
 // neither is the way to connect to a server with authentication disabled, and
-// to one that WithSessionToken authenticates instead; a server that does want a
-// login answers a client with nothing to offer with ErrAuthRequired.
+// to one that WithSessionToken or WithAPIKey authenticates instead; a server
+// that does want a login answers a client with nothing to offer with
+// ErrAuthRequired.
 //
 // The login it performs reports what the server refused through the package's
 // sentinel errors, so a caller can tell the cases apart with errors.Is:
 // ErrAuthRequired, ErrInvalidCredentials, ErrTwoFactorRequired,
 // ErrInvalidTOTPCode, ErrInvalidSessionToken, ErrUserInactive and
 // ErrRateLimited. Those are the rejections an Uptime Kuma 2.x server states;
-// 1.x is not supported, see the package documentation.
+// 1.x is not supported, see the package documentation. A client configured
+// with WithAPIKey fails with ErrAPIKeyUnsupported against a 2.x server and
+// with ErrAPIKeyRejected when a 3.x server refuses the key.
 //
 //nolint:revive // Complexity is necessary for complete client initialization and event setup
 func New(ctx context.Context, baseURL string, username string, password string, opts ...Option) (*Client, error) {
@@ -680,6 +691,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		return nil, err
 	}
 
+	err = c.useAPIKey(&creds)
+	if err != nil {
+		return nil, err
+	}
+
 	// The count comes first: a caller who configured two sources is told that
 	// before being sent to fix whichever of them also failed to decode.
 	if c.totpSources > 1 {
@@ -700,8 +716,16 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		return nil, fmt.Errorf("create cookie jar: %w", err)
 	}
 
+	c.requestHeaderSet, err = c.requestHeaders()
+	if err != nil {
+		return nil, err
+	}
+
 	c.jar = jar
-	c.httpClient = &http.Client{Jar: jar}
+	c.httpClient = &http.Client{
+		Jar:       jar,
+		Transport: &headerRoundTripper{base: http.DefaultTransport, headers: c.requestHeaderSet},
+	}
 	c.auth = &betterAuthClient{base: httpBase, http: c.httpClient, jar: jar}
 
 	ctxWithConnectTimeout := ctx
@@ -733,6 +757,10 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if creds.apiKey != "" && c.scheme != AuthSchemeHTTP {
+		return nil, ErrAPIKeyUnsupported
 	}
 
 	// A 3.x server is logged in to before the connection is made, because it
@@ -924,7 +952,10 @@ func (c *Client) Disconnect() error {
 // authenticated the new one. Commands in flight finish first, and commands
 // that arrive while the resync runs wait for it, see lockConnExclusive. A
 // server with authentication disabled authenticates the new connection as it
-// did the first, so there the resync needs no credentials at all.
+// did the first, so there the resync needs no credentials at all, and neither
+// does a client authenticated by WithAPIKey, whose key the new connection
+// presents again. A key the server has stopped accepting since is reported as
+// ErrAPIKeyRejected.
 //
 // Which lists Resync waits for follows New: the events configured with
 // WithReadyEvents are required and the remaining known events are best-effort,
@@ -1012,7 +1043,8 @@ func (c *Client) Resync(ctx context.Context) error {
 // WithSessionToken supplied and the server accepted. It is the empty string for
 // a client New returned without logging it in, which is a client created
 // without credentials, against a server that either has authentication disabled
-// or never stated that it wants a login.
+// or never stated that it wants a login, and for a client authenticated by
+// WithAPIKey, which logs in with no session at all.
 //
 // It is the credential WithSessionToken takes, so a caller can persist it and
 // reconnect later without the password and without a one-time code. It is a
@@ -1231,6 +1263,12 @@ func (c *Client) reconnectLocked(ctx context.Context) error {
 
 	case authModeLoginRequired:
 		c.disconnectOrphan(next)
+
+		if c.apiKey != "" {
+			// The key was revoked or expired since, or the API was turned
+			// off in the server's settings.
+			return ErrAPIKeyRejected
+		}
 
 		if c.SessionToken() == "" {
 			// The server authenticated the first connection by itself and

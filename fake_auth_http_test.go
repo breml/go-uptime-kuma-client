@@ -20,6 +20,8 @@ type fakeSession struct {
 	// cookie is the session cookie the handshake carried, or the empty
 	// string.
 	cookie string
+	// authorization is the Authorization header the handshake carried.
+	authorization string
 }
 
 // fakeHandshake records one engine.io handshake: when it was made and the
@@ -74,6 +76,8 @@ func (s *fakeAckServer) newSession(r *http.Request) *fakeSession {
 	if err == nil {
 		session.cookie = cookie.Value
 	}
+
+	session.authorization = r.Header.Get("Authorization")
 
 	if s.current == nil {
 		// The first session adopts the channel the test created the fake
@@ -499,7 +503,7 @@ func (s *fakeAckServer) sendAuthModeHTTP(session *fakeSession) {
 	case needsSetup:
 		s.sendTo(session, []byte("42[\"setup\"]\x1e42[\"loginRequired\"]"))
 
-	case auto || s.acceptsSession(cookie):
+	case auto || s.acceptsSession(cookie) || s.acceptsAPIKey(session.authorization):
 		s.sendTo(session, []byte(`42["session","admin"]`))
 
 		// A server that authenticates the connection but resends nothing
@@ -521,4 +525,51 @@ func (s *fakeAckServer) sendAuthModeHTTP(session *fakeSession) {
 			s.sendTo(session, []byte(`42["loginRequired"]`))
 		}()
 	}
+}
+
+// fakeRequest is one request the fake served: its path, the engine.io
+// transport it was made for, if any, and its headers.
+type fakeRequest struct {
+	path      string
+	transport string
+	header    http.Header
+}
+
+func (s *fakeAckServer) recordRequest(r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.requests = append(s.requests, fakeRequest{
+		path:      r.URL.Path,
+		transport: r.URL.Query().Get("transport"),
+		header:    r.Header.Clone(),
+	})
+}
+
+// receivedRequests returns every request the fake served, in order.
+func (s *fakeAckServer) receivedRequests() []fakeRequest {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]fakeRequest(nil), s.requests...)
+}
+
+// setAPIKey makes the fake authenticate a handshake that carries key as a
+// bearer token, the way a 3.x server with "API and MCP" turned on does. The
+// empty string accepts no key, which is also how the server answers every key
+// while that setting is off.
+func (s *fakeAckServer) setAPIKey(key string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.apiKey = key
+}
+
+// acceptsAPIKey reports whether an Authorization header names the key the
+// fake accepts.
+func (s *fakeAckServer) acceptsAPIKey(authorization string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.apiKey != "" && authorization == "Bearer "+s.apiKey
 }
