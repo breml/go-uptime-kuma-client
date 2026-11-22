@@ -64,6 +64,16 @@
 //
 //	client, err := kuma.New(ctx, url, "", "")
 //
+// An Uptime Kuma 3.x server with "API and MCP" turned on in its settings also
+// takes an API key, presented on every request instead of a login, see
+// [WithAPIKey]. It is the only credential such a client has:
+//
+//	client, err := kuma.New(ctx, url, "", "", kuma.WithAPIKey(key))
+//
+// [WithHeaders] adds HTTP headers to every request, the socket.io transports
+// included, for an access proxy in front of the server, and [WithUserAgent]
+// replaces the default User-Agent.
+//
 // # Server Versions
 //
 // The client targets Uptime Kuma 2.x and 3.x and is tested against 2.5.6 and

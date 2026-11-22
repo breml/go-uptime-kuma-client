@@ -92,6 +92,15 @@ operations concurrently over a single client):
   means 3.x) before connecting.
 - The socket.io client is built with cookie-aware transports in `transport.go`;
   the fork needs no change for that.
+- `WithHeaders`, `WithUserAgent` and `WithAPIKey` (`headers.go`) are one
+  mechanism: a round tripper on the shared `http.Client` (probe, better-auth,
+  long polling) plus the same headers in `cookieWebSocket.Dial`. A configured
+  `Cookie` is appended to the jar's, never replaces it.
+- `WithAPIKey` (`Authorization: Bearer`) works on 3.x only (`apiEnabled` on):
+  no HTTP login, the `session` event on connect means logged in, and
+  `loginRequired` is `ErrAPIKeyRejected`. On 2.x `New` fails with
+  `ErrAPIKeyUnsupported`. The key excludes every other credential, and
+  `SessionToken()` is empty for such a client.
 - The socket.io client is single-use, so a reconnect is a new `socketConn` with
   every handler registered again (`newSocket()`); handlers drop events of a
   torn-down connection (`applyEvent()`).

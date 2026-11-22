@@ -152,10 +152,42 @@ no credentials at all:
 client, err := kuma.New(ctx, url, "", "")
 ```
 
-These are the only ways in, on both server lines. API keys are not among
-them: the server accepts those for HTTP basic auth on `/metrics` only, never for
-the Socket.IO API this client speaks. There is likewise no OIDC, SSO, LDAP or
-client-certificate login.
+On Uptime Kuma 3.x an API key is a further way in, once "API and MCP"
+(`apiEnabled`, alpha upstream) is turned on in the server's settings:
+
+```go
+client, err := kuma.New(ctx, url, "", "", kuma.WithAPIKey(key))
+```
+
+The key goes out as `Authorization: Bearer <key>` and the server authenticates
+the Socket.IO connection by it, with no login and no session:
+`SessionToken` returns the empty string and `Resync` connects again with the
+key. It is the only credential such a client has; combining it with a username
+and password, `WithSessionToken` or a TOTP option fails `New`. The server
+answers an unknown key and a disabled API alike, reported as
+`ErrAPIKeyRejected`. A 2.x server accepts API keys for HTTP basic auth on
+`/metrics` only, never for the Socket.IO API, so `New` fails there with
+`ErrAPIKeyUnsupported`. There is no OIDC, SSO, LDAP or client-certificate
+login.
+
+### HTTP headers
+
+`WithHeaders` adds headers to every request the client makes, including the
+Socket.IO long polling and the WebSocket handshake, for an access proxy in
+front of the server:
+
+```go
+headers := http.Header{}
+headers.Set("CF-Access-Client-Id", id)
+headers.Set("CF-Access-Client-Secret", secret)
+
+client, err := kuma.New(ctx, url, "username", "password",
+ kuma.WithHeaders(headers))
+```
+
+Headers the client sets itself take precedence, except that a configured
+`Cookie` is appended to the client's own cookies. `WithUserAgent` replaces the
+default User-Agent, `go-uptime-kuma-client/<version>`.
 
 ### Uptime Kuma 2.x and 3.x
 
