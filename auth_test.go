@@ -178,10 +178,47 @@ func TestNewLoginWaitsForLoginRequired(t *testing.T) {
 // credentials work, so the rejection must not end the connect.
 //
 // This is the case where the setup event is already in when the barrier reads
-// it, so the client never sends the doomed login at all. The other ordering,
-// where it arrives only after the rejection, is
-// TestNewSetupFallbackAfterLateSetupEvent.
+// it, so the client never sends the doomed login at all. The other orderings
+// are TestNewSetupFallbackAfterLateSetupEvent, where it arrives only after the
+// rejection, and TestNewSetupFallbackSetupInOnePayloadWithLoginRequired, where
+// either can come first.
 func TestNewSetupFallbackAfterRejectedCredentials(t *testing.T) {
+	fake, url := newAuthFake(t)
+	fake.setEarlySetup()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	client, err := kuma.New(
+		ctx,
+		url,
+		"admin",
+		"admin1",
+		kuma.WithAutosetup(),
+		kuma.WithConnectTimeout(5*time.Second),
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	t.Cleanup(func() { _ = client.Disconnect() })
+
+	// Answering the setup is what makes the credentials work, so the only
+	// login is the one the setup ends with. A client that answers the
+	// loginRequired instead sends a doomed one before it.
+	require.Equal(t, 1, fake.loginFrameCount())
+}
+
+// TestNewSetupFallbackSetupInOnePayloadWithLoginRequired covers the server that
+// is not set up yet and delivers the setup event and loginRequired in one
+// payload, the way a real server does to a client that polls. The client
+// dispatches every handler on a goroutine of its own, so either event can be
+// applied first: the barrier reads setup, or the client sends a login the
+// server rejects and the fallback runs the setup. Both end in a connected
+// client.
+func TestNewSetupFallbackSetupInOnePayloadWithLoginRequired(t *testing.T) {
+	t.Cleanup(kuma.SetSetupEventGrace(2 * time.Second))
+
 	fake, url := newAuthFake(t)
 	fake.setSetupRequired()
 
@@ -202,11 +239,9 @@ func TestNewSetupFallbackAfterRejectedCredentials(t *testing.T) {
 
 	t.Cleanup(func() { _ = client.Disconnect() })
 
-	// The server sends the setup event and loginRequired in one payload, and
-	// answering the setup is what makes the credentials work, so the only
-	// login is the one the setup ends with. A client that answers the
-	// loginRequired instead sends a doomed one before it.
-	require.Equal(t, 1, fake.loginFrameCount())
+	// The login the setup ends with, and at most one doomed login before it.
+	require.GreaterOrEqual(t, fake.loginFrameCount(), 1)
+	require.LessOrEqual(t, fake.loginFrameCount(), 2)
 }
 
 // TestNewSetupFallbackAfterLateSetupEvent covers the ordering the fallback

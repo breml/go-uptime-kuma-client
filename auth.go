@@ -514,6 +514,13 @@ func (c *Client) authenticate(ctx context.Context, creds credentials, barrier au
 
 	case authModeLoginRequired:
 		if !creds.hasAny() {
+			// The server emits setup before loginRequired, but the handlers
+			// run on goroutines of their own, see setupPending. A setup that
+			// is still in flight is what the caller has to hear about.
+			if setupPending(ctx, barrier.setupRequired) {
+				return nil
+			}
+
 			return ErrAuthRequired
 		}
 
@@ -757,6 +764,11 @@ func (c *Client) confirmSession(
 		}
 
 		if !creds.hasAny() {
+			// See authenticate: a setup may still be in flight.
+			if setupPending(ctx, barrier.setupRequired) {
+				return nil
+			}
+
 			return ErrAuthRequired
 		}
 

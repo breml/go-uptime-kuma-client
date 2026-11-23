@@ -24,6 +24,13 @@ var errWebSocketNotConnected = errors.New("socket connection is not initialized"
 // the server's handshake states its own.
 const defaultPollingInterval = 10 * time.Second
 
+// maxPollingPayloadSize caps the body of a long-polling response. The engine.io
+// server flushes every packet it buffered into one body, the lists it sends
+// after a login included, so the library's default of 4 MiB is too tight for
+// a large instance. This is the limit the WebSocket transport has, see
+// websocket.DefaultMaxPayloadBytes.
+const maxPollingPayloadSize = websocket.DefaultMaxPayloadBytes
+
 // httpBaseURL returns baseURL with a ws or wss scheme rewritten to the http
 // scheme the server's HTTP endpoints are reached on, parsed.
 func httpBaseURL(baseURL string) (*url.URL, error) {
@@ -92,6 +99,7 @@ func newSocketIOClient(
 		enginepolling.WithLogger(logger),
 		enginepolling.WithDefaultPinger(time.NewTicker(defaultPollingInterval)),
 		enginepolling.WithHTTPClient(httpClient),
+		enginepolling.WithMaxPayloadSize(maxPollingPayloadSize),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create polling transport: %w", err)
@@ -101,6 +109,10 @@ func newSocketIOClient(
 		engineio.WithURL(parsed),
 		engineio.WithLogger(logger),
 		engineio.WithSupportedTransports([]engineio.Transport{wsTransport, pollingTransport}),
+		// A connection the library re-established on its own would come up
+		// without a login on a 2.x server and behind the back of the state
+		// cache. Connecting again is Resync's job, see reconnectLocked.
+		engineio.WithReconnect(false),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create engine.io client: %w", err)

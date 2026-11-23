@@ -174,6 +174,10 @@ type fakeAckServer struct {
 	// setupDone records that the setup command ran, which is what makes the
 	// credentials work.
 	setupDone bool
+	// setupFirst sends the setup event in a payload of its own, ahead of the
+	// loginRequired that loginRequiredDelay holds back, so the setup is in
+	// before the barrier is read, see setEarlySetup.
+	setupFirst bool
 	// setupDelay holds the setup event back so it lands after the client has
 	// already been told a login is wanted, which is the ordering the barrier
 	// cannot see and the setup fallback exists for.
@@ -430,6 +434,23 @@ func (s *fakeAckServer) setSetupRequired() {
 	s.setupRequired = true
 }
 
+// earlySetupLead is how long setEarlySetup holds loginRequired back behind the
+// setup event: long enough for the setup handler to have run before the
+// barrier reads loginRequired.
+const earlySetupLead = 50 * time.Millisecond
+
+// setEarlySetup makes the server ask to be set up and only then, in a payload
+// of its own, state that it wants a login, so the setup event is in by the
+// time the barrier is read.
+func (s *fakeAckServer) setEarlySetup() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.setupRequired = true
+	s.setupFirst = true
+	s.loginRequiredDelay = earlySetupLead
+}
+
 // lateSetupDelay is how long setLateSetup holds the setup event back: long
 // enough for the barrier to have read loginRequired and for New to have
 // reached setupPending with the rejection, on either scheme, and well inside
@@ -648,6 +669,7 @@ func (s *fakeAckServer) sendAuthMode(session *fakeSession) {
 	omit := s.omitLoginRequired
 	delay := s.loginRequiredDelay
 	needsSetup := s.setupRequired
+	setupFirst := s.setupFirst
 	setupDelay := s.setupDelay
 	s.mu.Unlock()
 
@@ -669,7 +691,7 @@ func (s *fakeAckServer) sendAuthMode(session *fakeSession) {
 		// delivers them to a client that polls: it emits setup at the top of
 		// its connection handler and the event below at the bottom, so a
 		// single long poll picks up both.
-		if !auto && !omit {
+		if !auto && !omit && !setupFirst {
 			s.sendTo(session, []byte("42[\"setup\"]\x1e42[\"loginRequired\"]"))
 
 			return

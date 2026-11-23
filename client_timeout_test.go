@@ -59,6 +59,10 @@ type fakeSocketIOServer struct {
 	// carried the command, so it must not block: delayed frames belong on a
 	// goroutine of its own. swallowACKsAfterLogin takes precedence over it.
 	onCommand func(command string, ackID string)
+	// pingInterval is the ping interval the handshake states, in milliseconds;
+	// zero states 50. The fake never pings, so it is also how long a client
+	// that polls once per interval leaves a queued packet unread.
+	pingInterval int
 }
 
 func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -78,10 +82,15 @@ func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			PingTimeout  int      `json:"pingTimeout"`
 			MaxPayload   int      `json:"maxPayload"`
 		}
+		pingInterval := s.pingInterval
+		if pingInterval == 0 {
+			pingInterval = 50
+		}
+
 		data, err := json.Marshal(engineIOHandshake{
 			Sid:          "test-sid",
 			Upgrades:     []string{}, // no WebSocket upgrade keeps the client on polling
-			PingInterval: 50,
+			PingInterval: pingInterval,
 			PingTimeout:  5000,
 			MaxPayload:   1000000,
 		})

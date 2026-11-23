@@ -92,8 +92,11 @@ operations concurrently over a single client):
   connecting: JSON on a 2xx (or better-auth's 429) means 3.x, non-JSON on a
   2xx, 404 or 429 means 2.x; anything else, including a redirected probe, is
   an error rather than a guess (`detectAuthScheme`).
-- The socket.io client is built with cookie-aware transports in `transport.go`;
-  the fork needs no change for that.
+- The socket.io client (upstream `maldikhan/go.socket.io`) is built with
+  cookie-aware transports in `transport.go`. Its automatic reconnect is off
+  (a reconnected 2.x socket is not logged in; `Resync()` reconnects), and the
+  long-polling payload limit is raised from 4 MiB to the 32 MiB of the WebSocket
+  side, since a client that polls gets the post-login lists in one body.
 - `WithHeaders`, `WithUserAgent` and `WithAPIKey` (`headers.go`) are one
   mechanism: a round tripper on the shared `http.Client` (probe, better-auth,
   long polling) plus the same headers in `cookieWebSocket.Dial`. A configured

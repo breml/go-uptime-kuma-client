@@ -3,7 +3,7 @@ module github.com/breml/go-uptime-kuma-client
 go 1.26.0
 
 require (
-	github.com/maldikhan/go.socket.io v0.1.1
+	github.com/maldikhan/go.socket.io v0.2.0
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/pquerna/otp v1.5.0
 	golang.org/x/sync v0.25.0
@@ -392,5 +392,3 @@ tool (
 )
 
 exclude github.com/docker/cli v28.2.2+incompatible
-
-replace github.com/maldikhan/go.socket.io => github.com/breml/go.socket.io v0.0.0-20260516193936-e70410c8cd31
