@@ -417,39 +417,117 @@ func requireDropDetected(t *testing.T, result <-chan error, since time.Time, det
 		"the command must fail once the client can know the connection is gone")
 }
 
-// TestResyncAfterConnectionLost covers the way back from a lost connection
-// against an Uptime Kuma 3.x server: the server restarted and forgot the
-// session, the next command reports that, and Resync connects again with the
-// session cookie the client holds.
+// TestResyncAfterConnectionLost covers the way back from a lost connection:
+// the server restarted and forgot the session, the next command reports that,
+// and Resync connects again, authenticated the way the server line asks for.
 func TestResyncAfterConnectionLost(t *testing.T) {
-	fake, url := newHTTPAuthFake(t)
+	tests := map[string]struct {
+		newFake func(t *testing.T) (*fakeAckServer, string)
+		// username and password are what New is given.
+		username, password string
+		// wantToken is whether the new connection has to be logged in with
+		// the session token, which only a 2.x server asks for.
+		wantToken bool
+	}{
+		"3.x, session cookie": {
+			newFake:  newHTTPAuthFake,
+			username: "admin", password: "admin1",
+		},
+		"2.x, session token": {
+			newFake:  newAuthFake,
+			username: "admin", password: "admin1",
+			wantToken: true,
+		},
+		"2.x, authentication disabled": {
+			newFake: func(t *testing.T) (*fakeAckServer, string) {
+				t.Helper()
+
+				fake, url := newAuthFake(t)
+				fake.setAutoLogin()
+
+				return fake, url
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			fake, url := test.newFake(t)
+			resyncClient := newLostClient(t, url, test.username, test.password)
+
+			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+			t.Cleanup(cancel)
+
+			fake.forgetSessions()
+			requireConnectionLost(ctx, t, resyncClient)
+
+			tokensBefore := len(fake.receivedTokens())
+
+			require.NoError(t, resyncClient.Resync(ctx))
+
+			if test.wantToken {
+				tokens := fake.receivedTokens()[tokensBefore:]
+				require.Equal(t, []string{fakeSessionToken}, tokens,
+					"the new connection has to be logged in with the session token")
+			}
+
+			_, err := resyncClient.GetNotification(ctx, fakeSeededNotificationID)
+			require.NoError(t, err, "the resync has to rebuild the cache on the new connection")
+
+			msg, err := resyncClient.TestNotification(ctx, notification.Generic{
+				Base:           notification.Base{Name: "after the drop"},
+				GenericDetails: notification.GenericDetails{},
+				TypeName:       "generic",
+			})
+			require.NoError(t, err, "commands have to go out on the new connection")
+			require.Equal(t, "ok", msg)
+		})
+	}
+}
+
+// TestResyncAfterConnectionLostRejectedToken covers a 2.x server that no
+// longer accepts the session token on the new connection: the resync reports
+// that, and the connection stays lost.
+func TestResyncAfterConnectionLostRejectedToken(t *testing.T) {
+	fake, url := newAuthFake(t)
+	resyncClient := newLostClient(t, url, "admin", "admin1")
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	t.Cleanup(cancel)
 
-	resyncClient, err := kuma.New(ctx, url, "admin", "admin1", kuma.WithConnectTimeout(5*time.Second))
+	fake.forgetSessions()
+	requireConnectionLost(ctx, t, resyncClient)
+
+	fake.setRejectToken()
+
+	require.ErrorIs(t, resyncClient.Resync(ctx), kuma.ErrInvalidSessionToken)
+
+	_, err := resyncClient.GetTags(ctx)
+	require.ErrorIs(t, err, kuma.ErrConnectionLost, "a refused resync must not install the new connection")
+}
+
+// newLostClient connects a client to the fake server at url.
+func newLostClient(t *testing.T, url string, username string, password string) *kuma.Client {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	t.Cleanup(cancel)
+
+	lostClient, err := kuma.New(ctx, url, username, password, kuma.WithConnectTimeout(5*time.Second))
 	require.NoError(t, err)
 
-	t.Cleanup(func() { _ = resyncClient.Disconnect() })
+	t.Cleanup(func() { _ = lostClient.Disconnect() })
 
-	fake.forgetSessions()
+	return lostClient
+}
+
+// requireConnectionLost waits for client to report its connection as lost.
+func requireConnectionLost(ctx context.Context, t *testing.T, client *kuma.Client) {
+	t.Helper()
 
 	require.Eventually(t, func() bool {
-		_, err := resyncClient.GetTags(ctx)
+		_, err := client.GetTags(ctx)
 
 		return errors.Is(err, kuma.ErrConnectionLost)
 	}, 2*time.Second, 50*time.Millisecond, "the forgotten session must be reported as a lost connection")
-
-	require.NoError(t, resyncClient.Resync(ctx))
-
-	_, err = resyncClient.GetNotification(ctx, fakeSeededNotificationID)
-	require.NoError(t, err, "the resync has to rebuild the cache on the new connection")
-
-	msg, err := resyncClient.TestNotification(ctx, notification.Generic{
-		Base:           notification.Base{Name: "after the drop"},
-		GenericDetails: notification.GenericDetails{},
-		TypeName:       "generic",
-	})
-	require.NoError(t, err, "commands have to go out on the new connection")
-	require.Equal(t, "ok", msg)
 }

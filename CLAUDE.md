@@ -102,6 +102,8 @@ operations concurrently over a single client):
   client does not pass on; `connectionLost()` (`socket.go`) fails the commands
   on it with `ErrConnectionLost`. Commands send through `emitOn()` (`await.go`),
   because a socket.io send over long polling can block without a deadline.
+  `Resync()` reconnects after a drop on both server lines; on 2.x the new
+  connection logs in with the session token (`authenticateReconnectSocket()`).
 - `WithHeaders`, `WithUserAgent` and `WithAPIKey` (`headers.go`) are one
   mechanism: a round tripper on the shared `http.Client` (probe, better-auth,
   long polling) plus the same headers in `cookieWebSocket.Dial`. A configured

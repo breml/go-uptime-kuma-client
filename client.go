@@ -141,8 +141,7 @@ var ErrOperationTimeout = errors.New("operation timeout exceeded")
 // A command that was in flight when the connection dropped may or may not have
 // been applied, the same as one that ran into ErrOperationTimeout. One whose ack
 // was already in reports ErrUpdateEventTimeout alongside, because the server
-// applied it. Against an Uptime Kuma 3.x server Resync connects again, see
-// Resync; against a 2.x server a new client is needed.
+// applied it. Resync connects again, see Resync.
 var ErrConnectionLost = errors.New("connection to the server lost")
 
 // operationTimeoutError is the cause recorded on a context derived by
@@ -964,13 +963,19 @@ func (c *Client) Disconnect() error {
 // presents again. A key the server has stopped accepting since is reported as
 // ErrAPIKeyRejected.
 //
+// Against a 2.x server whose connection was lost, see ErrConnectionLost, there
+// is no connection left to log in again on, so Resync connects again the same
+// way and logs the new connection in with the session token. A server with
+// authentication disabled logs it in by itself, so there the resync needs no
+// session token either.
+//
 // Which lists Resync waits for follows New: the events configured with
 // WithReadyEvents are required and the remaining known events are best-effort,
 // awaited for the ready grace period. The best-effort events New never saw are
 // skipped altogether, because a server (or a proxy in front of it) that does
 // not emit one while connecting does not emit it here either.
 func (c *Client) Resync(ctx context.Context) error {
-	if c.scheme == AuthSchemeHTTP {
+	if c.scheme == AuthSchemeHTTP || c.currentConn().isLost() {
 		return c.resyncByReconnect(ctx)
 	}
 
@@ -1228,16 +1233,16 @@ func (c *Client) resyncByReconnect(ctx context.Context) error {
 	return nil
 }
 
-// reconnectLocked replaces the connection with a fresh one, which a 3.x server
-// authenticates from the session cookie in the jar and answers with every
-// list, see AuthSchemeHTTP. The caller holds the exclusive side of the
+// reconnectLocked replaces the connection with a fresh one, authenticated the
+// way the server line asks for, see authenticateReconnect, which the server
+// answers with every list. The caller holds the exclusive side of the
 // connection lock, see lockConnExclusive.
 //
 // The connection is replaced only once the server has authenticated the new
-// one. A server that asks the new connection for a login instead no longer
-// accepts the cookie - it expired, or the password changed - and the old
-// connection, which the server authenticated when it was made, stays in
-// service for the commands that still work on it.
+// one. A server that refuses it - a 3.x server that no longer accepts the
+// cookie because it expired or the password changed, a 2.x server that no
+// longer accepts the session token - leaves the old connection in service for
+// the commands that still work on it.
 func (c *Client) reconnectLocked(ctx context.Context) error {
 	if c.isClosed() {
 		return errClientClosed
@@ -1265,35 +1270,11 @@ func (c *Client) reconnectLocked(ctx context.Context) error {
 		return fmt.Errorf("waiting for the server's auth mode: %w", err)
 	}
 
-	switch mode {
-	case authModeSession:
-
-	case authModeLoginRequired:
+	err = c.authenticateReconnect(dialCtx, next, mode)
+	if err != nil {
 		c.disconnectOrphan(next)
 
-		if c.apiKey != "" {
-			// The key was revoked or expired since, or the API was turned
-			// off in the server's settings.
-			return ErrAPIKeyRejected
-		}
-
-		if c.SessionToken() == "" {
-			// The server authenticated the first connection by itself and
-			// wants a login now: authentication was turned on since.
-			return ErrAuthRequired
-		}
-
-		return fmt.Errorf("%w: the server asked the new connection for a login", ErrInvalidSessionToken)
-
-	case authModeSetup, authModeAutoLogin, authModeUnknown:
-		c.disconnectOrphan(next)
-
-		return errors.New("the server stated neither a session nor that it wants a login on the new connection")
-
-	default:
-		c.disconnectOrphan(next)
-
-		return fmt.Errorf("auth mode: unknown: %d", mode)
+		return err
 	}
 
 	old, ok := c.installConn(next)
@@ -1312,6 +1293,84 @@ func (c *Client) reconnectLocked(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// authenticateReconnect authenticates next, a connection reconnectLocked made,
+// the way the server asked for it with mode, and fails for a server that wants
+// something the client cannot give on its own. The caller disconnects next
+// when it fails.
+//
+// A 3.x server authenticates the connection from the session cookie or the
+// API key on its handshake. A 2.x server asks for a login on every connection,
+// and gets one with the session token the client holds, or logs the client in
+// itself when it has authentication disabled.
+func (c *Client) authenticateReconnect(ctx context.Context, next *socketConn, mode authMode) error {
+	if c.scheme != AuthSchemeHTTP {
+		return c.authenticateReconnectSocket(ctx, next, mode)
+	}
+
+	switch mode {
+	case authModeSession:
+		return nil
+
+	case authModeLoginRequired:
+		if c.apiKey != "" {
+			// The key was revoked or expired since, or the API was turned
+			// off in the server's settings.
+			return ErrAPIKeyRejected
+		}
+
+		if c.SessionToken() == "" {
+			// The server authenticated the first connection by itself and
+			// wants a login now: authentication was turned on since.
+			return ErrAuthRequired
+		}
+
+		return fmt.Errorf("%w: the server asked the new connection for a login", ErrInvalidSessionToken)
+
+	case authModeSetup, authModeAutoLogin, authModeUnknown:
+		return errors.New("the server stated neither a session nor that it wants a login on the new connection")
+
+	default:
+		return fmt.Errorf("auth mode: unknown: %d", mode)
+	}
+}
+
+// authenticateReconnectSocket is authenticateReconnect for a 2.x server, see
+// AuthSchemeSocket. The login goes out on next, which is not in service yet,
+// so it is not subject to the connection lock the caller holds exclusively.
+func (c *Client) authenticateReconnectSocket(ctx context.Context, next *socketConn, mode authMode) error {
+	switch mode {
+	case authModeAutoLogin:
+		// The server logged the client in itself and sends the lists as it
+		// does after any login.
+		return nil
+
+	case authModeLoginRequired:
+		token := c.SessionToken()
+		if token == "" {
+			return ErrAuthRequired
+		}
+
+		response, err := emitAckOn(ctx, next, "loginByToken", token)
+		if err != nil {
+			return err
+		}
+
+		if !response.OK {
+			return loginError("loginByToken", response)
+		}
+
+		return nil
+
+	case authModeSetup, authModeSession, authModeUnknown:
+		return errors.New(
+			"the server stated neither an automatic login nor that it wants a login on the new connection",
+		)
+
+	default:
+		return fmt.Errorf("auth mode: unknown: %d", mode)
+	}
 }
 
 // connectContext bounds a connect the way New bounds its own, see
@@ -1639,37 +1698,7 @@ func (c *Client) emitAck(ctx context.Context, command string, args ...any) (ackR
 
 	defer release()
 
-	// Buffered and never closed, so a late ack (e.g. after the context
-	// expired) neither leaks the ack goroutine forever nor panics sending on
-	// a closed channel.
-	res := make(chan ackResponse, 1)
-
-	args = append(args, ackOptions(ctx, res)...)
-
-	conn := c.currentConn()
-
-	err = emitOn(ctx, conn, command, args...)
-	if err != nil {
-		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
-	}
-
-	select {
-	case response := <-res:
-		return response, nil
-
-	case <-conn.lost:
-		// An ack that came in just before the drop is still the answer.
-		select {
-		case response := <-res:
-			return response, nil
-
-		default:
-			return ackResponse{}, fmt.Errorf("%s: %w", command, ErrConnectionLost)
-		}
-
-	case <-ctx.Done():
-		return ackResponse{}, fmt.Errorf("%s: %w", command, contextErr(ctx))
-	}
+	return emitAckOn(ctx, c.currentConn(), command, args...)
 }
 
 func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {

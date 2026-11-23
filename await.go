@@ -5,6 +5,42 @@ import (
 	"fmt"
 )
 
+// emitAckOn emits command on conn and returns the ack the server answered
+// with, see Client.emitAck, which is the caller for the connection in service.
+// It takes no lock, so a caller emitting on the connection in service holds the
+// shared side of the connection lock, see lockConn.
+func emitAckOn(ctx context.Context, conn *socketConn, command string, args ...any) (ackResponse, error) {
+	// Buffered and never closed, so a late ack (e.g. after the context
+	// expired) neither leaks the ack goroutine forever nor panics sending on
+	// a closed channel.
+	res := make(chan ackResponse, 1)
+
+	args = append(args, ackOptions(ctx, res)...)
+
+	err := emitOn(ctx, conn, command, args...)
+	if err != nil {
+		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
+	}
+
+	select {
+	case response := <-res:
+		return response, nil
+
+	case <-conn.lost:
+		// An ack that came in just before the drop is still the answer.
+		select {
+		case response := <-res:
+			return response, nil
+
+		default:
+			return ackResponse{}, fmt.Errorf("%s: %w", command, ErrConnectionLost)
+		}
+
+	case <-ctx.Done():
+		return ackResponse{}, fmt.Errorf("%s: %w", command, contextErr(ctx))
+	}
+}
+
 // emitOn sends command on conn and returns once it is on its way, conn is
 // lost, or ctx is done, whichever comes first.
 //
