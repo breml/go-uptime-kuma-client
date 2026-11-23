@@ -89,10 +89,11 @@ type UpdateEventTimeoutError struct {
 	// a command that creates nothing, and for an ack that carried no ID.
 	ID int64
 
-	// Err describes the context that was done before the update event
-	// arrived: its cause when the client's own operation timeout expired, see
-	// ErrOperationTimeout, and otherwise its Err(). Compare it with errors.Is
-	// rather than by equality, which only the latter case satisfies.
+	// Err describes what ended the wait for the update event: the cause of
+	// the context when the client's own operation timeout expired, see
+	// ErrOperationTimeout, ErrConnectionLost when the connection dropped, and
+	// otherwise the context's Err(). Compare it with errors.Is rather than by
+	// equality, which not every case satisfies.
 	Err error
 }
 
@@ -131,6 +132,18 @@ func withCreatedID(err error, id int64) error {
 // checks a caller already has keep reporting. Use errors.Is(err,
 // ErrOperationTimeout) to tell a client-imposed expiry from the caller's own.
 var ErrOperationTimeout = errors.New("operation timeout exceeded")
+
+// ErrConnectionLost is returned by a command whose connection to the server
+// dropped for good: the server closed it, answered that it no longer holds the
+// session, as a restarted server does, or stopped sending heartbeats for longer
+// than it said it would. The client does not reconnect on its own.
+//
+// A command that was in flight when the connection dropped may or may not have
+// been applied, the same as one that ran into ErrOperationTimeout. One whose ack
+// was already in reports ErrUpdateEventTimeout alongside, because the server
+// applied it. Against an Uptime Kuma 3.x server Resync connects again, see
+// Resync; against a 2.x server a new client is needed.
+var ErrConnectionLost = errors.New("connection to the server lost")
 
 // operationTimeoutError is the cause recorded on a context derived by
 // operationContext, which is its only construction site and always passes a
@@ -1633,7 +1646,9 @@ func (c *Client) emitAck(ctx context.Context, command string, args ...any) (ackR
 
 	args = append(args, ackOptions(ctx, res)...)
 
-	err = c.currentConn().socket.Emit(command, args...)
+	conn := c.currentConn()
+
+	err = emitOn(ctx, conn, command, args...)
 	if err != nil {
 		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
@@ -1641,6 +1656,16 @@ func (c *Client) emitAck(ctx context.Context, command string, args ...any) (ackR
 	select {
 	case response := <-res:
 		return response, nil
+
+	case <-conn.lost:
+		// An ack that came in just before the drop is still the answer.
+		select {
+		case response := <-res:
+			return response, nil
+
+		default:
+			return ackResponse{}, fmt.Errorf("%s: %w", command, ErrConnectionLost)
+		}
 
 	case <-ctx.Done():
 		return ackResponse{}, fmt.Errorf("%s: %w", command, contextErr(ctx))
@@ -1785,126 +1810,12 @@ func (c *Client) syncEmitWithConfirmedUpdateEvent(
 
 	args = append(args, ackOptions(ctx, res)...)
 
-	err = c.currentConn().socket.Emit(command, args...)
+	conn := c.currentConn()
+
+	err = emitOn(ctx, conn, command, args...)
 	if err != nil {
 		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
 
-	return awaitAckAndUpdateEvent(ctx, command, updated, res, confirm)
-}
-
-// awaitAckAndUpdateEvent waits for the ack delivered on res and for the update
-// event that confirm accepts, or, when confirm is nil, for the first update
-// event signalled on updated.
-//
-// An ack that reports a failure is returned as the server's error even when ctx
-// is done as well, because the rejection is the more useful answer and it is
-// what the caller would have received had the ack arrived a moment earlier. An
-// update event without an ack stays a plain context error: without the ack the
-// client knows neither the outcome of the command nor the ID the server
-// assigned, and a confirmation cannot run without the ID either.
-func awaitAckAndUpdateEvent(
-	ctx context.Context,
-	command string,
-	updated <-chan struct{},
-	res <-chan ackResponse,
-	confirm updateEventConfirm,
-) (ackResponse, error) {
-	var (
-		response  ackResponse
-		acked     bool
-		sawUpdate bool
-	)
-
-	for {
-		if acked && confirmUpdate(confirm, response, sawUpdate) {
-			return response, nil
-		}
-
-		select {
-		case <-updated:
-			sawUpdate = true
-
-		case response = <-res:
-			if !response.OK {
-				return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
-			}
-
-			acked = true
-			// Nil blocks forever, so the loop keeps waiting on the remaining
-			// signals instead of spinning on a channel that is done.
-			res = nil
-
-		case <-ctx.Done():
-			// A signal that has already been delivered and the context being
-			// done can become ready in the same select, which picks between
-			// ready cases at random. Both signals are therefore collected
-			// explicitly, instead of letting that coin flip decide whether
-			// what they report is seen. Receiving from a nil channel is never
-			// ready, so the default case covers the signals already taken.
-			if !acked {
-				select {
-				case response = <-res:
-					acked = true
-
-				default:
-				}
-			}
-
-			select {
-			case <-updated:
-				sawUpdate = true
-
-			default:
-			}
-
-			return resultOnContextDone(
-				ctx, command, response, acked, acked && confirmUpdate(confirm, response, sawUpdate),
-			)
-		}
-	}
-}
-
-// confirmUpdate reports whether the write acknowledged by response is settled:
-// visible in the state cache when the caller supplied a confirmation, and
-// otherwise simply broadcast at least once.
-func confirmUpdate(confirm updateEventConfirm, response ackResponse, sawUpdate bool) bool {
-	if confirm == nil {
-		return sawUpdate
-	}
-
-	return confirm(response)
-}
-
-// resultOnContextDone reports the outcome of a command whose context is done,
-// from the signals that are in hand: acked tells whether the ack in response
-// arrived, settled whether the write is visible in the state cache - the
-// update event for a command that waits for one by name, the confirmation for
-// a command that recognizes its own write.
-func resultOnContextDone(
-	ctx context.Context,
-	command string,
-	response ackResponse,
-	acked bool,
-	settled bool,
-) (ackResponse, error) {
-	switch {
-	case acked && !response.OK:
-		return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
-
-	case acked && settled:
-		// Both signals are in hand and the context merely expired while they
-		// were collected. Nothing is missing, so this is the same success the
-		// caller's loop returns.
-		return response, nil
-
-	case acked:
-		// The server applied the command, only the state cache has not caught
-		// up with it. Returning the response lets the caller keep what the ack
-		// carried, e.g. the ID of a created resource.
-		return response, &UpdateEventTimeoutError{Command: command, Err: contextErr(ctx)}
-
-	default:
-		return ackResponse{}, fmt.Errorf("%s: %w", command, contextErr(ctx))
-	}
+	return awaitAckAndUpdateEvent(ctx, command, updated, res, conn.lost, confirm)
 }

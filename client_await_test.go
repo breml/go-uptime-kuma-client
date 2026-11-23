@@ -40,7 +40,7 @@ func awaitWith(ctx context.Context, signals awaitSignals) (ackResponse, error) {
 		updated <- struct{}{}
 	}
 
-	return awaitAckAndUpdateEvent(ctx, "addNotification", updated, res, signals.confirm)
+	return awaitAckAndUpdateEvent(ctx, "addNotification", updated, res, nil, signals.confirm)
 }
 
 func expiredContext(t *testing.T) context.Context {
@@ -296,11 +296,85 @@ func TestAwaitAckAndUpdateEventConfirmation(t *testing.T) {
 				return true
 			}
 
-			response, err := awaitAckAndUpdateEvent(t.Context(), "addNotification", updated, res, confirm)
+			response, err := awaitAckAndUpdateEvent(t.Context(), "addNotification", updated, res, nil, confirm)
 
 			require.NoError(t, err)
 			require.Equal(t, okAck, response)
 			require.Equal(t, 2, calls)
 		}
 	})
+}
+
+// TestAwaitAckAndUpdateEventConnectionLost covers the wait of a command whose
+// connection drops: what was delivered before the drop decides the answer,
+// the same way it does for a context that is done.
+func TestAwaitAckAndUpdateEventConnectionLost(t *testing.T) {
+	ok := ackResponse{OK: true}
+	rejected := ackResponse{OK: false, Msg: "rejected"}
+
+	tests := map[string]struct {
+		ack         *ackResponse
+		updateEvent bool
+		wantErr     func(t *testing.T, err error)
+		wantOK      bool
+	}{
+		"nothing delivered": {
+			wantErr: func(t *testing.T, err error) {
+				t.Helper()
+				require.ErrorIs(t, err, ErrConnectionLost)
+				require.NotErrorIs(t, err, ErrUpdateEventTimeout, "without the ack the outcome is unknown")
+			},
+		},
+		"ack without update event": {
+			ack: &ok,
+			wantErr: func(t *testing.T, err error) {
+				t.Helper()
+				require.ErrorIs(t, err, ErrConnectionLost)
+				require.ErrorIs(t, err, ErrUpdateEventTimeout, "the ack says the server applied the command")
+			},
+			wantOK: true,
+		},
+		"ack and update event": {
+			ack:         &ok,
+			updateEvent: true,
+			wantOK:      true,
+		},
+		"rejected ack": {
+			ack: &rejected,
+			wantErr: func(t *testing.T, err error) {
+				t.Helper()
+				require.ErrorContains(t, err, "rejected")
+				require.NotErrorIs(t, err, ErrConnectionLost)
+			},
+		},
+	}
+
+	lost := make(chan struct{})
+	close(lost)
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			for range awaitIterations {
+				res := make(chan ackResponse, 1)
+				if test.ack != nil {
+					res <- *test.ack
+				}
+
+				updated := make(chan struct{}, 1)
+				if test.updateEvent {
+					updated <- struct{}{}
+				}
+
+				response, err := awaitAckAndUpdateEvent(t.Context(), "addNotification", updated, res, lost, nil)
+
+				if test.wantErr == nil {
+					require.NoError(t, err)
+				} else {
+					test.wantErr(t, err)
+				}
+
+				require.Equal(t, test.wantOK, response.OK)
+			}
+		})
+	}
 }

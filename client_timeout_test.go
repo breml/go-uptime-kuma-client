@@ -63,6 +63,10 @@ type fakeSocketIOServer struct {
 	// zero states 50. The fake never pings, so it is also how long a client
 	// that polls once per interval leaves a queued packet unread.
 	pingInterval int
+	// pingTimeout is the ping timeout the handshake states, in milliseconds;
+	// zero states 5000. A client takes a server that has not pinged for the
+	// interval and the timeout together for gone.
+	pingTimeout int
 }
 
 func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -87,11 +91,16 @@ func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			pingInterval = 50
 		}
 
+		pingTimeout := s.pingTimeout
+		if pingTimeout == 0 {
+			pingTimeout = 5000
+		}
+
 		data, err := json.Marshal(engineIOHandshake{
 			Sid:          "test-sid",
 			Upgrades:     []string{}, // no WebSocket upgrade keeps the client on polling
 			PingInterval: pingInterval,
-			PingTimeout:  5000,
+			PingTimeout:  pingTimeout,
 			MaxPayload:   1000000,
 		})
 		if err != nil {

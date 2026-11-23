@@ -56,12 +56,14 @@ type socketConn struct {
 	cancel context.CancelFunc
 
 	connect       chan struct{}
+	lost          chan struct{}
 	setupRequired chan struct{}
 	loginRequired chan struct{}
 	autoLogin     chan struct{}
 	session       chan struct{}
 
 	closeConnect       func()
+	closeLost          func()
 	closeSetupRequired func()
 	closeLoginRequired func()
 	closeAutoLogin     func()
@@ -86,14 +88,9 @@ func (conn *socketConn) barrier() authBarrier {
 // newSocket creates a socket.io client for the server with every handler
 // registered, not yet connected.
 func (c *Client) newSocket() (*socketConn, error) {
-	socket, err := newSocketIOClient(c.baseURL, c.socketioLogger, c.httpClient, c.jar, c.requestHeaderSet)
-	if err != nil {
-		return nil, err
-	}
-
 	conn := &socketConn{
-		socket:        socket,
 		connect:       make(chan struct{}),
+		lost:          make(chan struct{}),
 		setupRequired: make(chan struct{}),
 		loginRequired: make(chan struct{}),
 		autoLogin:     make(chan struct{}),
@@ -101,10 +98,25 @@ func (c *Client) newSocket() (*socketConn, error) {
 	}
 
 	conn.closeConnect = sync.OnceFunc(func() { close(conn.connect) })
+	conn.closeLost = sync.OnceFunc(func() { close(conn.lost) })
 	conn.closeSetupRequired = sync.OnceFunc(func() { close(conn.setupRequired) })
 	conn.closeLoginRequired = sync.OnceFunc(func() { close(conn.loginRequired) })
 	conn.closeAutoLogin = sync.OnceFunc(func() { close(conn.autoLogin) })
 	conn.closeSession = sync.OnceFunc(func() { close(conn.session) })
+
+	socket, err := newSocketIOClient(
+		c.baseURL,
+		c.socketioLogger,
+		c.httpClient,
+		c.jar,
+		c.requestHeaderSet,
+		func() { c.connectionLost(conn) },
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	conn.socket = socket
 
 	c.registerHandlers(conn)
 
@@ -344,6 +356,9 @@ func (c *Client) dial(ctx context.Context, conn *socketConn) error {
 		case <-conn.connect:
 			return nil
 
+		case <-conn.lost:
+			return fmt.Errorf("connect to server: %w", ErrConnectionLost)
+
 		case err := <-connectErr:
 			if err != nil {
 				c.markClosed(conn)
@@ -455,6 +470,35 @@ func (c *Client) disconnectOrphan(conn *socketConn) {
 			c.socketioLogger.Warnf("disconnect orphaned connection: %s", err)
 		}
 	}()
+}
+
+// connectionLost takes conn out of service after it dropped for good, see
+// newSocketIOClient: the commands waiting on it, and every one sent on it from
+// now on, fail with ErrConnectionLost. Cancelling its context aborts a send
+// that is still on its way, which against a server that stopped answering
+// would otherwise wait on the HTTP request without a deadline.
+//
+// The connection is not marked closed, so Disconnect and a resync that
+// replaces it still close the socket and release what it holds.
+func (c *Client) connectionLost(conn *socketConn) {
+	conn.closeLost()
+
+	if conn.cancel != nil {
+		conn.cancel()
+	}
+
+	c.socketioLogger.Warnf("connection to the server lost")
+}
+
+// isLost reports whether conn dropped for good, see connectionLost.
+func (conn *socketConn) isLost() bool {
+	select {
+	case <-conn.lost:
+		return true
+
+	default:
+		return false
+	}
 }
 
 // installConn makes conn the connection the client's commands go out on and

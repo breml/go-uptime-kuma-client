@@ -71,12 +71,20 @@ func httpBaseURL(baseURL string) (*url.URL, error) {
 // requests through the round tripper of httpClient, see headerRoundTripper,
 // and the WebSocket handshake through cookieWebSocket. Both transports are
 // built the way the library builds them by default otherwise.
+//
+// onClose is called when the connection drops for good: the server closed it,
+// answered that it no longer holds the session, or stopped sending heartbeats.
+// The engine.io client reports that, but the socket.io client built on it does
+// not pass it on, so a command would otherwise be sent into the dead
+// connection and wait for an ack that cannot come. It is not called for a
+// close the client asked for itself.
 func newSocketIOClient(
 	baseURL string,
 	logger socketio.Logger,
 	httpClient *http.Client,
 	jar http.CookieJar,
 	headers *requestHeaderSet,
+	onClose func(),
 ) (*socketio.Client, error) {
 	parsed, err := url.Parse(baseURL)
 	if err != nil {
@@ -117,6 +125,8 @@ func newSocketIOClient(
 	if err != nil {
 		return nil, fmt.Errorf("create engine.io client: %w", err)
 	}
+
+	engineClient.On("close", func([]byte) { onClose() })
 
 	client, err := socketio.NewClient(
 		socketio.WithEngineIOClient(engineClient),

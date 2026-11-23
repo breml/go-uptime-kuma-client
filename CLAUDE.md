@@ -97,6 +97,11 @@ operations concurrently over a single client):
   (a reconnected 2.x socket is not logged in; `Resync()` reconnects), and the
   long-polling payload limit is raised from 4 MiB to the 32 MiB of the WebSocket
   side, since a client that polls gets the post-login lists in one body.
+- A connection that drops for good (closed, session forgotten, heartbeat
+  missed) is reported by the engine.io `close` handler, which the socket.io
+  client does not pass on; `connectionLost()` (`socket.go`) fails the commands
+  on it with `ErrConnectionLost`. Commands send through `emitOn()` (`await.go`),
+  because a socket.io send over long polling can block without a deadline.
 - `WithHeaders`, `WithUserAgent` and `WithAPIKey` (`headers.go`) are one
   mechanism: a round tripper on the shared `http.Client` (probe, better-auth,
   long polling) plus the same headers in `cookieWebSocket.Dial`. A configured

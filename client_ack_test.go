@@ -308,6 +308,9 @@ func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case msg := <-session.messages:
 			_, _ = w.Write(msg)
 
+		case <-session.forgotten:
+			unknownSession(w)
+
 		case <-r.Context().Done():
 		}
 
