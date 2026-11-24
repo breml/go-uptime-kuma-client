@@ -43,6 +43,9 @@ jobs:
           - louislam/uptime-kuma:nightly3
     env:
       UPTIME_KUMA_IMAGE: ${{ matrix.image }}
+      # TEMPORARY: debug output of TestAuthenticationAgainstServer, see
+      # authDebugLogLevel.
+      AUTH_E2E_LOG_LEVEL: debug
     steps:
       - name: Check out code
         uses: actions/checkout@v7

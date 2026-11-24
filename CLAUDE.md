@@ -78,7 +78,8 @@ operations concurrently over a single client):
 
 - Every command holds the shared side of the connection lock from its emit to
   its ack (and update event), see `lockConn()`. A `Resync()` against an Uptime
-  Kuma 3.x server replaces the socket.io connection, see `reconnectLocked()`,
+  Kuma 3.x server, or after a lost connection on either line, replaces the
+  socket.io connection, see `reconnectLocked()`,
   under the exclusive side, so no command is emitted on a connection about to
   be closed. Lock order: list lock, then connection lock, never nested.
 
@@ -92,8 +93,18 @@ operations concurrently over a single client):
   connecting: JSON on a 2xx (or better-auth's 429) means 3.x, non-JSON on a
   2xx, 404 or 429 means 2.x; anything else, including a redirected probe, is
   an error rather than a guess (`detectAuthScheme`).
-- The socket.io client is built with cookie-aware transports in `transport.go`;
-  the fork needs no change for that.
+- The socket.io client (upstream `maldikhan/go.socket.io`) is built with
+  cookie-aware transports in `transport.go`. Its automatic reconnect is off
+  (a reconnected 2.x socket is not logged in; `Resync()` reconnects), and the
+  long-polling payload limit is raised from 4 MiB to the 32 MiB of the WebSocket
+  side, since a client that polls gets the post-login lists in one body.
+- A connection that drops for good (closed, session forgotten, heartbeat
+  missed) is reported by the engine.io `close` handler, which the socket.io
+  client does not pass on; `connectionLost()` (`socket.go`) fails the commands
+  on it with `ErrConnectionLost`. Commands send through `emitOn()` (`await.go`),
+  because a socket.io send over long polling can block without a deadline.
+  `Resync()` reconnects after a drop on both server lines; on 2.x the new
+  connection logs in with the session token (`authenticateReconnectSocket()`).
 - `WithHeaders`, `WithUserAgent` and `WithAPIKey` (`headers.go`) are one
   mechanism: a round tripper on the shared `http.Client` (probe, better-auth,
   long polling) plus the same headers in `cookieWebSocket.Dial`. A configured

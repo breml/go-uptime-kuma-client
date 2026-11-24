@@ -17,6 +17,9 @@ import (
 type fakeSession struct {
 	sid      string
 	messages chan []byte
+	// forgotten is closed when the server drops the session, see
+	// fakeAckServer.forgetSessions, which ends the poll waiting on it.
+	forgotten chan struct{}
 	// cookie is the session cookie the handshake carried, or the empty
 	// string.
 	cookie string
@@ -69,7 +72,8 @@ func (s *fakeAckServer) newSession(r *http.Request) *fakeSession {
 	s.sidCounter++
 
 	session := &fakeSession{
-		sid: fmt.Sprintf("ack-test-sid-%d", s.sidCounter),
+		sid:       fmt.Sprintf("ack-test-sid-%d", s.sidCounter),
+		forgotten: make(chan struct{}),
 	}
 
 	cookie, err := r.Cookie(fakeSessionCookie)
@@ -101,6 +105,19 @@ func (s *fakeAckServer) newSession(r *http.Request) *fakeSession {
 	})
 
 	return session
+}
+
+// forgetSessions drops every engine.io session the way a restarted server
+// has: each request of one is answered as for a session the server does not
+// know, the poll waiting on one included.
+func (s *fakeAckServer) forgetSessions() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for sid, session := range s.sessions {
+		close(session.forgotten)
+		delete(s.sessions, sid)
+	}
 }
 
 func (s *fakeAckServer) session(sid string) *fakeSession {

@@ -17,6 +17,18 @@ import (
 	kuma "github.com/breml/go-uptime-kuma-client"
 )
 
+// authDebugLogLevel is TEMPORARY: AUTH_E2E_LOG_LEVEL sets the socket.io log
+// level of the clients TestAuthenticationAgainstServer creates, to find where
+// a connect against the 3.x nightly runs out of its 10 seconds in CI.
+func authDebugLogLevel() kuma.Option {
+	level := os.Getenv("AUTH_E2E_LOG_LEVEL")
+	if level == "" {
+		return func(*kuma.Client) {}
+	}
+
+	return kuma.WithLogLevel(kuma.LogLevel(level))
+}
+
 // newKumaContainer starts an Uptime Kuma of its own and returns its base URL
 // and the auth scheme it speaks.
 //
@@ -64,7 +76,7 @@ func newKumaContainer(t *testing.T) (baseURL string, scheme kuma.AuthScheme) {
 			testUsername, testPassword,
 			kuma.WithAutosetup(),
 			kuma.WithLogLevel(kuma.LogLevel(os.Getenv("SOCKETIO_LOG_LEVEL"))),
-			kuma.WithConnectTimeout(10*time.Second),
+			kuma.WithConnectTimeout(10*time.Second), authDebugLogLevel(),
 		)
 		if setupErr != nil {
 			return setupErr
@@ -111,6 +123,11 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 		t.Skip(`skipping end to end test, "E2E_TEST" env var not set`)
 	}
 
+	// TEMPORARY: see authDebugLogLevel.
+	if os.Getenv("AUTH_E2E_LOG_LEVEL") != "" {
+		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	}
+
 	baseURL, scheme := newKumaContainer(t)
 
 	ctx, cancel := context.WithTimeout(t.Context(), 4*time.Minute)
@@ -120,7 +137,14 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 	// once after it.
 	awaitSignInWindow(scheme)
 
-	admin, err := kuma.New(ctx, baseURL, testUsername, testPassword, kuma.WithConnectTimeout(10*time.Second))
+	admin, err := kuma.New(
+		ctx,
+		baseURL,
+		testUsername,
+		testPassword,
+		kuma.WithConnectTimeout(10*time.Second),
+		authDebugLogLevel(),
+	)
 	require.NoError(t, err)
 
 	defer func() { _ = admin.Disconnect() }()
@@ -167,7 +191,7 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 			baseURL,
 			testUsername,
 			testPassword,
-			kuma.WithConnectTimeout(10*time.Second),
+			kuma.WithConnectTimeout(10*time.Second), authDebugLogLevel(),
 		)
 
 		require.ErrorIs(t, newErr, kuma.ErrTwoFactorRequired)
@@ -181,7 +205,7 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 			testUsername,
 			testPassword,
 			kuma.WithTOTPSecret(normalized),
-			kuma.WithConnectTimeout(10*time.Second),
+			kuma.WithConnectTimeout(10*time.Second), authDebugLogLevel(),
 		)
 
 		require.NoError(t, newErr)
@@ -202,7 +226,7 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 			"",
 			"",
 			kuma.WithSessionToken(sessionToken),
-			kuma.WithConnectTimeout(10*time.Second),
+			kuma.WithConnectTimeout(10*time.Second), authDebugLogLevel(),
 		)
 
 		require.NoError(t, newErr)
@@ -232,7 +256,7 @@ func TestAuthenticationAgainstServer(t *testing.T) {
 			testUsername,
 			testPassword,
 			kuma.WithTOTPSecret(normalized),
-			kuma.WithConnectTimeout(10*time.Second),
+			kuma.WithConnectTimeout(10*time.Second), authDebugLogLevel(),
 		)
 		require.NoError(t, newErr)
 

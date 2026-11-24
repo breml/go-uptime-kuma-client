@@ -24,6 +24,14 @@ var errWebSocketNotConnected = errors.New("socket connection is not initialized"
 // the server's handshake states its own.
 const defaultPollingInterval = 10 * time.Second
 
+// maxPollingPayloadSize caps the body of a long-polling response. The engine.io
+// server flushes every packet it buffered into one body, the lists it sends
+// after a login included, so the library's default of 4 MiB is too tight for
+// a large instance. This is the limit cookieWebSocket has, see
+// websocket.DefaultMaxPayloadBytes; the library's own WebSocket transport has
+// 4 MiB too.
+const maxPollingPayloadSize = websocket.DefaultMaxPayloadBytes
+
 // httpBaseURL returns baseURL with a ws or wss scheme rewritten to the http
 // scheme the server's HTTP endpoints are reached on, parsed.
 func httpBaseURL(baseURL string) (*url.URL, error) {
@@ -62,14 +70,23 @@ func httpBaseURL(baseURL string) (*url.URL, error) {
 // cookie (or the API key, see WithAPIKey) on its handshake alone, see
 // AuthSchemeHTTP. The headers WithHeaders configures reach the long-polling
 // requests through the round tripper of httpClient, see headerRoundTripper,
-// and the WebSocket handshake through cookieWebSocket. Both transports are
-// built the way the library builds them by default otherwise.
+// and the WebSocket handshake through cookieWebSocket. Both transports accept
+// payloads of up to 32 MiB, see maxPollingPayloadSize, and the engine.io
+// client does not reconnect on its own.
+//
+// onClose is called when the connection drops for good: the server closed it,
+// answered that it no longer holds the session, or stopped sending heartbeats.
+// The engine.io client reports that, but the socket.io client built on it does
+// not pass it on, so a command would otherwise be sent into the dead
+// connection and wait for an ack that cannot come. It is not called for a
+// close the client asked for itself.
 func newSocketIOClient(
 	baseURL string,
 	logger socketio.Logger,
 	httpClient *http.Client,
 	jar http.CookieJar,
 	headers *requestHeaderSet,
+	onClose func(),
 ) (*socketio.Client, error) {
 	parsed, err := url.Parse(baseURL)
 	if err != nil {
@@ -92,6 +109,7 @@ func newSocketIOClient(
 		enginepolling.WithLogger(logger),
 		enginepolling.WithDefaultPinger(time.NewTicker(defaultPollingInterval)),
 		enginepolling.WithHTTPClient(httpClient),
+		enginepolling.WithMaxPayloadSize(maxPollingPayloadSize),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create polling transport: %w", err)
@@ -101,10 +119,16 @@ func newSocketIOClient(
 		engineio.WithURL(parsed),
 		engineio.WithLogger(logger),
 		engineio.WithSupportedTransports([]engineio.Transport{wsTransport, pollingTransport}),
+		// A connection the library re-established on its own would come up
+		// without a login on a 2.x server and behind the back of the state
+		// cache. Connecting again is Resync's job, see reconnectLocked.
+		engineio.WithReconnect(false),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create engine.io client: %w", err)
 	}
+
+	engineClient.On("close", func([]byte) { onClose() })
 
 	client, err := socketio.NewClient(
 		socketio.WithEngineIOClient(engineClient),
@@ -117,10 +141,12 @@ func newSocketIOClient(
 	return client, nil
 }
 
-// cookieWebSocket is the socket.io library's WebSocket implementation with
-// one addition: the handshake request carries the cookies the jar holds for
+// cookieWebSocket is the socket.io library's WebSocket implementation with two
+// differences: the handshake request carries the cookies the jar holds for
 // the target, which is how the session cookie reaches the server on an
-// upgraded connection, and the headers WithHeaders configured.
+// upgraded connection, and the headers WithHeaders configured; and it leaves
+// the payload limit at x/net's 32 MiB instead of the library's 4 MiB, see
+// maxPollingPayloadSize.
 type cookieWebSocket struct {
 	jar     http.CookieJar
 	headers *requestHeaderSet

@@ -34,16 +34,19 @@ var ErrNotFound = errors.New("not found")
 
 // ErrUpdateEventTimeout is returned when the server acknowledged a mutating
 // command successfully, but the update event that carries the change did not
-// arrive before the context was done. The write landed on the server; what is
-// missing is only the broadcast.
+// arrive before the context was done or the connection was lost, see
+// ErrConnectionLost. The write landed on the server; what is missing is only
+// the broadcast.
 //
 // An error wrapping ErrUpdateEventTimeout also wraps the error that ended the
 // wait, so errors.Is(err, context.DeadlineExceeded) still reports an expired
-// deadline - the caller's own or the client's, see ErrOperationTimeout - and
-// errors.Is(err, context.Canceled) a cancelled context. Use
+// deadline - the caller's own or the client's, see ErrOperationTimeout -
+// errors.Is(err, context.Canceled) a cancelled context and
+// errors.Is(err, ErrConnectionLost) a dropped connection. Use
 // errors.Is(err, ErrUpdateEventTimeout) to tell the two cases apart: a plain
-// context error means the server never confirmed the command and it may or may
-// not have been applied, while ErrUpdateEventTimeout means it was applied.
+// context or connection-lost error means the server never confirmed the
+// command and it may or may not have been applied, while ErrUpdateEventTimeout
+// means it was applied.
 //
 // The Create methods return the ID the server assigned alongside such an error,
 // so a caller can adopt the created resource instead of retrying and creating a
@@ -56,15 +59,16 @@ var ErrNotFound = errors.New("not found")
 // is not up to date yet. The cache is maintained by the socket.io event
 // handlers and not by the caller's context, so it catches up on its own once
 // the event arrives; if the event is lost for good, the cache stays stale until
-// the next broadcast for that resource. Until then a getter that serves from
+// the next broadcast for that resource. On a lost connection no event arrives
+// anymore, and only Resync brings the cache back. Until then a getter that serves from
 // the cache does not report the resource; Resync makes the server resend the
 // lists instead of waiting for that broadcast.
 var ErrUpdateEventTimeout = errors.New("update event not received")
 
 // UpdateEventTimeoutError is the error the client returns for a command that
 // the server acknowledged without the update event arriving, see
-// ErrUpdateEventTimeout. It wraps both ErrUpdateEventTimeout and the context
-// error, so errors.Is keeps reporting either.
+// ErrUpdateEventTimeout. It wraps both ErrUpdateEventTimeout and the error that
+// ended the wait, so errors.Is keeps reporting either.
 //
 // It exists so that the ID of a created resource survives the way errors are
 // usually propagated: a caller that writes the idiomatic
@@ -89,10 +93,11 @@ type UpdateEventTimeoutError struct {
 	// a command that creates nothing, and for an ack that carried no ID.
 	ID int64
 
-	// Err describes the context that was done before the update event
-	// arrived: its cause when the client's own operation timeout expired, see
-	// ErrOperationTimeout, and otherwise its Err(). Compare it with errors.Is
-	// rather than by equality, which only the latter case satisfies.
+	// Err describes what ended the wait for the update event: the cause of
+	// the context when the client's own operation timeout expired, see
+	// ErrOperationTimeout, ErrConnectionLost when the connection dropped, and
+	// otherwise the context's Err(). Compare it with errors.Is rather than by
+	// equality, which not every case satisfies.
 	Err error
 }
 
@@ -131,6 +136,18 @@ func withCreatedID(err error, id int64) error {
 // checks a caller already has keep reporting. Use errors.Is(err,
 // ErrOperationTimeout) to tell a client-imposed expiry from the caller's own.
 var ErrOperationTimeout = errors.New("operation timeout exceeded")
+
+// ErrConnectionLost is returned by a command whose connection to the server
+// dropped for good: the server closed it, answered that it no longer holds the
+// session, as a restarted server does, or stopped sending heartbeats for longer
+// than it said it would. The client does not reconnect on its own.
+//
+// A command that was in flight when the connection dropped may or may not have
+// been applied, the same as one that ran into ErrOperationTimeout. A command
+// that waits for an update event and whose ack was already in reports
+// ErrUpdateEventTimeout alongside, because the server applied it. Resync
+// connects again, see Resync.
+var ErrConnectionLost = errors.New("connection to the server lost")
 
 // operationTimeoutError is the cause recorded on a context derived by
 // operationContext, which is its only construction site and always passes a
@@ -860,6 +877,13 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			case <-setupRequired:
 				// Handled below the select.
 
+			case <-conn.lost:
+				return nil, fmt.Errorf(
+					"wait for ready: %w (missing events: %s)",
+					ErrConnectionLost,
+					strings.Join(gate.missingRequired(), ", "),
+				)
+
 			case <-ctx.Done():
 				return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
 
@@ -930,9 +954,9 @@ func (c *Client) Disconnect() error {
 // so Resync logs in again with the session token the client holds - the one the
 // login New performed handed out, or the one WithSessionToken supplied and the
 // server accepted. A client New returned without logging it in never obtained
-// one and cannot resync: that is a client created without credentials, against
-// a server that either has authentication disabled or never stated that it
-// wants a login.
+// one and cannot resync, except after a lost connection, see below: that is a
+// client created without credentials, against a server that either has
+// authentication disabled or never stated that it wants a login.
 //
 // A token the server has since stopped accepting is reported as
 // ErrInvalidSessionToken, wrapped by ErrUserInactive when the account it names
@@ -951,13 +975,20 @@ func (c *Client) Disconnect() error {
 // presents again. A key the server has stopped accepting since is reported as
 // ErrAPIKeyRejected.
 //
+// Against a 2.x server whose connection was lost, see ErrConnectionLost, there
+// is no connection left to log in again on, so Resync connects again the same
+// way and logs the new connection in with the session token. A server with
+// authentication disabled logs it in by itself, so there the resync needs no
+// session token either; one that asks a client without a token for a login
+// fails it with ErrAuthRequired.
+//
 // Which lists Resync waits for follows New: the events configured with
 // WithReadyEvents are required and the remaining known events are best-effort,
 // awaited for the ready grace period. The best-effort events New never saw are
 // skipped altogether, because a server (or a proxy in front of it) that does
 // not emit one while connecting does not emit it here either.
 func (c *Client) Resync(ctx context.Context) error {
-	if c.scheme == AuthSchemeHTTP {
+	if c.scheme == AuthSchemeHTTP || c.currentConn().isLost() {
 		return c.resyncByReconnect(ctx)
 	}
 
@@ -1002,6 +1033,10 @@ func (c *Client) Resync(ctx context.Context) error {
 
 	defer c.updates.RemoveListener(listenerID.String())
 
+	// The lists come in on the connection the login goes out on, so a drop
+	// of that one ends the wait for them.
+	conn := c.currentConn()
+
 	response, err := c.emitAck(ctx, "loginByToken", token)
 	if err != nil {
 		return fmt.Errorf("resync: %w", err)
@@ -1014,15 +1049,9 @@ func (c *Client) Resync(ctx context.Context) error {
 		return fmt.Errorf("resync: %w", loginError("loginByToken", response))
 	}
 
-	select {
-	case <-gate.requiredDone:
-
-	case <-ctx.Done():
-		return fmt.Errorf(
-			"resync: %w (missing events: %s)",
-			contextErr(ctx),
-			strings.Join(gate.missingRequired(), ", "),
-		)
+	err = awaitResyncLists(ctx, gate, conn)
+	if err != nil {
+		return err
 	}
 
 	// The required lists are in. Give the best-effort ones the same grace
@@ -1195,15 +1224,11 @@ func (c *Client) resyncByReconnect(ctx context.Context) error {
 		return fmt.Errorf("resync: %w", err)
 	}
 
-	select {
-	case <-gate.requiredDone:
-
-	case <-ctx.Done():
-		return fmt.Errorf(
-			"resync: %w (missing events: %s)",
-			contextErr(ctx),
-			strings.Join(gate.missingRequired(), ", "),
-		)
+	// The exclusive lock is held, so this is the connection reconnectLocked
+	// just installed.
+	err = awaitResyncLists(ctx, gate, c.currentConn())
+	if err != nil {
+		return err
 	}
 
 	release()
@@ -1215,16 +1240,45 @@ func (c *Client) resyncByReconnect(ctx context.Context) error {
 	return nil
 }
 
-// reconnectLocked replaces the connection with a fresh one, which a 3.x server
-// authenticates from the session cookie in the jar and answers with every
-// list, see AuthSchemeHTTP. The caller holds the exclusive side of the
+// awaitResyncLists waits for the required lists a resync asked for on conn, and
+// gives up once ctx is done or conn is lost, which no list arrives on anymore.
+func awaitResyncLists(ctx context.Context, gate *readyGate, conn *socketConn) error {
+	select {
+	case <-gate.requiredDone:
+		return nil
+
+	case <-conn.lost:
+		// Lists that came in just before the drop still rebuilt the cache.
+		if isRequested(gate.requiredDone) {
+			return nil
+		}
+
+		return fmt.Errorf(
+			"resync: %w (missing events: %s)",
+			ErrConnectionLost,
+			strings.Join(gate.missingRequired(), ", "),
+		)
+
+	case <-ctx.Done():
+		return fmt.Errorf(
+			"resync: %w (missing events: %s)",
+			contextErr(ctx),
+			strings.Join(gate.missingRequired(), ", "),
+		)
+	}
+}
+
+// reconnectLocked replaces the connection with a fresh one, authenticated the
+// way the server line asks for, see authenticateReconnect, which the server
+// answers with every list. The caller holds the exclusive side of the
 // connection lock, see lockConnExclusive.
 //
 // The connection is replaced only once the server has authenticated the new
-// one. A server that asks the new connection for a login instead no longer
-// accepts the cookie - it expired, or the password changed - and the old
-// connection, which the server authenticated when it was made, stays in
-// service for the commands that still work on it.
+// one. A 3.x server that refuses it, because the cookie expired or the
+// password changed, leaves the old connection in service for the commands that
+// still work on it. A 2.x server that no longer accepts the session token
+// leaves the lost connection installed, so commands keep failing with
+// ErrConnectionLost.
 func (c *Client) reconnectLocked(ctx context.Context) error {
 	if c.isClosed() {
 		return errClientClosed
@@ -1243,44 +1297,18 @@ func (c *Client) reconnectLocked(ctx context.Context) error {
 		return err
 	}
 
-	mode := next.barrier().await(dialCtx)
-
-	err = dialCtx.Err()
+	mode, err := next.barrier().awaitMode(dialCtx)
 	if err != nil {
 		c.disconnectOrphan(next)
 
-		return fmt.Errorf("waiting for the server's auth mode: %w", err)
+		return err
 	}
 
-	switch mode {
-	case authModeSession:
-
-	case authModeLoginRequired:
+	err = c.authenticateReconnect(dialCtx, next, mode)
+	if err != nil {
 		c.disconnectOrphan(next)
 
-		if c.apiKey != "" {
-			// The key was revoked or expired since, or the API was turned
-			// off in the server's settings.
-			return ErrAPIKeyRejected
-		}
-
-		if c.SessionToken() == "" {
-			// The server authenticated the first connection by itself and
-			// wants a login now: authentication was turned on since.
-			return ErrAuthRequired
-		}
-
-		return fmt.Errorf("%w: the server asked the new connection for a login", ErrInvalidSessionToken)
-
-	case authModeSetup, authModeAutoLogin, authModeUnknown:
-		c.disconnectOrphan(next)
-
-		return errors.New("the server stated neither a session nor that it wants a login on the new connection")
-
-	default:
-		c.disconnectOrphan(next)
-
-		return fmt.Errorf("auth mode: unknown: %d", mode)
+		return err
 	}
 
 	old, ok := c.installConn(next)
@@ -1299,6 +1327,84 @@ func (c *Client) reconnectLocked(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// authenticateReconnect authenticates next, a connection reconnectLocked made,
+// the way the server asked for it with mode, and fails for a server that wants
+// something the client cannot give on its own. The caller disconnects next
+// when it fails.
+//
+// A 3.x server authenticates the connection from the session cookie or the
+// API key on its handshake. A 2.x server asks for a login on every connection,
+// and gets one with the session token the client holds, or logs the client in
+// itself when it has authentication disabled.
+func (c *Client) authenticateReconnect(ctx context.Context, next *socketConn, mode authMode) error {
+	if c.scheme != AuthSchemeHTTP {
+		return c.authenticateReconnectSocket(ctx, next, mode)
+	}
+
+	switch mode {
+	case authModeSession:
+		return nil
+
+	case authModeLoginRequired:
+		if c.apiKey != "" {
+			// The key was revoked or expired since, or the API was turned
+			// off in the server's settings.
+			return ErrAPIKeyRejected
+		}
+
+		if c.SessionToken() == "" {
+			// The server authenticated the first connection by itself and
+			// wants a login now: authentication was turned on since.
+			return ErrAuthRequired
+		}
+
+		return fmt.Errorf("%w: the server asked the new connection for a login", ErrInvalidSessionToken)
+
+	case authModeSetup, authModeAutoLogin, authModeUnknown:
+		return errors.New("the server stated neither a session nor that it wants a login on the new connection")
+
+	default:
+		return fmt.Errorf("auth mode: unknown: %d", mode)
+	}
+}
+
+// authenticateReconnectSocket is authenticateReconnect for a 2.x server, see
+// AuthSchemeSocket. The login goes out on next, which is not in service yet,
+// so it is not subject to the connection lock the caller holds exclusively.
+func (c *Client) authenticateReconnectSocket(ctx context.Context, next *socketConn, mode authMode) error {
+	switch mode {
+	case authModeAutoLogin:
+		// The server logged the client in itself and sends the lists as it
+		// does after any login.
+		return nil
+
+	case authModeLoginRequired:
+		token := c.SessionToken()
+		if token == "" {
+			return ErrAuthRequired
+		}
+
+		response, err := emitAckOn(ctx, next, "loginByToken", token)
+		if err != nil {
+			return err
+		}
+
+		if !response.OK {
+			return loginError("loginByToken", response)
+		}
+
+		return nil
+
+	case authModeSetup, authModeSession, authModeUnknown:
+		return errors.New(
+			"the server stated neither an automatic login nor that it wants a login on the new connection",
+		)
+
+	default:
+		return fmt.Errorf("auth mode: unknown: %d", mode)
+	}
 }
 
 // connectContext bounds a connect the way New bounds its own, see
@@ -1626,25 +1732,7 @@ func (c *Client) emitAck(ctx context.Context, command string, args ...any) (ackR
 
 	defer release()
 
-	// Buffered and never closed, so a late ack (e.g. after the context
-	// expired) neither leaks the ack goroutine forever nor panics sending on
-	// a closed channel.
-	res := make(chan ackResponse, 1)
-
-	args = append(args, ackOptions(ctx, res)...)
-
-	err = c.currentConn().socket.Emit(command, args...)
-	if err != nil {
-		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
-	}
-
-	select {
-	case response := <-res:
-		return response, nil
-
-	case <-ctx.Done():
-		return ackResponse{}, fmt.Errorf("%s: %w", command, contextErr(ctx))
-	}
+	return emitAckOn(ctx, c.currentConn(), command, args...)
 }
 
 func (c *Client) syncEmit(ctx context.Context, command string, args ...any) (ackResponse, error) {
@@ -1785,126 +1873,12 @@ func (c *Client) syncEmitWithConfirmedUpdateEvent(
 
 	args = append(args, ackOptions(ctx, res)...)
 
-	err = c.currentConn().socket.Emit(command, args...)
+	conn := c.currentConn()
+
+	err = emitOn(ctx, conn, command, args...)
 	if err != nil {
 		return ackResponse{}, fmt.Errorf("%s: %w", command, err)
 	}
 
-	return awaitAckAndUpdateEvent(ctx, command, updated, res, confirm)
-}
-
-// awaitAckAndUpdateEvent waits for the ack delivered on res and for the update
-// event that confirm accepts, or, when confirm is nil, for the first update
-// event signalled on updated.
-//
-// An ack that reports a failure is returned as the server's error even when ctx
-// is done as well, because the rejection is the more useful answer and it is
-// what the caller would have received had the ack arrived a moment earlier. An
-// update event without an ack stays a plain context error: without the ack the
-// client knows neither the outcome of the command nor the ID the server
-// assigned, and a confirmation cannot run without the ID either.
-func awaitAckAndUpdateEvent(
-	ctx context.Context,
-	command string,
-	updated <-chan struct{},
-	res <-chan ackResponse,
-	confirm updateEventConfirm,
-) (ackResponse, error) {
-	var (
-		response  ackResponse
-		acked     bool
-		sawUpdate bool
-	)
-
-	for {
-		if acked && confirmUpdate(confirm, response, sawUpdate) {
-			return response, nil
-		}
-
-		select {
-		case <-updated:
-			sawUpdate = true
-
-		case response = <-res:
-			if !response.OK {
-				return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
-			}
-
-			acked = true
-			// Nil blocks forever, so the loop keeps waiting on the remaining
-			// signals instead of spinning on a channel that is done.
-			res = nil
-
-		case <-ctx.Done():
-			// A signal that has already been delivered and the context being
-			// done can become ready in the same select, which picks between
-			// ready cases at random. Both signals are therefore collected
-			// explicitly, instead of letting that coin flip decide whether
-			// what they report is seen. Receiving from a nil channel is never
-			// ready, so the default case covers the signals already taken.
-			if !acked {
-				select {
-				case response = <-res:
-					acked = true
-
-				default:
-				}
-			}
-
-			select {
-			case <-updated:
-				sawUpdate = true
-
-			default:
-			}
-
-			return resultOnContextDone(
-				ctx, command, response, acked, acked && confirmUpdate(confirm, response, sawUpdate),
-			)
-		}
-	}
-}
-
-// confirmUpdate reports whether the write acknowledged by response is settled:
-// visible in the state cache when the caller supplied a confirmation, and
-// otherwise simply broadcast at least once.
-func confirmUpdate(confirm updateEventConfirm, response ackResponse, sawUpdate bool) bool {
-	if confirm == nil {
-		return sawUpdate
-	}
-
-	return confirm(response)
-}
-
-// resultOnContextDone reports the outcome of a command whose context is done,
-// from the signals that are in hand: acked tells whether the ack in response
-// arrived, settled whether the write is visible in the state cache - the
-// update event for a command that waits for one by name, the confirmation for
-// a command that recognizes its own write.
-func resultOnContextDone(
-	ctx context.Context,
-	command string,
-	response ackResponse,
-	acked bool,
-	settled bool,
-) (ackResponse, error) {
-	switch {
-	case acked && !response.OK:
-		return ackResponse{}, fmt.Errorf("%s: %s", command, response.Msg)
-
-	case acked && settled:
-		// Both signals are in hand and the context merely expired while they
-		// were collected. Nothing is missing, so this is the same success the
-		// caller's loop returns.
-		return response, nil
-
-	case acked:
-		// The server applied the command, only the state cache has not caught
-		// up with it. Returning the response lets the caller keep what the ack
-		// carried, e.g. the ID of a created resource.
-		return response, &UpdateEventTimeoutError{Command: command, Err: contextErr(ctx)}
-
-	default:
-		return ackResponse{}, fmt.Errorf("%s: %w", command, contextErr(ctx))
-	}
+	return awaitAckAndUpdateEvent(ctx, command, updated, res, conn.lost, confirm)
 }
