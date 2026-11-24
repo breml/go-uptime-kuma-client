@@ -110,15 +110,23 @@ func main() {
 
 ## Self-signed certificates
 
-To trust a private CA, pass it as `RootCAs`; to skip verification altogether
-(only on a network you trust), use `WithInsecureSkipVerify`:
+To trust a private CA, pass it as `RootCAs`. To accept a self-signed
+certificate, pin its SHA-256 fingerprint (hex, `:` separators optional) with
+`WithCertificateFingerprint`; the chain and host name are then not verified,
+but the connection is refused unless the server presents exactly that
+certificate:
+
+```sh
+openssl s_client -connect kuma.example.com:443 </dev/null 2>/dev/null |
+  openssl x509 -noout -fingerprint -sha256
+```
 
 ```go
 client, err := kuma.New(ctx, url, "username", "password",
  kuma.WithTLSConfig(&tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}))
 
 client, err = kuma.New(ctx, url, "username", "password",
- kuma.WithInsecureSkipVerify())
+ kuma.WithCertificateFingerprint("AB:CD:..."))
 ```
 
 Both apply to the HTTP requests and the WebSocket connection.

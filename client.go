@@ -303,13 +303,11 @@ type Client struct {
 	// httpClient and jar are what the HTTP side of the login uses and what
 	// the socket.io transports send their cookies from, see newSocketIOClient;
 	// auth speaks to the authentication endpoints of a 3.x server over them.
-	httpClient *http.Client
-	jar        *cookiejar.Jar
-
-	// tlsConfig is what WithTLSConfig and WithInsecureSkipVerify configured,
-	// or nil for the default verification.
-	tlsConfig *tls.Config
-	auth      *betterAuthClient
+	httpClient      *http.Client
+	jar             *cookiejar.Jar
+	tlsConfig       *tls.Config
+	certFingerprint string
+	auth            *betterAuthClient
 
 	// authScheme is what WithAuthScheme configured, and scheme what New
 	// settled on: the configured one, or the detected one for AuthSchemeAuto.
@@ -487,32 +485,6 @@ func WithReadyEvents(events ...string) Option {
 func WithReadyGracePeriod(d time.Duration) Option {
 	return func(c *Client) {
 		c.readyGracePeriod = d
-	}
-}
-
-// WithTLSConfig sets the TLS configuration for every connection the client
-// makes: the HTTP requests (login, autosetup, long-polling) and the WebSocket
-// handshake. Use it to trust a private CA (RootCAs) or to present a client
-// certificate. The config is cloned, so later changes by the caller have no
-// effect.
-func WithTLSConfig(cfg *tls.Config) Option {
-	return func(c *Client) {
-		c.tlsConfig = cfg.Clone()
-	}
-}
-
-// WithInsecureSkipVerify turns off verification of the server certificate, which
-// allows connecting to a server with a self-signed certificate. The connection
-// is then open to interception: prefer WithTLSConfig with the server's CA in
-// RootCAs, and use this only on a network you trust. It combines with
-// WithTLSConfig in either order.
-func WithInsecureSkipVerify() Option {
-	return func(c *Client) {
-		if c.tlsConfig == nil {
-			c.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12}
-		}
-
-		c.tlsConfig.InsecureSkipVerify = true //nolint:gosec // opt-in by the caller, see above.
 	}
 }
 
@@ -753,24 +725,9 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	c.jar = jar
-
-	baseTransport := http.DefaultTransport
-
-	if c.tlsConfig != nil {
-		transport, ok := http.DefaultTransport.(*http.Transport)
-		if !ok {
-			return nil, errors.New("tls: default http transport is not an *http.Transport")
-		}
-
-		transport = transport.Clone()
-		transport.TLSClientConfig = c.tlsConfig.Clone()
-		baseTransport = transport
-	}
-
-	c.httpClient = &http.Client{
-		Jar:           jar,
-		Transport:     &headerRoundTripper{base: baseTransport, headers: c.requestHeaderSet},
-		CheckRedirect: checkRedirect(httpBase, c.redirectNote()),
+	c.httpClient, err = c.newHTTPClient(jar, httpBase)
+	if err != nil {
+		return nil, err
 	}
 
 	c.auth = &betterAuthClient{base: httpBase, http: c.httpClient, jar: jar}
