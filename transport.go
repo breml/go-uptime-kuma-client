@@ -2,6 +2,7 @@ package kuma
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -70,6 +71,7 @@ func newSocketIOClient(
 	httpClient *http.Client,
 	jar http.CookieJar,
 	headers *requestHeaderSet,
+	tlsConfig *tls.Config,
 ) (*socketio.Client, error) {
 	parsed, err := url.Parse(baseURL)
 	if err != nil {
@@ -82,7 +84,7 @@ func newSocketIOClient(
 
 	wsTransport, err := enginews.NewTransport(
 		enginews.WithLogger(logger),
-		enginews.WithWebSocket(&cookieWebSocket{jar: jar, headers: headers}),
+		enginews.WithWebSocket(&cookieWebSocket{jar: jar, headers: headers, tlsConfig: tlsConfig}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create websocket transport: %w", err)
@@ -122,9 +124,10 @@ func newSocketIOClient(
 // the target, which is how the session cookie reaches the server on an
 // upgraded connection, and the headers WithHeaders configured.
 type cookieWebSocket struct {
-	jar     http.CookieJar
-	headers *requestHeaderSet
-	conn    *websocket.Conn
+	jar       http.CookieJar
+	headers   *requestHeaderSet
+	tlsConfig *tls.Config
+	conn      *websocket.Conn
 }
 
 // Dial opens the WebSocket connection with the jar's cookies and the
@@ -135,6 +138,10 @@ func (w *cookieWebSocket) Dial(ctx context.Context, target *url.URL, origin *url
 	config, err := websocket.NewConfig(target.String(), origin.String())
 	if err != nil {
 		return fmt.Errorf("create websocket config: %w", err)
+	}
+
+	if w.tlsConfig != nil {
+		config.TlsConfig = w.tlsConfig.Clone()
 	}
 
 	if cookie := cookieHeader(w.jar, target); cookie != "" {

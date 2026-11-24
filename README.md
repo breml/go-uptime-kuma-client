@@ -108,6 +108,21 @@ func main() {
 }
 ```
 
+## Self-signed certificates
+
+To trust a private CA, pass it as `RootCAs`; to skip verification altogether
+(only on a network you trust), use `WithInsecureSkipVerify`:
+
+```go
+client, err := kuma.New(ctx, url, "username", "password",
+ kuma.WithTLSConfig(&tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}))
+
+client, err = kuma.New(ctx, url, "username", "password",
+ kuma.WithInsecureSkipVerify())
+```
+
+Both apply to the HTTP requests and the WebSocket connection.
+
 ## Authentication
 
 A username and password is the usual way in. An account with two-factor

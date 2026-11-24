@@ -86,7 +86,7 @@ func (conn *socketConn) barrier() authBarrier {
 // newSocket creates a socket.io client for the server with every handler
 // registered, not yet connected.
 func (c *Client) newSocket() (*socketConn, error) {
-	socket, err := newSocketIOClient(c.baseURL, c.socketioLogger, c.httpClient, c.jar, c.requestHeaderSet)
+	socket, err := newSocketIOClient(c.baseURL, c.socketioLogger, c.httpClient, c.jar, c.requestHeaderSet, c.tlsConfig)
 	if err != nil {
 		return nil, err
 	}
