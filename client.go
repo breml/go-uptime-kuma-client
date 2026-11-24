@@ -34,16 +34,19 @@ var ErrNotFound = errors.New("not found")
 
 // ErrUpdateEventTimeout is returned when the server acknowledged a mutating
 // command successfully, but the update event that carries the change did not
-// arrive before the context was done. The write landed on the server; what is
-// missing is only the broadcast.
+// arrive before the context was done or the connection was lost, see
+// ErrConnectionLost. The write landed on the server; what is missing is only
+// the broadcast.
 //
 // An error wrapping ErrUpdateEventTimeout also wraps the error that ended the
 // wait, so errors.Is(err, context.DeadlineExceeded) still reports an expired
-// deadline - the caller's own or the client's, see ErrOperationTimeout - and
-// errors.Is(err, context.Canceled) a cancelled context. Use
+// deadline - the caller's own or the client's, see ErrOperationTimeout -
+// errors.Is(err, context.Canceled) a cancelled context and
+// errors.Is(err, ErrConnectionLost) a dropped connection. Use
 // errors.Is(err, ErrUpdateEventTimeout) to tell the two cases apart: a plain
-// context error means the server never confirmed the command and it may or may
-// not have been applied, while ErrUpdateEventTimeout means it was applied.
+// context or connection-lost error means the server never confirmed the
+// command and it may or may not have been applied, while ErrUpdateEventTimeout
+// means it was applied.
 //
 // The Create methods return the ID the server assigned alongside such an error,
 // so a caller can adopt the created resource instead of retrying and creating a
@@ -56,15 +59,16 @@ var ErrNotFound = errors.New("not found")
 // is not up to date yet. The cache is maintained by the socket.io event
 // handlers and not by the caller's context, so it catches up on its own once
 // the event arrives; if the event is lost for good, the cache stays stale until
-// the next broadcast for that resource. Until then a getter that serves from
+// the next broadcast for that resource. On a lost connection no event arrives
+// anymore, and only Resync brings the cache back. Until then a getter that serves from
 // the cache does not report the resource; Resync makes the server resend the
 // lists instead of waiting for that broadcast.
 var ErrUpdateEventTimeout = errors.New("update event not received")
 
 // UpdateEventTimeoutError is the error the client returns for a command that
 // the server acknowledged without the update event arriving, see
-// ErrUpdateEventTimeout. It wraps both ErrUpdateEventTimeout and the context
-// error, so errors.Is keeps reporting either.
+// ErrUpdateEventTimeout. It wraps both ErrUpdateEventTimeout and the error that
+// ended the wait, so errors.Is keeps reporting either.
 //
 // It exists so that the ID of a created resource survives the way errors are
 // usually propagated: a caller that writes the idiomatic
@@ -139,9 +143,10 @@ var ErrOperationTimeout = errors.New("operation timeout exceeded")
 // than it said it would. The client does not reconnect on its own.
 //
 // A command that was in flight when the connection dropped may or may not have
-// been applied, the same as one that ran into ErrOperationTimeout. One whose ack
-// was already in reports ErrUpdateEventTimeout alongside, because the server
-// applied it. Resync connects again, see Resync.
+// been applied, the same as one that ran into ErrOperationTimeout. A command
+// that waits for an update event and whose ack was already in reports
+// ErrUpdateEventTimeout alongside, because the server applied it. Resync
+// connects again, see Resync.
 var ErrConnectionLost = errors.New("connection to the server lost")
 
 // operationTimeoutError is the cause recorded on a context derived by
@@ -872,6 +877,13 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 			case <-setupRequired:
 				// Handled below the select.
 
+			case <-conn.lost:
+				return nil, fmt.Errorf(
+					"wait for ready: %w (missing events: %s)",
+					ErrConnectionLost,
+					strings.Join(gate.missingRequired(), ", "),
+				)
+
 			case <-ctx.Done():
 				return nil, fmt.Errorf("wait for ready: %w", ctx.Err())
 
@@ -942,9 +954,9 @@ func (c *Client) Disconnect() error {
 // so Resync logs in again with the session token the client holds - the one the
 // login New performed handed out, or the one WithSessionToken supplied and the
 // server accepted. A client New returned without logging it in never obtained
-// one and cannot resync: that is a client created without credentials, against
-// a server that either has authentication disabled or never stated that it
-// wants a login.
+// one and cannot resync, except after a lost connection, see below: that is a
+// client created without credentials, against a server that either has
+// authentication disabled or never stated that it wants a login.
 //
 // A token the server has since stopped accepting is reported as
 // ErrInvalidSessionToken, wrapped by ErrUserInactive when the account it names
@@ -967,7 +979,8 @@ func (c *Client) Disconnect() error {
 // is no connection left to log in again on, so Resync connects again the same
 // way and logs the new connection in with the session token. A server with
 // authentication disabled logs it in by itself, so there the resync needs no
-// session token either.
+// session token either; one that asks a client without a token for a login
+// fails it with ErrAuthRequired.
 //
 // Which lists Resync waits for follows New: the events configured with
 // WithReadyEvents are required and the remaining known events are best-effort,
@@ -1020,6 +1033,10 @@ func (c *Client) Resync(ctx context.Context) error {
 
 	defer c.updates.RemoveListener(listenerID.String())
 
+	// The lists come in on the connection the login goes out on, so a drop
+	// of that one ends the wait for them.
+	conn := c.currentConn()
+
 	response, err := c.emitAck(ctx, "loginByToken", token)
 	if err != nil {
 		return fmt.Errorf("resync: %w", err)
@@ -1032,15 +1049,9 @@ func (c *Client) Resync(ctx context.Context) error {
 		return fmt.Errorf("resync: %w", loginError("loginByToken", response))
 	}
 
-	select {
-	case <-gate.requiredDone:
-
-	case <-ctx.Done():
-		return fmt.Errorf(
-			"resync: %w (missing events: %s)",
-			contextErr(ctx),
-			strings.Join(gate.missingRequired(), ", "),
-		)
+	err = awaitResyncLists(ctx, gate, conn)
+	if err != nil {
+		return err
 	}
 
 	// The required lists are in. Give the best-effort ones the same grace
@@ -1213,15 +1224,11 @@ func (c *Client) resyncByReconnect(ctx context.Context) error {
 		return fmt.Errorf("resync: %w", err)
 	}
 
-	select {
-	case <-gate.requiredDone:
-
-	case <-ctx.Done():
-		return fmt.Errorf(
-			"resync: %w (missing events: %s)",
-			contextErr(ctx),
-			strings.Join(gate.missingRequired(), ", "),
-		)
+	// The exclusive lock is held, so this is the connection reconnectLocked
+	// just installed.
+	err = awaitResyncLists(ctx, gate, c.currentConn())
+	if err != nil {
+		return err
 	}
 
 	release()
@@ -1233,16 +1240,45 @@ func (c *Client) resyncByReconnect(ctx context.Context) error {
 	return nil
 }
 
+// awaitResyncLists waits for the required lists a resync asked for on conn, and
+// gives up once ctx is done or conn is lost, which no list arrives on anymore.
+func awaitResyncLists(ctx context.Context, gate *readyGate, conn *socketConn) error {
+	select {
+	case <-gate.requiredDone:
+		return nil
+
+	case <-conn.lost:
+		// Lists that came in just before the drop still rebuilt the cache.
+		if isRequested(gate.requiredDone) {
+			return nil
+		}
+
+		return fmt.Errorf(
+			"resync: %w (missing events: %s)",
+			ErrConnectionLost,
+			strings.Join(gate.missingRequired(), ", "),
+		)
+
+	case <-ctx.Done():
+		return fmt.Errorf(
+			"resync: %w (missing events: %s)",
+			contextErr(ctx),
+			strings.Join(gate.missingRequired(), ", "),
+		)
+	}
+}
+
 // reconnectLocked replaces the connection with a fresh one, authenticated the
 // way the server line asks for, see authenticateReconnect, which the server
 // answers with every list. The caller holds the exclusive side of the
 // connection lock, see lockConnExclusive.
 //
 // The connection is replaced only once the server has authenticated the new
-// one. A server that refuses it - a 3.x server that no longer accepts the
-// cookie because it expired or the password changed, a 2.x server that no
-// longer accepts the session token - leaves the old connection in service for
-// the commands that still work on it.
+// one. A 3.x server that refuses it, because the cookie expired or the
+// password changed, leaves the old connection in service for the commands that
+// still work on it. A 2.x server that no longer accepts the session token
+// leaves the lost connection installed, so commands keep failing with
+// ErrConnectionLost.
 func (c *Client) reconnectLocked(ctx context.Context) error {
 	if c.isClosed() {
 		return errClientClosed
@@ -1261,13 +1297,11 @@ func (c *Client) reconnectLocked(ctx context.Context) error {
 		return err
 	}
 
-	mode := next.barrier().await(dialCtx)
-
-	err = dialCtx.Err()
+	mode, err := next.barrier().awaitMode(dialCtx)
 	if err != nil {
 		c.disconnectOrphan(next)
 
-		return fmt.Errorf("waiting for the server's auth mode: %w", err)
+		return err
 	}
 
 	err = c.authenticateReconnect(dialCtx, next, mode)

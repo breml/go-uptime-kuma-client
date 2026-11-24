@@ -336,13 +336,19 @@ func handleWebSocketUpgrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ping at the interval the handshake stated, until the client
-	// disconnects; never send ready events.
+	// disconnects; never send ready events. The client's pongs are read and
+	// dropped.
 	done := make(chan struct{})
 
 	go func() {
 		defer close(done)
 
-		_, _ = wsReadText(conn)
+		for {
+			_, readErr := wsReadText(conn)
+			if readErr != nil {
+				return
+			}
+		}
 	}()
 
 	ticker := time.NewTicker(50 * time.Millisecond)

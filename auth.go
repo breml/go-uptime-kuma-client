@@ -281,6 +281,10 @@ type authBarrier struct {
 	autoLogin     <-chan struct{}
 	session       <-chan struct{}
 	setupRequired <-chan struct{}
+
+	// lost is closed once the connection dropped for good, see
+	// Client.connectionLost: the server states nothing on it anymore.
+	lost <-chan struct{}
 }
 
 // credentials are the ways New was given to authenticate, gathered from its
@@ -395,7 +399,7 @@ func unclassifiedLoginError(command string, response ackResponse) error {
 }
 
 // await reports how the server wants the connection to be authenticated, or
-// authModeUnknown once it is clear that it will not say.
+// authModeUnknown once it is clear that it will not say, see awaitMode.
 func (b authBarrier) await(ctx context.Context) authMode {
 	timer := time.NewTimer(barrierWaitWithin(ctx))
 	defer timer.Stop()
@@ -418,6 +422,9 @@ func (b authBarrier) await(ctx context.Context) authMode {
 	case <-timer.C:
 		return authModeUnknown
 
+	case <-b.lost:
+		return authModeUnknown
+
 	case <-ctx.Done():
 		return authModeUnknown
 	}
@@ -434,6 +441,26 @@ func (b authBarrier) await(ctx context.Context) authMode {
 	}
 
 	return mode
+}
+
+// awaitMode is await for a caller that has to tell a wait cut short apart from
+// a server that stated nothing: await answers authModeUnknown for both. A
+// connection that dropped meanwhile is reported as ErrConnectionLost, because
+// whatever the server stated before the drop applies to a connection that is
+// gone.
+func (b authBarrier) awaitMode(ctx context.Context) (authMode, error) {
+	mode := b.await(ctx)
+
+	err := ctx.Err()
+	if err != nil {
+		return mode, fmt.Errorf("waiting for the server's auth mode: %w", err)
+	}
+
+	if isRequested(b.lost) {
+		return mode, fmt.Errorf("waiting for the server's auth mode: %w", ErrConnectionLost)
+	}
+
+	return mode, nil
 }
 
 // isRequested reports whether an event of the barrier has been delivered,
@@ -481,17 +508,13 @@ func (c credentials) hasAny() bool {
 // still logged in to when credentials were given, because that is what produces
 // a session token, see Resync.
 func (c *Client) authenticate(ctx context.Context, creds credentials, barrier authBarrier) error {
-	mode := barrier.await(ctx)
-
-	// await answers authModeUnknown both for a server that stated nothing and
-	// for a wait the caller cut short. Only the context can tell those apart,
-	// and reading it here keeps a cancellation from being reported as a server
-	// that wants no login - which for a client without credentials would be a
-	// successful New, and for one with them a login emitted into a connection
-	// that is already being torn down.
-	err := ctx.Err()
+	// A wait cut short must not be read as a server that wants no login -
+	// which for a client without credentials would be a successful New, and
+	// for one with them a login emitted into a connection that is already
+	// being torn down or gone.
+	mode, err := barrier.awaitMode(ctx)
 	if err != nil {
-		return fmt.Errorf("waiting for the server's auth mode: %w", err)
+		return err
 	}
 
 	switch mode {
@@ -728,11 +751,9 @@ func (c *Client) confirmSession(
 	barrier authBarrier,
 	loginErr error,
 ) error {
-	mode := barrier.await(ctx)
-
-	err := ctx.Err()
+	mode, err := barrier.awaitMode(ctx)
 	if err != nil {
-		return fmt.Errorf("waiting for the server's auth mode: %w", err)
+		return err
 	}
 
 	if creds.apiKey != "" {

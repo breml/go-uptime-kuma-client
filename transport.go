@@ -27,8 +27,9 @@ const defaultPollingInterval = 10 * time.Second
 // maxPollingPayloadSize caps the body of a long-polling response. The engine.io
 // server flushes every packet it buffered into one body, the lists it sends
 // after a login included, so the library's default of 4 MiB is too tight for
-// a large instance. This is the limit the WebSocket transport has, see
-// websocket.DefaultMaxPayloadBytes.
+// a large instance. This is the limit cookieWebSocket has, see
+// websocket.DefaultMaxPayloadBytes; the library's own WebSocket transport has
+// 4 MiB too.
 const maxPollingPayloadSize = websocket.DefaultMaxPayloadBytes
 
 // httpBaseURL returns baseURL with a ws or wss scheme rewritten to the http
@@ -69,8 +70,9 @@ func httpBaseURL(baseURL string) (*url.URL, error) {
 // cookie (or the API key, see WithAPIKey) on its handshake alone, see
 // AuthSchemeHTTP. The headers WithHeaders configures reach the long-polling
 // requests through the round tripper of httpClient, see headerRoundTripper,
-// and the WebSocket handshake through cookieWebSocket. Both transports are
-// built the way the library builds them by default otherwise.
+// and the WebSocket handshake through cookieWebSocket. Both transports accept
+// payloads of up to 32 MiB, see maxPollingPayloadSize, and the engine.io
+// client does not reconnect on its own.
 //
 // onClose is called when the connection drops for good: the server closed it,
 // answered that it no longer holds the session, or stopped sending heartbeats.
@@ -139,10 +141,12 @@ func newSocketIOClient(
 	return client, nil
 }
 
-// cookieWebSocket is the socket.io library's WebSocket implementation with
-// one addition: the handshake request carries the cookies the jar holds for
+// cookieWebSocket is the socket.io library's WebSocket implementation with two
+// differences: the handshake request carries the cookies the jar holds for
 // the target, which is how the session cookie reaches the server on an
-// upgraded connection, and the headers WithHeaders configured.
+// upgraded connection, and the headers WithHeaders configured; and it leaves
+// the payload limit at x/net's 32 MiB instead of the library's 4 MiB, see
+// maxPollingPayloadSize.
 type cookieWebSocket struct {
 	jar     http.CookieJar
 	headers *requestHeaderSet

@@ -78,7 +78,8 @@ operations concurrently over a single client):
 
 - Every command holds the shared side of the connection lock from its emit to
   its ack (and update event), see `lockConn()`. A `Resync()` against an Uptime
-  Kuma 3.x server replaces the socket.io connection, see `reconnectLocked()`,
+  Kuma 3.x server, or after a lost connection on either line, replaces the
+  socket.io connection, see `reconnectLocked()`,
   under the exclusive side, so no command is emitted on a connection about to
   be closed. Lock order: list lock, then connection lock, never nested.
 

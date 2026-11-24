@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -29,9 +30,10 @@ const dropOperationTimeout = 5 * time.Second
 // connection it goes out on is gone.
 const dropDetectionBudget = time.Second
 
-// dropSilentPing are the ping interval and timeout, in milliseconds, the fakes
-// state when they go silent on a drop: a client takes the server for gone
-// after both together, see silentDropDetection.
+// dropSilentPingInterval and dropSilentPingTimeout are the ping interval and
+// timeout, in milliseconds, the dropping polling server states: a client takes
+// a server that went silent for gone after both together, see
+// silentDropDetection.
 const (
 	dropSilentPingInterval = 50
 	dropSilentPingTimeout  = 200
@@ -73,7 +75,13 @@ type dropper interface {
 type droppingPollingServer struct {
 	*fakeSocketIOServer
 
-	mode        dropMode
+	mode dropMode
+	// holdCommands holds the request of every command sent from then on
+	// open, without answering it, until the server is released, see
+	// heldCommands.
+	holdCommands atomic.Bool
+	heldCommands atomic.Int64
+
 	dropped     chan struct{}
 	dropOnce    sync.Once
 	released    chan struct{}
@@ -120,6 +128,12 @@ func (s *droppingPollingServer) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	if r.Method != http.MethodGet {
+		if s.holdCommands.Load() {
+			s.holdCommand(w, r)
+
+			return
+		}
+
 		s.fakeSocketIOServer.ServeHTTP(w, r)
 
 		return
@@ -143,6 +157,42 @@ func (s *droppingPollingServer) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 	case <-r.Context().Done():
 	}
+}
+
+// holdCommand holds a POST that carries a socket.io event open until the server
+// is released, and answers any other, such as a pong.
+func (s *droppingPollingServer) holdCommand(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "read body", http.StatusInternalServerError)
+
+		return
+	}
+
+	if !carriesEvent(body) {
+		w.WriteHeader(http.StatusOK)
+
+		return
+	}
+
+	s.heldCommands.Add(1)
+
+	select {
+	case <-s.released:
+	case <-r.Context().Done():
+	}
+}
+
+// carriesEvent reports whether a polling payload, packets separated by the
+// record separator, carries a socket.io event.
+func carriesEvent(body []byte) bool {
+	for packet := range strings.SplitSeq(string(body), "\x1e") {
+		if strings.HasPrefix(packet, "42") {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *droppingPollingServer) drop() {
@@ -299,6 +349,24 @@ func newDropServer(mode dropMode) (dropper, time.Duration) {
 	}
 }
 
+// dropCommand is a command of the client the drop tests send.
+type dropCommand func(ctx context.Context, client *kuma.Client) error
+
+// dropCommands are the commands the drop tests send, one for each way a
+// command waits: for its ack alone, and for its ack and an update event.
+func dropCommands() map[string]dropCommand {
+	return map[string]dropCommand{
+		"ack": func(ctx context.Context, client *kuma.Client) error {
+			_, err := client.GetTags(ctx)
+
+			return err
+		},
+		"update event": func(ctx context.Context, client *kuma.Client) error {
+			return client.PauseMonitor(ctx, 1)
+		},
+	}
+}
+
 // TestConnectionDrop covers the commands of a client whose connection is gone:
 // the server shut down, restarted and forgot the session, or became
 // unreachable. Each command has to fail once the client can know, rather than
@@ -312,48 +380,110 @@ func TestConnectionDrop(t *testing.T) {
 	}
 
 	for name, mode := range modes {
-		t.Run(name, func(t *testing.T) {
-			t.Run("command in flight", func(t *testing.T) {
-				server, detection := newDropServer(mode)
+		for commandName, command := range dropCommands() {
+			t.Run(name+"/"+commandName, func(t *testing.T) {
+				t.Run("command in flight", func(t *testing.T) {
+					server, detection := newDropServer(mode)
+					dropClient := newDropClient(t, server)
+
+					result := startCommand(t, dropClient, command)
+
+					// Long enough for the command to be on the wire before
+					// the drop.
+					time.Sleep(100 * time.Millisecond)
+
+					dropped := time.Now()
+
+					server.drop()
+
+					requireDropDetected(t, result, dropped, detection)
+				})
+
+				t.Run("command after the drop", func(t *testing.T) {
+					server, detection := newDropServer(mode)
+					dropClient := newDropClient(t, server)
+
+					server.drop()
+					time.Sleep(detection + 100*time.Millisecond)
+
+					requireDropDetected(t, startCommand(t, dropClient, command), time.Now(), 0)
+				})
+			})
+		}
+	}
+}
+
+// TestCommandSendHeld covers a command whose send the server never answers,
+// while the connection otherwise stays up: over long polling the send is an
+// HTTP request bounded by nothing but the connection. The command has to give
+// up with the caller's context, and fail once the connection drops.
+func TestCommandSendHeld(t *testing.T) {
+	const deadline = 300 * time.Millisecond
+
+	for commandName, command := range dropCommands() {
+		t.Run(commandName, func(t *testing.T) {
+			t.Run("context done", func(t *testing.T) {
+				server := newDroppingPollingServer(dropSessionClosed)
 				dropClient := newDropClient(t, server)
 
-				result := startCommand(t, dropClient)
+				server.holdCommands.Store(true)
 
-				// Long enough for the command to be on the wire before the
-				// drop.
-				time.Sleep(100 * time.Millisecond)
+				ctx, cancel := context.WithTimeout(t.Context(), deadline)
+				t.Cleanup(cancel)
+
+				result := startCommandCtx(ctx, dropClient, command)
+
+				hang := time.NewTimer(deadline + dropDetectionBudget)
+				defer hang.Stop()
+
+				select {
+				case err := <-result:
+					require.ErrorIs(t, err, context.DeadlineExceeded)
+
+				case <-hang.C:
+					require.FailNow(t, "a held send must not outlast the caller's context")
+				}
+
+				require.Positive(t, server.heldCommands.Load(), "the command must have been on the wire")
+			})
+
+			t.Run("connection lost", func(t *testing.T) {
+				server := newDroppingPollingServer(dropSessionClosed)
+				dropClient := newDropClient(t, server)
+
+				server.holdCommands.Store(true)
+
+				result := startCommand(t, dropClient, command)
+
+				require.Eventually(t, func() bool {
+					return server.heldCommands.Load() > 0
+				}, time.Second, 10*time.Millisecond, "the command must have been on the wire")
 
 				dropped := time.Now()
 
 				server.drop()
 
-				requireDropDetected(t, result, dropped, detection)
-			})
-
-			t.Run("command after the drop", func(t *testing.T) {
-				server, detection := newDropServer(mode)
-				dropClient := newDropClient(t, server)
-
-				server.drop()
-				time.Sleep(detection + 100*time.Millisecond)
-
-				requireDropDetected(t, startCommand(t, dropClient), time.Now(), 0)
+				requireDropDetected(t, result, dropped, 0)
 			})
 		})
 	}
 }
 
-// startCommand sends a command on client and returns where its error arrives.
+// startCommand sends command on client and returns where its error arrives.
 // The command runs on a goroutine of its own, so one that never returns fails
 // the test instead of hanging it.
-func startCommand(t *testing.T, client *kuma.Client) <-chan error {
+func startCommand(t *testing.T, client *kuma.Client, command dropCommand) <-chan error {
 	t.Helper()
 
+	return startCommandCtx(t.Context(), client, command)
+}
+
+// startCommandCtx is startCommand with ctx.
+func startCommandCtx(ctx context.Context, client *kuma.Client, command dropCommand) <-chan error {
 	result := make(chan error, 1)
 
 	go func() {
-		_, err := client.GetTags(t.Context())
-		result <- err
+		result <- command(ctx, client)
 	}()
 
 	return result

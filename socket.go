@@ -45,8 +45,8 @@ func handledEvents() []string {
 // server states its auth mode with on it.
 //
 // The socket.io library's client is single-use - closing it is final - so
-// connecting again, which is what a resync on an Uptime Kuma 3.x server takes,
-// means a new socketConn with every handler registered again, see
+// connecting again, which is what a resync on an Uptime Kuma 3.x server, or
+// after a lost connection, takes, means a new socketConn with every handler registered again, see
 // Client.reconnectLocked.
 type socketConn struct {
 	socket *socketio.Client
@@ -82,6 +82,7 @@ func (conn *socketConn) barrier() authBarrier {
 		autoLogin:     conn.autoLogin,
 		session:       conn.session,
 		setupRequired: conn.setupRequired,
+		lost:          conn.lost,
 	}
 }
 
@@ -357,6 +358,11 @@ func (c *Client) dial(ctx context.Context, conn *socketConn) error {
 			return nil
 
 		case <-conn.lost:
+			dialErr := c.abandonConnect(conn, connectErr)
+			if dialErr != nil {
+				return fmt.Errorf("connect to server: %w: %w", ErrConnectionLost, dialErr)
+			}
+
 			return fmt.Errorf("connect to server: %w", ErrConnectionLost)
 
 		case err := <-connectErr:
@@ -373,18 +379,26 @@ func (c *Client) dial(ctx context.Context, conn *socketConn) error {
 			connectErr = nil
 
 		case <-ctx.Done():
-			if connectErr == nil {
-				c.disconnectOrphan(conn)
-			} else {
-				dialErr := c.abandonDial(conn, connectErr)
-				if dialErr != nil {
-					return fmt.Errorf("connect to server: %w", dialErr)
-				}
+			dialErr := c.abandonConnect(conn, connectErr)
+			if dialErr != nil {
+				return fmt.Errorf("connect to server: %w", dialErr)
 			}
 
 			return fmt.Errorf("connect to server: %w", ctx.Err())
 		}
 	}
+}
+
+// abandonConnect cleans up conn when dial gives up on it, see abandonDial. A
+// nil connectErr means the dial already returned without an error.
+func (c *Client) abandonConnect(conn *socketConn, connectErr <-chan error) error {
+	if connectErr == nil {
+		c.disconnectOrphan(conn)
+
+		return nil
+	}
+
+	return c.abandonDial(conn, connectErr)
 }
 
 // abandonDial cleans up the dial a caller walks away from when its wait is
@@ -472,7 +486,7 @@ func (c *Client) disconnectOrphan(conn *socketConn) {
 	}()
 }
 
-// connectionLost takes conn out of service after it dropped for good, see
+// connectionLost marks conn lost after it dropped for good, see
 // newSocketIOClient: the commands waiting on it, and every one sent on it from
 // now on, fail with ErrConnectionLost. Cancelling its context aborts a send
 // that is still on its way, which against a server that stopped answering

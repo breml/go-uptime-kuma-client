@@ -3,7 +3,14 @@ package kuma
 import (
 	"context"
 	"fmt"
+	"time"
 )
+
+// sendErrorLostGrace is how long emitOn waits, after a send failed, for the
+// connection to be reported lost. The close handler runs once the transport's
+// reader notices the drop, which against a restarted server is usually just
+// after the send that hit it failed. It is only ever paid on a failed send.
+const sendErrorLostGrace = 500 * time.Millisecond
 
 // emitAckOn emits command on conn and returns the ack the server answered
 // with, see Client.emitAck, which is the caller for the connection in service.
@@ -63,7 +70,7 @@ func emitOn(ctx context.Context, conn *socketConn, command string, args ...any) 
 
 	select {
 	case err := <-sent:
-		if err != nil && conn.isLost() {
+		if err != nil && awaitLost(ctx, conn) {
 			return fmt.Errorf("%w: %w", ErrConnectionLost, err)
 		}
 
@@ -77,14 +84,33 @@ func emitOn(ctx context.Context, conn *socketConn, command string, args ...any) 
 	}
 }
 
+// awaitLost reports whether conn is lost, or is reported lost within
+// sendErrorLostGrace, see emitOn.
+func awaitLost(ctx context.Context, conn *socketConn) bool {
+	timer := time.NewTimer(sendErrorLostGrace)
+	defer timer.Stop()
+
+	select {
+	case <-conn.lost:
+		return true
+
+	case <-timer.C:
+		return false
+
+	case <-ctx.Done():
+		return conn.isLost()
+	}
+}
+
 // awaitAckAndUpdateEvent waits for the ack delivered on res and for the update
 // event that confirm accepts, or, when confirm is nil, for the first update
 // event signalled on updated.
 //
 // An ack that reports a failure is returned as the server's error even when ctx
-// is done as well, because the rejection is the more useful answer and it is
-// what the caller would have received had the ack arrived a moment earlier. An
-// update event without an ack stays a plain context error: without the ack the
+// is done or lost is closed as well, because the rejection is the more useful
+// answer and it is what the caller would have received had the ack arrived a
+// moment earlier. An update event without an ack stays a plain context or
+// connection-lost error: without the ack the
 // client knows neither the outcome of the command nor the ID the server
 // assigned, and a confirmation cannot run without the ID either.
 func awaitAckAndUpdateEvent(
@@ -146,7 +172,7 @@ type awaitState struct {
 
 // collectDelivered takes the ack and the update event that have already been
 // delivered, without waiting for either. Receiving from a nil channel is never
-// ready, so the default cases cover the signals already taken.
+// ready, so the default case covers an ack already taken.
 func (s *awaitState) collectDelivered(res <-chan ackResponse, updated <-chan struct{}) {
 	if !s.acked {
 		select {
