@@ -60,8 +60,9 @@ type fakeSocketIOServer struct {
 	// goroutine of its own. swallowACKsAfterLogin takes precedence over it.
 	onCommand func(command string, ackID string)
 	// pingInterval is the ping interval the handshake states, in milliseconds;
-	// zero states 50. The fake never pings, so it is also how long a client
-	// that polls once per interval leaves a queued packet unread.
+	// zero states 50. The fake pings an idle poll after it, see
+	// fakePingPacket, so it is also how long a client that polls once per
+	// interval leaves a queued packet unread.
 	pingInterval int
 	// pingTimeout is the ping timeout the handshake states, in milliseconds;
 	// zero states 5000. A client takes a server that has not pinged for the
@@ -86,11 +87,6 @@ func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			PingTimeout  int      `json:"pingTimeout"`
 			MaxPayload   int      `json:"maxPayload"`
 		}
-		pingInterval := s.pingInterval
-		if pingInterval == 0 {
-			pingInterval = 50
-		}
-
 		pingTimeout := s.pingTimeout
 		if pingTimeout == 0 {
 			pingTimeout = 5000
@@ -99,7 +95,7 @@ func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		data, err := json.Marshal(engineIOHandshake{
 			Sid:          "test-sid",
 			Upgrades:     []string{}, // no WebSocket upgrade keeps the client on polling
-			PingInterval: pingInterval,
+			PingInterval: s.interval(),
 			PingTimeout:  pingTimeout,
 			MaxPayload:   1000000,
 		})
@@ -121,26 +117,17 @@ func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
 	case r.Method == http.MethodGet && sid != "":
-		// Long-poll: deliver the next queued message or block until the
-		// client disconnects (simulating a server that never emits ready events).
-		var idle <-chan time.Time
-
-		if s.noConnectACK {
-			// End an idle poll with an engine.io NOOP instead of holding it
-			// open forever. Nothing else would ever end this poll, and a
-			// client shutting down waits for the one in flight.
-			timer := time.NewTimer(50 * time.Millisecond)
-			defer timer.Stop()
-
-			idle = timer.C
-		}
+		// Long-poll: deliver the next queued message, or end an idle poll
+		// with a ping once the ping interval is up.
+		ping := time.NewTimer(time.Duration(s.interval()) * time.Millisecond)
+		defer ping.Stop()
 
 		select {
 		case msg := <-s.messages:
 			_, _ = w.Write(msg)
 
-		case <-idle:
-			_, _ = w.Write([]byte("6"))
+		case <-ping.C:
+			_, _ = w.Write([]byte(fakePingPacket))
 
 		case <-r.Context().Done():
 		}
@@ -148,6 +135,21 @@ func (s *fakeSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 	}
 }
+
+// interval is the ping interval the handshake states, in milliseconds.
+func (s *fakeSocketIOServer) interval() int {
+	if s.pingInterval == 0 {
+		return 50
+	}
+
+	return s.pingInterval
+}
+
+// fakePingPacket is the engine.io ping the fake servers end an idle poll with,
+// and send over an idle WebSocket, once the ping interval their handshake
+// states is up. A real server pings the same way, and a client takes one that
+// does not ping within the interval and timeout it stated for gone.
+const fakePingPacket = "2"
 
 // handleClientMessage processes socket.io messages received from the client via POST.
 // The body format is: engine.io type byte ("4" for Message) + socket.io packet.
@@ -333,8 +335,30 @@ func handleWebSocketUpgrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Block until the client disconnects (never send ready events).
-	_, _ = wsReadText(conn)
+	// Ping at the interval the handshake stated, until the client
+	// disconnects; never send ready events.
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		_, _ = wsReadText(conn)
+	}()
+
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-done:
+			return
+
+		case <-ticker.C:
+			if wsSendText(conn, fakePingPacket) != nil {
+				return
+			}
+		}
+	}
 }
 
 // wsHandshake upgrades the HTTP connection to WebSocket using http.Hijacker.

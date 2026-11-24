@@ -136,7 +136,7 @@ func (s *droppingPollingServer) ServeHTTP(w http.ResponseWriter, r *http.Request
 		_, _ = w.Write(msg)
 
 	case <-ping.C:
-		_, _ = w.Write([]byte("2"))
+		_, _ = w.Write([]byte(fakePingPacket))
 
 	case <-s.dropped:
 		s.answerDropped(w, r)

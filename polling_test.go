@@ -53,9 +53,17 @@ func (s *batchingSocketIOServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 	var batch [][]byte
 
+	ping := time.NewTimer(time.Duration(s.interval()) * time.Millisecond)
+	defer ping.Stop()
+
 	select {
 	case msg := <-s.messages:
 		batch = append(batch, msg)
+
+	case <-ping.C:
+		_, _ = w.Write([]byte(fakePingPacket))
+
+		return
 
 	case <-r.Context().Done():
 		return

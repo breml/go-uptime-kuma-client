@@ -241,6 +241,10 @@ func tokenFromFrame(payload string) string {
 	return token
 }
 
+// fakeAckPingInterval is the ping interval fakeAckServer states, in
+// milliseconds.
+const fakeAckPingInterval = 50
+
 func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.recordRequest(r)
 
@@ -268,7 +272,7 @@ func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		data, err := json.Marshal(engineIOHandshake{
 			Sid:          session.sid,
 			Upgrades:     []string{}, // no WebSocket upgrade keeps the client on polling
-			PingInterval: 50,
+			PingInterval: fakeAckPingInterval,
 			PingTimeout:  5000,
 			MaxPayload:   1000000,
 		})
@@ -304,9 +308,17 @@ func (s *fakeAckServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// An idle poll ends in a ping once the ping interval the handshake
+		// stated is up, see fakePingPacket.
+		ping := time.NewTimer(fakeAckPingInterval * time.Millisecond)
+		defer ping.Stop()
+
 		select {
 		case msg := <-session.messages:
 			_, _ = w.Write(msg)
+
+		case <-ping.C:
+			_, _ = w.Write([]byte(fakePingPacket))
 
 		case <-session.forgotten:
 			unknownSession(w)
