@@ -3,6 +3,7 @@ package kuma
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -302,9 +303,11 @@ type Client struct {
 	// httpClient and jar are what the HTTP side of the login uses and what
 	// the socket.io transports send their cookies from, see newSocketIOClient;
 	// auth speaks to the authentication endpoints of a 3.x server over them.
-	httpClient *http.Client
-	jar        *cookiejar.Jar
-	auth       *betterAuthClient
+	httpClient      *http.Client
+	jar             *cookiejar.Jar
+	tlsConfig       *tls.Config
+	certFingerprint string
+	auth            *betterAuthClient
 
 	// authScheme is what WithAuthScheme configured, and scheme what New
 	// settled on: the configured one, or the detected one for AuthSchemeAuto.
@@ -722,11 +725,11 @@ func New(ctx context.Context, baseURL string, username string, password string, 
 	}
 
 	c.jar = jar
-	c.httpClient = &http.Client{
-		Jar:           jar,
-		Transport:     &headerRoundTripper{base: http.DefaultTransport, headers: c.requestHeaderSet},
-		CheckRedirect: checkRedirect(httpBase, c.redirectNote()),
+	c.httpClient, err = c.newHTTPClient(jar, httpBase)
+	if err != nil {
+		return nil, err
 	}
+
 	c.auth = &betterAuthClient{base: httpBase, http: c.httpClient, jar: jar}
 
 	ctxWithConnectTimeout := ctx

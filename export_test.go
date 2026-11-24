@@ -149,3 +149,6 @@ func (c *Client) setAPIEnabled(ctx context.Context, enabled bool, password strin
 
 	return err
 }
+
+//nolint:gochecknoglobals // see above.
+var ParseFingerprint = parseFingerprint
